@@ -48,7 +48,8 @@ async function getUniverse(env, fetcher) {
 function failureReason(error) {
   const code=String(error?.message||'');
   if (code === 'universe-lookup-failed' || code === 'universe-lookup-invalid') return 'universe_lookup';
-  if (/^analytics-upstream-status-(401|403)$/.test(code) || /^analytics-poll-status-(401|403)$/.test(code)) return 'authorization';
+  if (/^analytics-(upstream|poll)-status-401$/.test(code)) return 'key_or_scope';
+  if (/^analytics-(upstream|poll)-status-403$/.test(code)) return 'creator_access';
   if (/^analytics-upstream-status-(400|404|422)$/.test(code) || code === 'analytics-query-rejected-2001') return 'request_invalid';
   if (/^analytics-upstream-status-429$/.test(code) || code === 'analytics-query-rejected-3000') return 'rate_limited';
   if (/^analytics-upstream-status-5\d\d$/.test(code) || /^analytics-poll-status-5\d\d$/.test(code)) return 'upstream';
@@ -57,7 +58,9 @@ function failureReason(error) {
 }
 function publicReasonMessage(reason){
   const labels={
-    authorization:'Roblox weigert toegang tot analytics. Controleer de API-key, universe.analytics:read en de rechten op deze groepsgame.',
+    key_or_scope:'Roblox geeft HTTP 401 terug. Controleer of de Cloudflare Secret geldig is en deze Universe de juiste universe.analytics:read-bevoegdheid heeft.',
+    creator_access:'Roblox geeft HTTP 403 terug. De eigenaar van de sleutel mag mogelijk geen analytics van deze groepsgame bekijken. Controleer groepsrol en Roblox-toegang.',
+    authorization:'Roblox weigert toegang tot analytics. Controleer sleutel, Universe en groepsrechten.',
     request_invalid:'Roblox heeft de analytics-query afgewezen. Controleer of de experience en metric beschikbaar zijn.',
     universe_lookup:'De juiste Universe ID kon niet worden opgehaald. Controleer de Universe ID in Roblox Creator Dashboard.',
     rate_limited:'Roblox heeft tijdelijk een aanvraaglimiet bereikt. De cijfers worden later opnieuw geprobeerd.',
@@ -225,7 +228,7 @@ export const publicAnalyticsClient = String.raw`
        const card=document.createElement('article');card.className='official-card';
        const heading=document.createElement('small');heading.textContent=metric.label;
        const amount=document.createElement('strong');amount.textContent=metric.latest?fmt(metric.latest.value,metric.dp)+(metric.unit==='min'?' min':''): '—';amount.title=metric.latest?'Geautoriseerde, geaggregeerde Roblox-data':'Nog geen geverifieerde waarde beschikbaar';
-       const note=document.createElement('p');const problem={authorization:'Geen toestemming vanuit Roblox voor deze game.',request_invalid:'Roblox heeft de aanvraag geweigerd.',universe_lookup:'Universe ID kan niet worden opgehaald.',rate_limited:'Roblox vraagt om later opnieuw te proberen.',no_data:'Nog geen definitieve meetgegevens.',pending:'Roblox verwerkt deze statistiek nog.',upstream:'Roblox Analytics tijdelijk niet bereikbaar.',invalid_response:'Onverwacht Roblox-antwoord.'};note.textContent=metric.state==='ready'?'Laatste afgeronde dag ('+metric.latest.date+') · '+metric.unit+(metric.unit==='API value'?' (ongeconverteerd)':''):problem[metric.reason]||'Geen betrouwbare, afgeronde meting beschikbaar';
+       const note=document.createElement('p');const problem={key_or_scope:'API-key ongeldig of deze Universe heeft geen analytics:read-toestemming (401).',creator_access:'De sleutel-eigenaar heeft geen toegang tot deze game-analytics (403).',authorization:'Geen toestemming vanuit Roblox voor deze game.',request_invalid:'Roblox heeft de aanvraag geweigerd.',universe_lookup:'Universe ID kan niet worden opgehaald.',rate_limited:'Roblox vraagt om later opnieuw te proberen.',no_data:'Nog geen definitieve meetgegevens.',pending:'Roblox verwerkt deze statistiek nog.',upstream:'Roblox Analytics tijdelijk niet bereikbaar.',invalid_response:'Onverwacht Roblox-antwoord.'};note.textContent=metric.state==='ready'?'Laatste afgeronde dag ('+metric.latest.date+') · '+metric.unit+(metric.unit==='API value'?' (ongeconverteerd)':''):problem[metric.reason]||'Geen betrouwbare, afgeronde meting beschikbaar';
        card.append(heading,amount,note);
        if(Array.isArray(metric.points) && metric.points.length>1){
           const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');

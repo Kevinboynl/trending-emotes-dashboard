@@ -2,6 +2,7 @@ import { refinementCSS, refinementJS } from './refinements.js';
 import { publicAnalyticsResponse, publicAnalyticsStyles, publicAnalyticsMarkup, publicAnalyticsClient } from './public-analytics.js';
 import { premiumCSS } from './premium-theme.js';
 import { premiumJS } from './premium-interactions.js';
+import { studioUpgradeCSS, studioUpgradeJS } from './studio-upgrade.js';
 /* TRENDING EMOTES — one-file Cloudflare Worker. Optional D1 binding: DB.
    Optional cron expression: every five minutes (collects without visitors).
    Place ID: 134944031090971. No API keys required for public metrics.
@@ -259,9 +260,9 @@ const THEMED_HTML = HTML
   .replaceAll('<b>STUDIOS</b>', '<b>CLOTHING</b>')
   .replaceAll('#b6ff69', '#5daeff')
   .replaceAll('#aaff62', '#5daeff')
-  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n</style>')
+  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n</style>')
   .replace('</section></main><footer', () => '</section>' + publicAnalyticsMarkup + '</main><footer')
-  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n</script></body></html>');
+  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n</script></body></html>');
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);

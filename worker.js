@@ -266,6 +266,7 @@ const spans={'1h':3600000,'24h':86400000,'7d':7*86400000,'30d':30*86400000};
 const valueFields={ccu:'Players',visits:'Visits',favorites:'Favorites',likes:'Likes'};
 const dateTime=t=>new Date(t).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
 const numberAnimations=new WeakMap();
+let ccuReservedWidth=3.35;
 function animateNumber(id,num,extra,verifiedCcuChange=false){
   const el=$(id);
   if(!el||!Number.isFinite(num)){
@@ -274,6 +275,14 @@ function animateNumber(id,num,extra,verifiedCcuChange=false){
   }
   const old=Number(el.dataset.value);
   const target=fmt(num)+(extra||'');
+  if(id==='playing'){
+    // Reserve the widest verified digit group seen this session. That keeps
+    // the adjacent CCU badge from jumping on 99→100 or 100→98 transitions.
+    const previousText=Number.isFinite(Number(el.dataset.value))?
+      fmt(Number(el.dataset.value)):'';
+    ccuReservedWidth=Math.min(12,Math.max(ccuReservedWidth,target.length,previousText.length));
+    el.style.setProperty('--kvn-ccu-reserved-width',ccuReservedWidth+'ch');
+  }
   el.dataset.value=String(num);
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const active=numberAnimations.get(el);
@@ -291,9 +300,13 @@ function animateNumber(id,num,extra,verifiedCcuChange=false){
     }
     const before=fmt(old),after=fmt(num);
     if(before.length!==after.length || before.length>12){
+      // Carries that add/remove a character cannot roll digit-for-digit.
+      // Show the exact new number immediately with a short, gentle fade.
+      // The reserved-width counter avoids badge overlap or a number jump.
+      el.getAnimations?.().forEach(anim=>anim.cancel());
       el.textContent=target;
-      el.animate?.([{opacity:.66,transform:'translateY(7px)'},{opacity:1,transform:'translateY(0)'}],
-        {duration:540,easing:'cubic-bezier(.2,.8,.2,1)'});
+      el.animate?.([{opacity:.48,transform:'translateY(5px)'},{opacity:1,transform:'translateY(0)'}],
+        {duration:520,easing:'cubic-bezier(.2,.85,.2,1)'});
       return;
     }
     const increasing=num>old;

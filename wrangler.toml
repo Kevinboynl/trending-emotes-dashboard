@@ -8,3 +8,8 @@ workers_dev = true
 # Once D1 is added, the scheduled job tracks game stats even with no visitors.
 [triggers]
 crons = ["*/5 * * * *"]
+
+# Only explicitly selected aggregated analytics are shown publicly.
+# The Roblox API key must remain a Cloudflare Secret named ROBLOX_ANALYTICS_API_KEY.
+[vars]
+PUBLIC_ANALYTICS_METRICS = "DailyActiveUsers,AverageSessionLengthMinutes"

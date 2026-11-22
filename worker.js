@@ -217,9 +217,9 @@ const THEMED_HTML = HTML
   .replaceAll('<b>STUDIOS</b>', '<b>CLOTHING</b>')
   .replaceAll('#b6ff69', '#5daeff')
   .replaceAll('#aaff62', '#5daeff')
-  .replace('</style>', '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n</style>')
-  .replace('</section></main><footer', '</section>' + publicAnalyticsMarkup + '</main><footer')
-  .replace('</script></body></html>', '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n</script></body></html>');
+  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n</style>')
+  .replace('</section></main><footer', () => '</section>' + publicAnalyticsMarkup + '</main><footer')
+  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n</script></body></html>');
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);

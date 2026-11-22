@@ -162,7 +162,130 @@ try{
       assert.equal(await chip.isVisible(),false,'Cached CCU must not show a new badge');
       assert.equal(await page.locator('#playing .kvn-roll-slot').count(),0,'Cached CCU must not roll');
       assert.deepEqual(errors,[],'Browser JS error during CCU change animation');
-      console.log('PASS: Verified CCU rise/drop, digit rolling, responsive badges, unchanged and stale-value guards.');
+      // Returning visitor: last actually SEEN real sample was 49 (not the
+      // hidden/cached 53). Delay the next synthetic response so we can assert
+      // the old value stays visible before the roll begins.
+      const visibleKey='kvn-trending-emotes-visible-ccu-v1';
+      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).playing,visibleKey),49);
+      await page.request.get(localURL+'__test__/settings?delay=650');
+      await page.request.get(localURL+'__test__/ccu?value=62');
+      await page.reload({waitUntil:'domcontentloaded'});
+      assert.equal(await page.locator('#playing').getAttribute('data-value'),'49',
+        'Reload must initially display last actually visible CCU, not latest fetched');
+      assert.equal(await page.locator('.kvn-ccu-change').isVisible(),false,
+        'Return animation must wait for a newer verified response');
+      await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='62',{},{timeout:6000});
+      const returnChip=page.locator('.kvn-ccu-change');
+      assert.match(await returnChip.innerText(),/\+13\s*CCU/,
+        'Return increase must compare against last visible 49, not cached 53');
+      assert.match(await page.locator('.kvn-ccu-delta').innerText(),/SINCE LAST VISIT/);
+      assert.equal(await page.locator('.metrics .primary').getAttribute('data-motion'),'up');
+      await page.screenshot({path:artifactDir+'/return-ccu-up-390.png'});
+      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).playing,visibleKey),62);
+      await page.request.get(localURL+'__test__/settings?delay=0');
+
+      // A different authoritative timestamp but unchanged CCU must never
+      // replay the badge, and should advance the visible verified baseline.
+      await page.request.get(localURL+'__test__/ccu?value=62');
+      await page.reload({waitUntil:'domcontentloaded'});
+      await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='62');
+      await page.evaluate(()=>stats());
+      assert.equal(await page.locator('.kvn-ccu-change').isVisible(),false,
+        'Unchanged return CCU must not show a +0 badge');
+
+      await page.request.get(localURL+'__test__/ccu?value=39');
+      await page.reload({waitUntil:'domcontentloaded'});
+      await page.waitForFunction(()=>document.querySelector('.kvn-ccu-change')?.dataset.visible==='true');
+      assert.match(await page.locator('.kvn-ccu-change').innerText(),/−23\s*CCU/);
+      assert.match(await page.locator('.kvn-ccu-delta').innerText(),/SINCE LAST VISIT/);
+      assert.equal(await page.locator('.metrics .primary').getAttribute('data-motion'),'down');
+      await page.screenshot({path:artifactDir+'/return-ccu-down-390.png'});
+
+      // A request made while the visitor is away must not advance the visible
+      // baseline. On return, focus/visibility events coalesce into one fetch.
+      await page.evaluate(()=>markVisitorAway());
+      await page.request.get(localURL+'__test__/ccu?value=48');
+      await page.evaluate(()=>stats());
+      assert.equal(await page.locator('#playing').getAttribute('data-value'),'39');
+      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).playing,visibleKey),39);
+      const beforeRequests=(await (await page.request.get(localURL+'__test__/requests')).json()).count;
+      await page.evaluate(()=>{
+        resumeLiveStats();resumeLiveStats();window.dispatchEvent(new Event('focus'));
+      });
+      await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='48');
+      const afterRequests=(await (await page.request.get(localURL+'__test__/requests')).json()).count;
+      assert(afterRequests-beforeRequests<=1,
+        'Rapid return events unexpectedly caused duplicate Roblox fetches');
+      assert.match(await page.locator('.kvn-ccu-change').innerText(),/\+9\s*CCU/);
+      assert.match(await page.locator('.kvn-ccu-delta').innerText(),/SINCE LAST VISIT/);
+
+      // Returning with cached data must preserve the previous visible count,
+      // and a later fresh Roblox snapshot may still trigger the return motion.
+      await page.evaluate(()=>markVisitorAway());
+      await page.request.get(localURL+'__test__/ccu?value=55&stale=true');
+      await page.evaluate(()=>resumeLiveStats());
+      await page.waitForFunction(()=>document.querySelector('#status')?.textContent?.includes('CACHED'),null,{timeout:3000});
+      assert.equal(await page.locator('#playing').getAttribute('data-value'),'48');
+      assert.equal(await page.locator('.kvn-ccu-change').isVisible(),false);
+      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).playing,visibleKey),48);
+      await page.request.get(localURL+'__test__/ccu?value=55');
+      await page.evaluate(()=>stats());
+      await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='55');
+      assert.match(await page.locator('.kvn-ccu-change').innerText(),/\+7\s*CCU/);
+      assert.match(await page.locator('.kvn-ccu-delta').innerText(),/SINCE LAST VISIT/);
+
+      // A failed response must also preserve the displayed and stored sample.
+      await page.evaluate(()=>markVisitorAway());
+      await page.request.get(localURL+'__test__/settings?failure=true');
+      await page.evaluate(()=>resumeLiveStats());
+      await page.waitForFunction(()=>document.querySelector('#status')?.textContent?.includes('UNAVAILABLE'));
+      assert.equal(await page.locator('#playing').getAttribute('data-value'),'55');
+      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).playing,visibleKey),55);
+      await page.request.get(localURL+'__test__/settings?failure=false');
+      await page.request.get(localURL+'__test__/ccu?value=53');
+      await page.evaluate(()=>stats());
+      await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='53');
+      assert.match(await page.locator('.kvn-ccu-change').innerText(),/−2\s*CCU/);
+
+      // Identical authoritative timestamps cannot introduce a contradictory
+      // new count, regardless of whether the game API returned it.
+      await page.request.get(localURL+'__test__/ccu?value=57&sameStamp=true');
+      await page.evaluate(()=>stats());
+      assert.equal(await page.locator('#playing').getAttribute('data-value'),'53');
+      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).playing,visibleKey),53);
+
+      // One-hour-old visible baseline is valid and shows net difference,
+      // not invented join events.
+      const oneHourAgo=Date.now()-3600000;
+      await page.evaluate(({key,stamp})=>localStorage.setItem(key,JSON.stringify({
+        playing:35,timestamp:stamp-500,shownAt:stamp,fresh:true
+      })),{key:visibleKey,stamp:oneHourAgo});
+      await page.request.get(localURL+'__test__/ccu?value=48');
+      await page.reload({waitUntil:'domcontentloaded'});
+      await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='48');
+      assert.match(await page.locator('.kvn-ccu-change').innerText(),/\+13\s*CCU/);
+      assert.match(await page.locator('.kvn-ccu-delta').innerText(),/SINCE LAST VISIT/);
+
+      // A baseline older than the 48h retention limit must never animate.
+      const tooOld=Date.now()-49*3600000;
+      await page.evaluate(({key,stamp})=>localStorage.setItem(key,JSON.stringify({
+        playing:15,timestamp:stamp-500,shownAt:stamp,fresh:true
+      })),{key:visibleKey,stamp:tooOld});
+      await page.request.get(localURL+'__test__/ccu?value=50');
+      await page.reload({waitUntil:'domcontentloaded'});
+      await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='50');
+      assert.equal(await page.locator('.kvn-ccu-change').isVisible(),false,
+        'Expired return baseline must not produce a motion');
+
+      // Cleared browser storage is a genuine first visit, not a return.
+      await page.evaluate(key=>localStorage.removeItem(key),visibleKey);
+      await page.request.get(localURL+'__test__/ccu?value=51');
+      await page.reload({waitUntil:'domcontentloaded'});
+      await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='51');
+      assert.equal(await page.locator('.kvn-ccu-change').isVisible(),false,
+        'Missing baseline must not synthesize a prior CCU');
+      assert.deepEqual(errors,[],'Browser JS error during returning visitor scenarios');
+      console.log('PASS: Return up/down, reopen/reload, unseen fetch, rapid focus, stale/error, identical timestamp, 1h, expired and cleared storage.');
     }
     if(width===390||width===1440||width===1920){
       await chart.screenshot({path:artifactDir+'/chart-'+width+'.png',animations:'disabled'});

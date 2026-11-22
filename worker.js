@@ -260,6 +260,50 @@ function restoreVerifiedStats() {
     return true;
   }catch{return false;}
 }
+// A *visible* snapshot differs from the latest successful network response.
+// Inactive tabs may finish a request after the visitor has left. Never use
+// that unseen result as a return-visit comparison baseline.
+const LAST_VISIBLE_CCU_KEY='kvn-trending-emotes-visible-ccu-v1';
+const VISIBLE_SNAPSHOT_TTL=48*60*60*1000;
+const validVisibleSnapshot=(x,now=Date.now())=>Boolean(x&&
+  Number.isSafeInteger(x.playing)&&x.playing>=0&&x.playing<=1e9&&
+  Number.isFinite(x.timestamp)&&Number.isFinite(x.shownAt)&&
+  x.timestamp>0&&x.timestamp<=now+30000&&
+  x.shownAt>=x.timestamp-30000&&x.shownAt<=now+30000&&
+  now-x.shownAt<=VISIBLE_SNAPSHOT_TTL);
+function readLastVisibleCCU(){
+  try{
+    const stored=JSON.parse(localStorage.getItem(LAST_VISIBLE_CCU_KEY)||'null');
+    return validVisibleSnapshot(stored)?stored:null;
+  }catch{return null;}
+}
+let lastVisibleCCU=readLastVisibleCCU();
+let lastFetchedCCU=null;
+let latestVerifiedCCU=null;
+let returnComparisonPending=Boolean(lastVisibleCCU);
+let visibilityEpoch=0;
+let requestVisibilityEpoch=null;
+let resumeQueued=false;
+let lastResumeAttempt=0;
+function displaySavedVisibleCCU(){
+  if(!validVisibleSnapshot(lastVisibleCCU))return;
+  // The old, actually seen count remains on-screen until a newer verified
+  // measurement has been accepted and the roll can begin.
+  animateNumber('playing',lastVisibleCCU.playing);
+  animateNumber('heroCCU',lastVisibleCCU.playing);
+  $('lastUpdate').textContent='Previous verified CCU: '+
+    new Date(lastVisibleCCU.timestamp).toLocaleString('en-GB')+' · checking for updates';
+}
+function rememberVisibleCCU(sample){
+  if(!sample||sample.stale||!validVisibleSnapshot({
+    playing:sample.playing,timestamp:sample.timestamp,shownAt:Date.now()
+  }))return;
+  const visible={playing:sample.playing,timestamp:sample.timestamp,
+    shownAt:Date.now(),fresh:true};
+  lastVisibleCCU=visible;
+  try{localStorage.setItem(LAST_VISIBLE_CCU_KEY,JSON.stringify(visible));}catch{}
+}
+
 let browserHistory=[];try{browserHistory=JSON.parse(localStorage.getItem(TIMEKEY)||'[]').filter(x=>Number.isFinite(x.t)&&Number.isFinite(x.ccu));}catch{}
 let currentRange='24h',currentMetric='ccu',currentStats=null,cloudHistory=[],usingCloud=false,chartPoints=[];
 const spans={'1h':3600000,'24h':86400000,'7d':7*86400000,'30d':30*86400000};

@@ -75,16 +75,16 @@ function failureReason(error) {
 }
 function publicReasonMessage(reason){
   const labels={
-    key_or_scope:'Roblox geeft HTTP 401 terug. Controleer of de Cloudflare Secret geldig is en deze Universe de juiste universe.analytics:read-bevoegdheid heeft.',
-    creator_access:'Roblox geeft HTTP 403 terug. Controleer of de sleutel voor deze experience de permission universe.analytics:read in het systeem universe-analytics heeft, en of de sleuteleigenaar analytics mag bekijken.',
-    authorization:'Roblox weigert toegang tot analytics. Controleer sleutel, Universe en groepsrechten.',
-    request_invalid:'Roblox heeft de analytics-query afgewezen. Controleer of de experience en metric beschikbaar zijn.',
-    universe_lookup:'De juiste Universe ID kon niet worden opgehaald. Controleer de Universe ID in Roblox Creator Dashboard.',
-    rate_limited:'Roblox heeft tijdelijk een aanvraaglimiet bereikt. De cijfers worden later opnieuw geprobeerd.',
-    upstream:'De Roblox Analytics API is tijdelijk niet bereikbaar.',
-    invalid_response:'Roblox leverde een onverwacht analytics-antwoord.',
-    no_data:'Roblox heeft nog geen definitieve gegevens voor de geselecteerde periode.',
-    pending:'Roblox verwerkt deze query nog.'
+    key_or_scope:'Roblox returned HTTP 401. Check that your Cloudflare Secret is valid and has universe.analytics:read permission for this universe.',
+    creator_access:'Roblox returned HTTP 403. Check that this API key has universe.analytics:read access to the experience and that its owner may view the analytics.',
+    authorization:'Roblox denied analytics access. Check the API key, universe, and group permissions.',
+    request_invalid:'Roblox rejected the analytics query. Check whether the experience and metric are supported.',
+    universe_lookup:'Could not retrieve the correct Universe ID. Check it in Roblox Creator Dashboard.',
+    rate_limited:'Roblox is temporarily rate-limiting requests. Statistics will be retried.',
+    upstream:'The Roblox Analytics API is temporarily unavailable.',
+    invalid_response:'Roblox returned an unexpected analytics response.',
+    no_data:'Roblox has not supplied finalized data for this period yet.',
+    pending:'Roblox is still processing this query.'
   };
   return labels[reason]||labels.upstream;
 }
@@ -148,11 +148,11 @@ async function loadOperation(metric, universeId, key, now, fetcher) {
 export async function publicAnalyticsResponse(env,fetcher=fetch,now=Date.now()){
   const selected=selectedMetrics(env||{});
   if (!selected.length) return output({
-    state:'disabled',metrics:[],note:'Er zijn geen geaggregeerde statistieken geselecteerd.'
+    state:'disabled',metrics:[],note:'No aggregated statistics have been selected for public display.'
   });
   if (!env.ROBLOX_ANALYTICS_API_KEY) return output({
     state:'not_configured',metrics:[],
-    note:'De Cloudflare Secret ontbreekt. Er worden geen privéstatistieken gepubliceerd.'
+    note:'Cloudflare Secret is missing. No private statistics are published.'
   });
   // In-memory cache avoids querying Roblox on every visitor's page load.
   const cachedKey=selected.join('|')+'|'+String(env.ROBLOX_UNIVERSE_ID||'');
@@ -234,7 +234,7 @@ export const publicAnalyticsStyles = String.raw`
 @media(prefers-reduced-motion:reduce){.kvn-insight-card{transition:none}.kvn-insight-card:hover{transform:none}}
 `;
 export const publicAnalyticsMarkup = String.raw`
-<section class="wrap" id="officialMetrics" aria-label="Geselecteerde officiële Roblox statistieken">
+<section class="wrap" id="officialMetrics" aria-label="Selected official Roblox statistics">
  <div class="bar reveal"><div><div class="sec-label">04 / AUTHORIZED ANALYTICS</div>
  <h2>OFFICIAL <span style="color:#74c6ff">INSIGHTS.</span></h2>
  <p class="official-sub">Only owner-approved aggregated Roblox Creator Analytics. No private player data, unpublished revenue, or fabricated estimates.</p></div>
@@ -383,7 +383,7 @@ export const publicAnalyticsClient = String.raw`
        card.append(heading,amount,note);
        if(Array.isArray(metric.points) && metric.points.length>1){
           const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-          svg.setAttribute('viewBox','0 0 300 75');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('role','img');svg.setAttribute('aria-label','Dagelijkse historische waarden van '+metric.label);
+          svg.setAttribute('viewBox','0 0 300 75');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('role','img');svg.setAttribute('aria-label','Daily historical values for '+metric.label);
           const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');
           line.setAttribute('points',svgPoints(metric.points.map(p=>p.value)));
           line.setAttribute('stroke','#68bdff');line.setAttribute('stroke-width','2.5');line.setAttribute('fill','none');line.setAttribute('vector-effect','non-scaling-stroke');

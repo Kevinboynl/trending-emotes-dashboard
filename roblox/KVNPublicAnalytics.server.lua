@@ -84,10 +84,17 @@ local function refresh()
 end
 
 -- A client can request the LAST cached data, never trigger a new HTTP request.
+-- Throttle requests so clients cannot spam the RemoteEvent.
+local lastReply = {}
 remote.OnServerEvent:Connect(function(player, action)
-	if action == "snapshot" then
-		remote:FireClient(player, lastSnapshot)
-	end
+	if action ~= "snapshot" then return end
+	local now = os.clock()
+	if now - (lastReply[player] or -100) < 5 then return end
+	lastReply[player] = now
+	remote:FireClient(player, lastSnapshot)
+end)
+Players.PlayerRemoving:Connect(function(player)
+	lastReply[player] = nil
 end)
 
 task.spawn(function()

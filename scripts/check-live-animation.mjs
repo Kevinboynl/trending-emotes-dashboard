@@ -57,10 +57,13 @@ try{
     assert.equal(rising.motion,'up','Live page did not enter increase state '+JSON.stringify(rising));
     assert.match(rising.chipText,/\+3\s*CCU/);
     assert(rising.chipOpacity>.25,'Rise badge is invisible midway '+JSON.stringify(rising));
-    assert(rising.waveOpacity>.02,'Rise wave is invisible midway '+JSON.stringify(rising));
+    // Wave intentionally starts after 400ms; evaluate visible opacity after that delay.
     assert.match(rising.waveAnimation,/kvnWaveUp/);
     assert.match(rising.edgeAnimation,/kvnEdgeOpacity/);
     assert.match(rising.digitAnimation,/kvnDigitUp/);
+    await page.waitForTimeout(400);
+    const riseWaveOpacity=await page.locator('.kvn-ccu-wave').evaluate(el=>Number(getComputedStyle(el).opacity));
+    assert(riseWaveOpacity>.08,'Rise wave must be visible after its 400ms CSS delay; opacity='+riseWaveOpacity);
     await page.locator('.metrics .primary').screenshot({path:'test-artifacts/live-rise-'+width+'.png'});
 
     // Settle the previous CSS animations, then validate actual fade/slide.
@@ -91,9 +94,12 @@ try{
     assert.equal(falling.motion,'down','Live page did not enter decrease state '+JSON.stringify(falling));
     assert.match(falling.chipText,/−2\s*CCU/);
     assert(falling.chipOpacity>.25,'Drop badge is invisible midway '+JSON.stringify(falling));
-    assert(falling.waveOpacity>.02,'Drop wave is invisible midway '+JSON.stringify(falling));
+    // Decrease wave begins after 440ms, not immediately.
     assert.match(falling.digitAnimation,/kvnDigitDown/);
     assert.match(falling.deltaText,/SINCE LAST VISIT/);
+    await page.waitForTimeout(410);
+    const fallWaveOpacity=await page.locator('.kvn-ccu-wave').evaluate(el=>Number(getComputedStyle(el).opacity));
+    assert(fallWaveOpacity>.05,'Drop wave must be visible after its 440ms CSS delay; opacity='+fallWaveOpacity);
     await page.locator('.metrics .primary').screenshot({path:'test-artifacts/live-fall-'+width+'.png'});
     console.log('PASS deployed UI visual effects at '+width+'px, baseline '+baseline+':',JSON.stringify({rising,falling}));
     assert.deepEqual(errors,[],'Live page JavaScript errors at '+width);

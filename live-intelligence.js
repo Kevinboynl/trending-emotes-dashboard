@@ -177,7 +177,7 @@ line.append(status,delta);
 if(label)label.after(line);
 else card.querySelector('.card-content')?.prepend(line);
 const record=document.createElement('div');record.className='kvn-ccu-record';record.hidden=true;
-record.textContent='✦ NEW PEAK · 24H';
+record.textContent='✦ NEW 24H PEAK';
 const description=card.querySelector('.metric-info');
 if(description)description.after(record);
 else card.querySelector('.card-content')?.append(record);
@@ -272,8 +272,8 @@ window.addEventListener('kvn:verified-stats',event=>{
   if(fresh&&Number.isFinite(priorValue)){
     const diff=d.playing-priorValue;
     delta.dataset.direction=diff>0?'up':diff<0?'down':'flat';
-    delta.textContent=diff>0?'PLAYER ACTIVITY INCREASED':
-      diff<0?'PLAYER ACTIVITY DECREASED':'PLAYER COUNT UNCHANGED';
+    delta.textContent=diff>0?'MEASURED CCU INCREASE':
+      diff<0?'MEASURED CCU DECREASE':'PLAYER COUNT UNCHANGED';
     if(diff!==0){
       showMotion(diff>0?'up':'down');
       revealChip(diff);
@@ -287,16 +287,22 @@ window.addEventListener('kvn:verified-stats',event=>{
     clearMovement();
     hideChip();
   }
-  // A new high requires at least two earlier VERIFIED historical samples,
-  // spanning five minutes; no "record" label from a single initial reading.
-  const history=Array.isArray(info.history)?info.history.filter(p=>
-    p&&Number.isFinite(p.t)&&Number.isFinite(p.ccu)&&
-    p.t<d.timestamp-45000&&p.t>=d.timestamp-86400000):[];
-  const coverage=history.length>=2&&(history[history.length-1].t-history[0].t)>=300000;
+  // "NEW 24H PEAK" must mean something: require ~22 hours of VERIFIED
+  // observations, at least 40 actual samples and no >90min measurement gaps.
+  // This suppresses false records when D1 has only just been connected.
+  const history=(Array.isArray(info.history)?info.history:[]).filter(p=>
+    p&&Number.isFinite(p.t)&&Number.isFinite(p.ccu)&&p.ccu>=0
+    &&p.t<d.timestamp-45000&&p.t>=d.timestamp-86400000
+  ).sort((a,b)=>a.t-b.t);
+  const duration=history.length>1?history[history.length-1].t-history[0].t:0;
+  let maxGap=0;
+  for(let i=1;i<history.length;i++)maxGap=Math.max(maxGap,history[i].t-history[i-1].t);
+  const coverage=history.length>=40&&duration>=22*3600000
+    &&maxGap<=90*60000 && history[history.length-1].t>=d.timestamp-60*60000;
   const isPeak=fresh&&Number.isFinite(priorValue)&&d.playing>priorValue
     &&coverage&&d.playing>Math.max(...history.map(p=>p.ccu));
   if(isPeak){
-    record.title='New high among actual CCU measurements available from the past 24 hours';
+    record.title='Highest measured concurrent-player count within the last 24 hours, with verified history coverage';
     revealPeak();
   }else if(!peakTimer){
     record.hidden=true;
@@ -307,6 +313,10 @@ window.addEventListener('kvn:stats-unavailable',event=>{
   delta.dataset.direction='none';
   delta.textContent=event.detail?.hasPrevious?'LAST VERIFIED SAMPLE':'RETRYING ROBLOX API';
   hidePeak();clearMovement();hideChip();
+});
+// Background tabs may be throttled; end stale visual sequences, never data.
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){clearMovement();hideChip();hidePeak();}
 });
 const chartPanel=document.querySelector('.chart-panel');
 if(chartPanel){

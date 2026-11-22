@@ -181,9 +181,13 @@ const mockFetch=async(url)=>{
 };
 const mockRuntime={...nativeContext,Date:TestClock,fetch:mockFetch};
 const measuredWorker=runInNewContext(bundle,mockRuntime,{timeout:4000})(...Object.values(modules)).worker;
-const first=await (await measuredWorker.fetch(request('/api/stats'),{})).json();
+const backgroundTasks=[];
+const testContext={waitUntil:p=>backgroundTasks.push(p)};
+const first=await (await measuredWorker.fetch(request('/api/stats'),{},testContext)).json();
 assert.equal(first.playing,10);
-assert.equal(first.likes,26);
+assert.ok(first.likes===null||first.likes===26,
+  'Optional votes must not block the initial CCU response');
+await Promise.all(backgroundTasks);
 assert.equal(first.favorites,43);
 assert.equal(requests.game,1);
 assert.equal(requests.votes,1);
@@ -202,5 +206,34 @@ assert.equal(requests.game,2);
 assert.equal(requests.votes,1,'Votes should be cached while CCU changes');
 assert.equal(requests.icons,1,'Artwork should be cached while CCU changes');
 assert.equal(third.timestamp,fakeNow);
+// A slow optional Roblox enrichment endpoint must not block verified live CCU.
+let releaseOptional;
+const slowOptional=new Promise(resolve=>{releaseOptional=resolve;});
+const slowFetch=async url=>{
+  const u=String(url);
+  if(u.includes('/universes/v1/places/'))return Response.json({universeId:123456});
+  if(u.startsWith('https://games.roblox.com/v1/games?'))return Response.json({
+    data:[{name:'TRENDING EMOTES!',playing:27,visits:155,favoritedCount:55}]
+  });
+  return slowOptional;
+};
+const slowWorker=runInNewContext(bundle,{...mockRuntime,fetch:slowFetch},{timeout:4000})
+  (...Object.values(modules)).worker;
+const delayedTasks=[];
+let watchdog;
+try {
+  const quickResponse=await Promise.race([
+    slowWorker.fetch(request('/api/stats'),{},{waitUntil:p=>delayedTasks.push(p)}),
+    new Promise((_,reject)=>{watchdog=setTimeout(
+      ()=>reject(Error('Live CCU was blocked by optional Roblox calls')),750
+    );})
+  ]);
+  assert.equal((await quickResponse.json()).playing,27);
+} finally {
+  clearTimeout(watchdog);
+  releaseOptional(Response.json({data:[]}));
+  await Promise.all(delayedTasks);
+}
+console.log('PASS: Live CCU returns without waiting for optional Roblox votes or artwork.');
 console.log('PASS: Browser 20s refresh, official analytics timer, verified CCU update and Roblox upstream caching.');
 console.log('PASS: Worker composition, dashboard JavaScript, selected filters, real-data wiring, CSS, CSP nonce, invalid routes and public API states.');

@@ -396,7 +396,13 @@ export const publicAnalyticsClient = String.raw`
      acq.append(makeInsight('EndToEndCVR','Play-through rate',payload));
    }
  };
+ const OFFICIAL_REFRESH_MS=15*60*1000;
+ let lastOfficialRefresh=0;
+ let officialRequest=null;
  async function fetchPublished(){
+   if(officialRequest)return officialRequest;
+   lastOfficialRefresh=Date.now();
+   officialRequest=(async()=>{
    try{
      const r=await fetch('/api/public-analytics',{cache:'no-store'});
      const data=await r.json();
@@ -429,8 +435,16 @@ export const publicAnalyticsClient = String.raw`
      if(!grid.children.length){message('No selected metrics available.');return}
      root.append(grid);
    }catch{renderPanels(null);message('Authorized Creator Analytics are temporarily unavailable.');}
+   })();
+   try{return await officialRequest;}
+   finally{officialRequest=null;}
  }
  fetchPublished();
- document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchPublished()});
+ // Creator Analytics is finalized per UTC day, unlike live concurrent players.
+ // Only recheck on a slow schedule to respect Roblox Open Cloud limits.
+ setInterval(()=>{if(!document.hidden)fetchPublished();},OFFICIAL_REFRESH_MS);
+ document.addEventListener('visibilitychange',()=>{
+   if(!document.hidden&&Date.now()-lastOfficialRefresh>=OFFICIAL_REFRESH_MS)fetchPublished();
+ });
 })();
 `;

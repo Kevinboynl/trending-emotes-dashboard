@@ -145,6 +145,10 @@ footer .footer-brand{letter-spacing:-.4px}
 .metrics.is-loading .card .number::after{animation:none!important}
 .hero-sheen{display:none!important}
 }
+
+/* Responsive CCU hero: draw sparkline only when it has enough room. */
+@media(min-width:681px){.metrics .primary .sparkline{position:absolute;bottom:17px;right:33px;width:38%;height:44px;margin:0;opacity:.47}}
+@media(max-width:680px){.metrics .primary .sparkline{display:none}.metrics .card:not(.primary) .number{font-size:clamp(24px,6.8vw,34px)}}
 `;
 export const refinementJS = String.raw`
 /* A progressive enhancement. It never requests private data or changes API payloads. */

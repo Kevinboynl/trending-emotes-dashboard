@@ -392,11 +392,24 @@ export default {
       // Disallow arbitrary query parameters and surprise URL variants.
       // The only supported API parameter is the predefined history range.
       if(pathname==='/api/history'){
-        const allowed=new Set(['1h','24h','7d','30d']);
-        const range=url.searchParams.get('range');
-        if(url.searchParams.size>1 || (url.searchParams.size===1 && (!url.searchParams.has('range') || !allowed.has(range))))
+        const allowedRanges=new Set(['1h','24h','7d','30d']);
+        // Links shared through chat/search may append harmless attribution
+        // parameters. Accept known tracking keys but never use their values in
+        // SQL, analytics selection, or cache lookup. Reject any functional
+        // unknown key, duplicate range, or malformed range.
+        const tracking=new Set([
+          'utm_source','utm_medium','utm_campaign','utm_content','utm_term',
+          'utm_id','gclid','fbclid'
+        ]);
+        const query=[...url.searchParams];
+        const ranges=url.searchParams.getAll('range');
+        const validQuery=query.length<=9 && query.every(([key,value])=>
+          (key==='range' && allowedRanges.has(value)) ||
+          (tracking.has(key) && value.length<=256)
+        );
+        if(!validQuery || ranges.length>1 || (ranges.length===1 && !allowedRanges.has(ranges[0])))
           return safeError(400,'invalid_query','Supported history ranges are 1h, 24h, 7d, and 30d.');
-      }else if(url.searchParams.size){
+      }else if([...url.searchParams].length){
         return safeError(400,'invalid_query','This endpoint does not accept query parameters.');
       }
       if(!(await allowPublicApi(request,env,pathname)))

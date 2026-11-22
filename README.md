@@ -189,3 +189,22 @@ De openbare API blijft `/api/public-analytics`. Na de nieuwste code-update:
 - Geen van deze fouten wordt opgelost door de publieke metrics-variabele uit te breiden. De dashboardbezoekers hebben geen Roblox-account of API-key nodig.
 
 Het endpoint toont alleen de veilige foutcategorie. **Nooit** de API-key in berichten, GitHub of screenshots zetten.
+
+## In-game Roblox statistiekenwidget (optioneel)
+
+Wil je de *echt gemeten* geaggregeerde DAU en gemiddelde sessieduur **in TRENDING EMOTES! zelf** tonen? De scripts staan in de [roblox map](./roblox):
+
+- [`KVNPublicAnalytics.server.lua`](./roblox/KVNPublicAnalytics.server.lua): ServerScriptService → nieuw **Script**. De server vraagt de bestaande publieke `/api/public-analytics` route elke 10 minuten op, valideert de velden en stuurt alleen twee publieke cijfers naar de spelers.
+- [`KVNPublicAnalytics.client.lua`](./roblox/KVNPublicAnalytics.client.lua): StarterPlayer → StarterPlayerScripts → nieuw **LocalScript**. Toont een klein, optioneel blauw game-stats-venster dat op pc en mobiel kan worden geopend.
+
+### Installeren zonder downloaden
+
+1. Open de eerste GitHub-file, klik op **Raw** (of kopieer de code), en plak alles in een **Script** in `ServerScriptService`.
+2. Open de tweede GitHub-file en plak alles in een **LocalScript** in `StarterPlayer > StarterPlayerScripts`.
+3. Zet in Roblox Studio bij **Game Settings → Security → Allow HTTP Requests** de instelling op **On**.
+4. Test met **Play**; je ziet rechts een kleine knop **GAME STATS**. Klik voor DAU en session time. De eerste meting wordt alleen getoond zodra de openbare dashboard-API deze cijfers werkelijk levert.
+5. Publiceer je Roblox experience vanuit Studio wanneer je groeps- en accountrechten dit toestaan.
+
+**Geen Roblox API-key of Cloudflare Secret in Roblox Studio plaatsen.** Het script roept uitsluitend de URL `https://trending-emotes-dashboard.k-backx.workers.dev/api/public-analytics` aan en krijgt *alleen* jouw reeds openbaar gemaakte geaggregeerde cijfers. De Roblox Studio gamefiles zijn niet gekoppeld aan deze GitHub-repository: de bestanden zijn **klaar om te installeren, maar nog niet toegevoegd of gepubliceerd in je echte Roblox-game**.
+
+Dit in-game widget vervangt je bestaande emote-UI niet. Als je eigen interface op dezelfde plek staat, wijzig dan alleen de `Position` van `OpenStats` en `StatsPanel` in het LocalScript.

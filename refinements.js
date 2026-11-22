@@ -260,7 +260,7 @@ if(chart && frame && curve){
   for(let i=0;i<4;i++)rows.append(document.createElement('span'));
   frame.prepend(rows);
   const foot=document.createElement('div');foot.className='chart-key';
-  foot.innerHTML='<div class="key-left"><i class="key-mark" aria-hidden="true"></i><span class="key-name">Live activity</span></div><span class="key-source">Gemeten Roblox-data • geen schattingen</span>';
+  foot.innerHTML='<div class="key-left"><i class="key-mark" aria-hidden="true"></i><span class="key-name">Live activity</span></div><span class="key-source">Measured Roblox data • no estimates</span>';
   const chartAxis=document.querySelector('.chart-axis');
   if(chartAxis) chartAxis.before(foot);
   const mark=throttle(e=>{
@@ -320,7 +320,7 @@ function renderSparks(){
       svg.setAttribute('viewBox','0 0 190 44');
       svg.setAttribute('preserveAspectRatio','none');
       svg.setAttribute('role','img');
-      svg.setAttribute('aria-label','Gemeten trend voor '+label);
+      svg.setAttribute('aria-label','Measured trend for '+label);
       const fill=document.createElementNS('http://www.w3.org/2000/svg','path');
       fill.setAttribute('class','spark-fill');
       const stroke=document.createElementNS('http://www.w3.org/2000/svg','path');

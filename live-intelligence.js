@@ -262,7 +262,7 @@ line.append(status,delta);
 if(label)label.after(line);
 else card.querySelector('.card-content')?.prepend(line);
 const record=document.createElement('div');record.className='kvn-ccu-record';record.hidden=true;
-record.textContent='✦ NEW MEASURED PERIOD PEAK';
+record.textContent='✦ NEW PEAK · 24H';
 const description=card.querySelector('.metric-info');
 if(description)description.after(record);
 else card.querySelector('.card-content')?.append(record);
@@ -271,11 +271,18 @@ freshness.setAttribute('aria-live','off');freshness.textContent='Waiting for a v
 record.after(freshness);
 const flash=document.createElement('div');flash.className='kvn-ccu-flash';
 flash.setAttribute('aria-hidden','true');card.prepend(flash);
+const travel=document.createElement('div');travel.className='kvn-ccu-travel';
+travel.setAttribute('aria-hidden','true');card.prepend(travel);
+const wave=document.createElement('div');wave.className='kvn-ccu-wave';
+wave.setAttribute('aria-hidden','true');card.prepend(wave);
 const changeChip=document.createElement('span');
 changeChip.className='kvn-ccu-change';changeChip.hidden=true;
 changeChip.setAttribute('role','status');changeChip.setAttribute('aria-live','polite');
 changeChip.setAttribute('aria-label','Verified concurrent player count change');
-card.querySelector('.card-content')?.append(changeChip);
+// This row wraps on small screens, so the floating badge cannot cover digits.
+const numberRow=document.createElement('div');numberRow.className='kvn-ccu-number-row';
+player.before(numberRow);
+numberRow.append(player,changeChip);
 let changeChipTimer=null;
 function hideChip(){
   if(changeChipTimer){clearTimeout(changeChipTimer);changeChipTimer=null;}
@@ -295,10 +302,22 @@ function revealChip(diff){
   changeChip.removeAttribute('data-visible');
   void changeChip.offsetWidth;
   changeChip.dataset.visible='true';
-  changeChipTimer=setTimeout(hideChip,5200);
+  changeChipTimer=setTimeout(hideChip,2200);
 }
-let lastTimestamp=null;
-let lastTrustedCCU=null;
+let movementTimer=null;
+let peakTimer=null;
+function hidePeak(){
+  if(peakTimer){clearTimeout(peakTimer);peakTimer=null;}
+  record.classList.remove('is-new-peak');
+  record.hidden=true;
+}
+function revealPeak(){
+  hidePeak();
+  record.hidden=false;
+  void record.offsetWidth; // Runs only after a newly VERIFIED high.
+  record.classList.add('is-new-peak');
+  peakTimer=setTimeout(hidePeak,2600);
+}
 function setState(name,text){status.dataset.state=name;wording.textContent=text;}
 function updateTime(stamp,cached){
   if(!Number.isFinite(stamp))return;
@@ -307,20 +326,22 @@ function updateTime(stamp,cached){
   freshness.title='Timestamp returned with the latest actual Roblox measurement';
 }
 function clearMovement(){
+  if(movementTimer){clearTimeout(movementTimer);movementTimer=null;}
   card.removeAttribute('data-motion');
 }
 function showMotion(direction){
-  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   clearMovement();
-  void card.offsetWidth; // Only on a verified CCU change, not during scrolling.
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  void card.offsetWidth; // Only once per verified CCU change.
   card.dataset.motion=direction;
+  movementTimer=setTimeout(clearMovement,1600);
 }
 window.addEventListener('kvn:verified-stats',event=>{
   const info=event.detail||{},d=info.stats;
   if(!d||!Number.isFinite(d.playing)){
     setState('unavailable','METRIC UNAVAILABLE');
     delta.textContent='NO VERIFIED PLAYER COUNT';
-    delta.dataset.direction='none';record.hidden=true;
+    delta.dataset.direction='none';hidePeak();
     clearMovement();hideChip();return;
   }
   const fresh=!d.stale&&Number.isFinite(d.timestamp);
@@ -328,15 +349,16 @@ window.addEventListener('kvn:verified-stats',event=>{
   setState(fresh?'live':'cached',fresh?'AUTO UPDATING · VERIFIED':'CACHED · NOT LIVE');
   // Never claim a trend between identical timestamps or stale responses.
   const previous=info.previous;
+  // A comparison requires two distinct FRESH Roblox measurements.
+  // Never derive a motion direction from cached or stale fallback values.
   const priorValue=previous&&!previous.stale&&Number.isFinite(previous.playing)
     && Number.isFinite(previous.timestamp)&&previous.timestamp<d.timestamp
-    ?previous.playing
-    :(lastTimestamp!==null&&lastTimestamp<d.timestamp?lastTrustedCCU:null);
+    ?previous.playing:null;
   if(fresh&&Number.isFinite(priorValue)){
     const diff=d.playing-priorValue;
     delta.dataset.direction=diff>0?'up':diff<0?'down':'flat';
-    delta.textContent=(diff>0?'+':diff<0?'−':'')+
-      Math.abs(diff).toLocaleString('en-US')+' SINCE PREVIOUS SAMPLE';
+    delta.textContent=diff>0?'PLAYER ACTIVITY INCREASED':
+      diff<0?'PLAYER ACTIVITY DECREASED':'PLAYER COUNT UNCHANGED';
     if(diff!==0){
       showMotion(diff>0?'up':'down');
       revealChip(diff);
@@ -350,22 +372,26 @@ window.addEventListener('kvn:verified-stats',event=>{
     clearMovement();
     hideChip();
   }
-  if(fresh){lastTimestamp=d.timestamp;lastTrustedCCU=d.playing;}
   // A new high requires at least two earlier VERIFIED historical samples,
   // spanning five minutes; no "record" label from a single initial reading.
   const history=Array.isArray(info.history)?info.history.filter(p=>
     p&&Number.isFinite(p.t)&&Number.isFinite(p.ccu)&&
     p.t<d.timestamp-45000&&p.t>=d.timestamp-86400000):[];
   const coverage=history.length>=2&&(history[history.length-1].t-history[0].t)>=300000;
-  const isPeak=fresh&&coverage&&d.playing>Math.max(...history.map(p=>p.ccu));
-  record.hidden=!isPeak;
-  record.title=isPeak?'Compared with earlier verified history available in the selected chart data':''; 
+  const isPeak=fresh&&Number.isFinite(priorValue)&&d.playing>priorValue
+    &&coverage&&d.playing>Math.max(...history.map(p=>p.ccu));
+  if(isPeak){
+    record.title='New high among actual CCU measurements available from the past 24 hours';
+    revealPeak();
+  }else if(!peakTimer){
+    record.hidden=true;
+  } 
 });
 window.addEventListener('kvn:stats-unavailable',event=>{
   setState('unavailable','REFRESH DELAYED');
   delta.dataset.direction='none';
   delta.textContent=event.detail?.hasPrevious?'LAST VERIFIED SAMPLE':'RETRYING ROBLOX API';
-  record.hidden=true;clearMovement();hideChip();
+  hidePeak();clearMovement();hideChip();
 });
 const chartPanel=document.querySelector('.chart-panel');
 if(chartPanel){

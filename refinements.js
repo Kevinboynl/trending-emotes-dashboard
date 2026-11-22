@@ -261,8 +261,8 @@ if(hero&&!reduce.matches&&fine.matches){
   light.setAttribute('aria-hidden','true');
   hero.append(light);
   const positionLight=throttle((x,y)=>{
-    // The light starts at left:0/top:0, so position = cursor minus half of its dimensions.
-    light.style.transform='translate3d('+(x-145)+'px,'+(y-145)+'px,0)';
+    // Translate by half the light's ACTUAL width/height: stays centered at every breakpoint.
+    light.style.transform='translate3d('+x+'px,'+y+'px,0) translate(-50%,-50%)';
   });
   hero.addEventListener('pointermove',e=>{
     const r=hero.getBoundingClientRect();

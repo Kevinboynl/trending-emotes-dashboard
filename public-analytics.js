@@ -44,83 +44,130 @@ async function getUniverse(env, fetcher) {
   universeCache = String(result.universeId);
   return universeCache;
 }
+/* Only publish safe, fixed status categories — never the API key or Roblox's raw response. */
+function failureReason(error) {
+  const code=String(error?.message||'');
+  if (code === 'universe-lookup-failed' || code === 'universe-lookup-invalid') return 'universe_lookup';
+  if (/^analytics-upstream-status-(401|403)$/.test(code) || /^analytics-poll-status-(401|403)$/.test(code)) return 'authorization';
+  if (/^analytics-upstream-status-(400|404|422)$/.test(code) || code === 'analytics-query-rejected-2001') return 'request_invalid';
+  if (/^analytics-upstream-status-429$/.test(code) || code === 'analytics-query-rejected-3000') return 'rate_limited';
+  if (/^analytics-upstream-status-5\d\d$/.test(code) || /^analytics-poll-status-5\d\d$/.test(code)) return 'upstream';
+  if (code === 'invalid-operation-path' || code === 'invalid-analytics-payload' || code === 'invalid-aggregate-series') return 'invalid_response';
+  return 'upstream';
+}
+function publicReasonMessage(reason){
+  const labels={
+    authorization:'Roblox weigert toegang tot analytics. Controleer de API-key, universe.analytics:read en de rechten op deze groepsgame.',
+    request_invalid:'Roblox heeft de analytics-query afgewezen. Controleer of de experience en metric beschikbaar zijn.',
+    universe_lookup:'De juiste Universe ID kon niet worden opgehaald. Controleer de Universe ID in Roblox Creator Dashboard.',
+    rate_limited:'Roblox heeft tijdelijk een aanvraaglimiet bereikt. De cijfers worden later opnieuw geprobeerd.',
+    upstream:'De Roblox Analytics API is tijdelijk niet bereikbaar.',
+    invalid_response:'Roblox leverde een onverwacht analytics-antwoord.',
+    no_data:'Roblox heeft nog geen definitieve gegevens voor de geselecteerde periode.',
+    pending:'Roblox verwerkt deze query nog.'
+  };
+  return labels[reason]||labels.upstream;
+}
 async function loadOperation(metric, universeId, key, now, fetcher) {
   const midnight = new Date(now);
   midnight.setUTCHours(0, 0, 0, 0);
   const endTime = midnight.toISOString();
-  const startTime = new Date(midnight.getTime() - 31*86400000).toISOString();
+  const startTime = new Date(midnight.getTime()-31*86400000).toISOString();
   const path = 'v1/universes/' + universeId + '/metrics';
-  const headers = { 'x-api-key': key, 'Content-Type':'application/json', Accept:'application/json' };
-  const response = await fetcher(BASE + path, {
+  const headers = { 'x-api-key':key, 'Content-Type':'application/json', Accept:'application/json' };
+  const response = await fetcher(BASE+path,{
     method:'POST', headers, signal:AbortSignal.timeout(12000),
     body:JSON.stringify({ metric, granularity:'OneDay', startTime, endTime })
   });
-  if (!response.ok) throw new Error('analytics-upstream-status-' + response.status);
+  if (!response.ok) throw new Error('analytics-upstream-status-'+response.status);
   let result = await response.json();
-  if (!result || typeof result !== 'object') throw new Error('invalid-analytics-response');
-  // Respect Roblox's async operation envelope. Poll at most twice per browser request.
-  for (let attempt = 0; attempt < 2 && result.done === false; attempt++) {
-    const operationPath = result.path;
-    const safePath = 'v1/universes/' + universeId + '/operations/metrics/';
+  if (!result || typeof result !== 'object') throw new Error('invalid-analytics-payload');
+
+  // Roblox may return a long-running operation. Only follow validated Roblox paths.
+  for (let attempt=0;attempt<3&&result.done===false;attempt++){
+    const operationPath=result.path;
+    const safePath = 'v1/universes/'+universeId+'/operations/metrics/';
     if (typeof operationPath !== 'string' ||
       !operationPath.startsWith(safePath) ||
-      !/^v1\/universes\/[0-9]+\/operations\/metrics\/[A-Za-z0-9_-]+$/.test(operationPath)) {
+      !/^v1\/universes\/[0-9]+\/operations\/metrics\/[A-Za-z0-9_-]+$/.test(operationPath))
       throw new Error('invalid-operation-path');
-    }
-    const r = await fetcher(BASE + operationPath, { headers:{'x-api-key':key, Accept:'application/json'}, signal:AbortSignal.timeout(12000) });
-    if (!r.ok) throw new Error('analytics-poll-status-'+r.status);
-    result = await r.json();
-  }
-  if (result.done === false) return { state:'pending', points:[], latest:null };
-  if (result.error) throw new Error('analytics-query-rejected');
-  if (result.done !== true || !Array.isArray(result.response?.values)) throw new Error('invalid-analytics-payload');
-  const series = result.response.values.filter(x => Array.isArray(x.breakdowns) && x.breakdowns.length === 0);
-  if (series.length !== 1 || !Array.isArray(series[0].dataPoints)) throw new Error('invalid-aggregate-series');
-  const points = series[0].dataPoints
-    .filter(p => p && typeof p.time === 'string'
-      && typeof p.value === 'number' && Number.isFinite(p.value)
-      && p.value >= 0 && !Array.isArray(p.stringValues)
-      && (p.status == null || p.status === 'Valid')
-      && Date.parse(p.time) >= Date.parse(startTime)
-      && Date.parse(p.time) < Date.parse(endTime))
-    .map(p => ({ date:p.time.slice(0,10), value:p.value }))
-    .sort((a,b) => a.date.localeCompare(b.date))
-    .slice(-31);
-  return { state:points.length ? 'ready' : 'unavailable', points, latest:points.length ? points[points.length - 1] : null };
-}
-export async function publicAnalyticsResponse(env, fetcher = fetch, now = Date.now()) {
-  const selected = selectedMetrics(env || {});
-  if (!selected.length) return output({ state:'disabled', metrics:[], note:'Geen privé-analytics geselecteerd om openbaar te tonen.' });
-  if (!env.ROBLOX_ANALYTICS_API_KEY) return output({
-    state:'not_configured',
-    metrics:[],
-    note:'Een Cloudflare Secret ontbreekt. Privé-analytics worden niet getoond.'
-  });
-  const cachedKey = selected.join('|');
-  const hit = cache.get(cachedKey);
-  if (hit && hit.until > now) return output(hit.body);
-  try {
-    const universeId = await getUniverse(env, fetcher);
-    const results = await Promise.allSettled(
-      selected.map(metric => loadOperation(metric, universeId, env.ROBLOX_ANALYTICS_API_KEY, now, fetcher))
-    );
-    const metrics = selected.map((id, i) => {
-      const info = ANALYTICS_CATALOG[id];
-      const res = results[i].status === 'fulfilled' ? results[i].value : { state:'unavailable', points:[], latest:null };
-      return { id, ...info, ...res };
+    const poll=await fetcher(BASE+operationPath,{
+      method:'GET',
+      headers:{'x-api-key':key,Accept:'application/json'},
+      signal:AbortSignal.timeout(12000)
     });
-    const ready = metrics.filter(m=>m.state === 'ready').length;
-    const pending = metrics.filter(m=>m.state === 'pending').length;
-    const body = {
-      state:ready === selected.length ? 'ready' : (ready ? 'partial' : pending ? 'pending' : 'unavailable'),
-      metrics, publishedAt:new Date(now).toISOString(),
+    if (!poll.ok) throw new Error('analytics-poll-status-'+poll.status);
+    result=await poll.json();
+  }
+  if (result.done===false) return {state:'pending',reason:'pending',points:[],latest:null};
+  if (result.error) throw new Error('analytics-query-rejected-'+(Number.isInteger(result.error.code)?result.error.code:'unknown'));
+  if (result.done!==true||!Array.isArray(result.response?.values))
+    throw new Error('invalid-analytics-payload');
+
+  // No dimension breakdown is requested. The single aggregate series may omit breakdowns.
+  const series=result.response.values.filter(x=>x && (x.breakdowns==null ||
+    (Array.isArray(x.breakdowns) && x.breakdowns.length===0)));
+  if (series.length!==1 || !Array.isArray(series[0].dataPoints))
+    throw new Error('invalid-aggregate-series');
+  const points=series[0].dataPoints.filter(p=>p && typeof p.time==='string'
+    && typeof p.value==='number' && Number.isFinite(p.value)
+    && p.value>=0 && !Array.isArray(p.stringValues)
+    && (p.status == null || p.status==='Valid')
+    && Number.isFinite(Date.parse(p.time)) && Date.parse(p.time)>=Date.parse(startTime)
+    && Date.parse(p.time)<Date.parse(endTime)
+  ).map(p=>({date:p.time.slice(0,10),value:p.value}))
+    .sort((a,b)=>a.date.localeCompare(b.date)).slice(-31);
+  return {
+    state: points.length?'ready':'unavailable',
+    ...(points.length?{}:{reason:'no_data'}),
+    points,latest:points.length?points[points.length-1]:null
+  };
+}
+export async function publicAnalyticsResponse(env,fetcher=fetch,now=Date.now()){
+  const selected=selectedMetrics(env||{});
+  if (!selected.length) return output({
+    state:'disabled',metrics:[],note:'Er zijn geen geaggregeerde statistieken geselecteerd.'
+  });
+  if (!env.ROBLOX_ANALYTICS_API_KEY) return output({
+    state:'not_configured',metrics:[],
+    note:'De Cloudflare Secret ontbreekt. Er worden geen privéstatistieken gepubliceerd.'
+  });
+  // In-memory cache avoids querying Roblox on every visitor's page load.
+  const cachedKey=selected.join('|')+'|'+String(env.ROBLOX_UNIVERSE_ID||'');
+  const hit=cache.get(cachedKey);
+  if(hit&&hit.until>now) return output(hit.body);
+  try{
+    const universeId=await getUniverse(env,fetcher);
+    const results=await Promise.allSettled(selected.map(
+      metric=>loadOperation(metric,universeId,env.ROBLOX_ANALYTICS_API_KEY,now,fetcher)
+    ));
+    const metrics=selected.map((id,i)=>{
+      const info=ANALYTICS_CATALOG[id];
+      if(results[i].status==='fulfilled')return {id,...info,...results[i].value};
+      const reason=failureReason(results[i].reason);
+      return {id,...info,state:'unavailable',reason,points:[],latest:null};
+    });
+    const ready=metrics.filter(m=>m.state==='ready').length;
+    const pending=metrics.filter(m=>m.state==='pending').length;
+    const state=ready===selected.length?'ready':
+      ready?'partial':pending?'pending':'unavailable';
+    const reasons=[...new Set(metrics.filter(m=>m.state!=='ready').map(m=>m.reason).filter(Boolean))];
+    const body={
+      state,metrics,publishedAt:new Date(now).toISOString(),
       source:'Roblox Open Cloud Analytics Query API',
-      window:'Last 31 complete UTC days (latest yesterday)'
+      window:'Last 31 complete UTC days (latest yesterday)',
+      // Safe diagnostics: no API key, universe ID, account data, or raw error messages.
+      ...(reasons.length?{reason:reasons.length===1?reasons[0]:'mixed',
+        note:publicReasonMessage(reasons[0])}: {})
     };
-    cache.set(cachedKey, { body, until:now+(ready?TTL:45000) });
+    cache.set(cachedKey,{body,until:now+(ready?TTL:45000)});
     return output(body);
-  } catch {
-    return output({ state:'unavailable', metrics:[], note:'Geautoriseerde statistieken tijdelijk niet beschikbaar.' }, 503);
+  }catch(err){
+    const reason=failureReason(err);
+    return output({
+      state:'unavailable',reason,metrics:[],
+      note:publicReasonMessage(reason)
+    },503);
   }
 }
 export const publicAnalyticsStyles = String.raw`

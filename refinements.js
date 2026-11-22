@@ -16,7 +16,7 @@ a:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:2px solid 
 .navlinks a[aria-current="location"]{color:var(--white);background:color-mix(in srgb,var(--blue) 17%,transparent)}
 .navlinks a[aria-current="location"]:after{transform:scaleX(1)}
 .hero{isolation:isolate}
-.hero-sheen{position:absolute;z-index:-1;left:50%;top:50%;width:330px;height:330px;border-radius:50%;opacity:.23;pointer-events:none;filter:blur(42px);background:radial-gradient(circle,var(--blue) 0%,transparent 70%);transform:translate3d(-50%,-50%,0);will-change:transform}
+.hero-sheen{position:absolute;z-index:-1;left:0;top:0;width:330px;height:330px;border-radius:50%;opacity:.23;pointer-events:none;filter:blur(42px);background:radial-gradient(circle,var(--blue) 0%,transparent 70%);transform:translate3d(-700px,-700px,0);will-change:transform}
 .hero h1{max-width:750px}
 .hero .eyebrow{animation:refineIn .75s .08s var(--ease-enter) both}
 .hero .lead{max-width:590px}
@@ -192,7 +192,7 @@ if(hero&&!reduce.matches&&fine.matches){
   hero.append(light);
   hero.addEventListener('pointermove',throttle(e=>{
     const r=hero.getBoundingClientRect();
-    light.style.transform='translate3d('+(e.clientX-r.left-165)+'px,'+(e.clientY-r.top-165)+'px,0)';
+    light.style.transform='translate3d('+(e.clientX-r.left-light.offsetWidth/2)+'px,'+(e.clientY-r.top-light.offsetHeight/2)+'px,0)';
   }),{passive:true});
   hero.addEventListener('pointerleave',()=>{light.style.transform='translate3d(-700px,-700px,0)'});
 }

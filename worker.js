@@ -122,15 +122,32 @@ async function record(db, s) {
     .bind(t, s.playing, s.visits, s.favorites, s.likes, s.dislikes).run();
 }
 async function history(db, range) {
-  if (!db) return { storage: 'browser', points: [] };
+  if (!db) return {storage:'browser',points:[],comparison:{state:'d1_required'}};
   await ensureDB(db);
-  const durations = { '1h': 3600000, '24h': 86400000, '7d': 7*86400000, '30d': 30*86400000 };
-  const duration = durations[range] || durations['24h'];
-  const since = Date.now() - duration;
-  const bucket = Math.max(300000, Math.ceil(duration / 170 / 300000) * 300000);
-  const sql = 'SELECT MIN(t) t, ROUND(AVG(ccu)) ccu, MAX(visits) visits, MAX(favorites) favorites, MAX(likes) likes, MAX(dislikes) dislikes FROM samples WHERE t>=? GROUP BY CAST(t / ? AS INTEGER) ORDER BY t ASC LIMIT 180';
-  const res = await db.prepare(sql).bind(since, bucket).all();
-  return { storage:'cloud', points: res.results || [] };
+  const durations={'1h':3600000,'24h':86400000,'7d':7*86400000,'30d':30*86400000};
+  const selectedRange=Object.prototype.hasOwnProperty.call(durations,range)?range:'24h';
+  const duration=durations[selectedRange],now=Date.now(),since=now-duration;
+  const bucket=Math.max(300000,Math.ceil(duration/170/300000)*300000);
+  const sql='SELECT MIN(t) t, ROUND(AVG(ccu)) ccu, MAX(visits) visits, MAX(favorites) favorites, MAX(likes) likes, MAX(dislikes) dislikes FROM samples WHERE t>=? GROUP BY CAST(t / ? AS INTEGER) ORDER BY t ASC LIMIT 180';
+  const res=await db.prepare(sql).bind(since,bucket).all();
+  // Only compare accurately labelled average OBSERVED CCU. Both periods
+  // must contain actual 5-minute samples covering most of their duration.
+  const comparisonQuery='SELECT CASE WHEN t>=? THEN 1 ELSE 0 END AS period, COUNT(*) AS samples, AVG(ccu) AS average, MIN(t) AS first_t, MAX(t) AS last_t FROM samples WHERE t>=? AND t<? AND ccu IS NOT NULL GROUP BY period';
+  const prior=await db.prepare(comparisonQuery).bind(since,now-2*duration,now).all();
+  const segments=Array.isArray(prior.results)?prior.results:[];
+  const current=segments.find(x=>x.period===1),previous=segments.find(x=>x.period===0);
+  const enough=x=>x&&Number.isFinite(x.samples)&&x.samples>=Math.ceil(duration/300000*.7)
+    &&Number.isFinite(x.first_t)&&Number.isFinite(x.last_t)
+    &&x.last_t-x.first_t>=duration*.7
+    &&Number.isFinite(x.average)&&x.average>=0;
+  const comparison=enough(current)&&enough(previous)?{
+    state:'ready',metric:'sampled_average_ccu',range:selectedRange,
+    current:Math.round(current.average*10)/10,
+    previous:Math.round(previous.average*10)/10,
+    sampleCounts:{current:current.samples,previous:previous.samples},
+    label:'Average sampled concurrent players (not DAU)'
+  }:{state:'insufficient',range:selectedRange};
+  return {storage:'cloud',points:res.results||[],comparison};
 }
 const HTML = String.raw`<!doctype html>
 <html lang="en"><head>
@@ -240,10 +257,12 @@ async function stats(){try{const r=await fetch('/api/stats',{cache:'no-store'});
 function getPoints(){const since=Date.now()-spans[currentRange];const base=usingCloud?cloudHistory:browserHistory;return base.filter(x=>x.t>=since&&Number.isFinite(x[currentMetric]));}
 async function loadHistory(){
   let unavailable=false;
+  let comparison={state:'unavailable'};
   try{
     const r=await fetch('/api/history?range='+currentRange,{cache:'no-store'});
     if(!r.ok)throw Error('history unavailable');
     const data=await r.json();
+    comparison=data.comparison&&typeof data.comparison==='object'?data.comparison:{state:'unavailable'};
     if(data.storage==='cloud'){
       usingCloud=true;
       cloudHistory=Array.isArray(data.points)?data.points.filter(p=>p&&Number.isFinite(p.t)):[];
@@ -267,6 +286,7 @@ async function loadHistory(){
     }
   }
   await acquisition();
+  window.dispatchEvent(new CustomEvent('kvn:history-loaded',{detail:{range:currentRange,comparison,cloud:usingCloud,error:unavailable}}));
 }
 async function acquisition(){
   let source=browserHistory;

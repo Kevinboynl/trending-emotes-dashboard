@@ -286,6 +286,52 @@ try{
         'Missing baseline must not synthesize a prior CCU');
       assert.deepEqual(errors,[],'Browser JS error during returning visitor scenarios');
       console.log('PASS: Return up/down, reopen/reload, unseen fetch, rapid focus, stale/error, identical timestamp, 1h, expired and cleared storage.');
+      // Closing a tab and opening another tab in the SAME browser context
+      // must preserve the last actual visible CCU in localStorage.
+      await page.request.get(localURL+'__test__/ccu?value=52');
+      const reopen=await page.context().newPage();
+      await reopen.goto(localURL,{waitUntil:'domcontentloaded'});
+      await reopen.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='52');
+      assert.match(await reopen.locator('.kvn-ccu-change').innerText(),/\+1\s*CCU/,
+        'Opening a new tab should compare against the last displayed count');
+      assert.match(await reopen.locator('.kvn-ccu-delta').innerText(),/SINCE LAST VISIT/);
+      await reopen.close();
+
+      // Reduced-motion users still see the verified net delta label, but no
+      // animated digit slots or card glow.
+      await page.request.get(localURL+'__test__/ccu?value=54');
+      const reducedPage=await page.context().newPage();
+      await reducedPage.emulateMedia({reducedMotion:'reduce'});
+      await reducedPage.goto(localURL,{waitUntil:'domcontentloaded'});
+      await reducedPage.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='54');
+      assert.match(await reducedPage.locator('.kvn-ccu-change').innerText(),/\+2\s*CCU/);
+      assert.match(await reducedPage.locator('.kvn-ccu-delta').innerText(),/SINCE LAST VISIT/);
+      assert.equal(await reducedPage.locator('#playing .kvn-roll-slot').count(),0,
+        'Reduced motion must not create digit animations');
+      assert.equal(await reducedPage.locator('.metrics .primary').getAttribute('data-motion'),null,
+        'Reduced motion should not trigger decorative card effects');
+      await reducedPage.close();
+
+      // Simulate the browser's actual visibilitychange event without
+      // touching production APIs. A hidden fetch must not modify the
+      // last-visible value and the first visible response must animate once.
+      await page.bringToFront();
+      await page.evaluate(()=>{
+        Object.defineProperty(document,'hidden',{configurable:true,value:true});
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      const storedBefore=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).playing,visibleKey);
+      await page.request.get(localURL+'__test__/ccu?value='+String(storedBefore+2));
+      await page.evaluate(()=>stats());
+      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).playing,visibleKey),storedBefore);
+      await page.evaluate(()=>{
+        delete document.hidden;
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await page.waitForFunction(value=>document.querySelector('#playing')?.dataset.value===String(value),
+        storedBefore+2,{timeout:6000});
+      assert.match(await page.locator('.kvn-ccu-delta').innerText(),/SINCE LAST VISIT/);
+      console.log('PASS: Close/open same browser, reduced-motion return, actual visibility event and hidden poll exclusion.');
     }
     if(width===390||width===1440||width===1920){
       await chart.screenshot({path:artifactDir+'/chart-'+width+'.png',animations:'disabled'});

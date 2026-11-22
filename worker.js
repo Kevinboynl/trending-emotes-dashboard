@@ -9,6 +9,8 @@ import { premiumJS } from './premium-interactions.js';
 const PLACE_ID = '134944031090971';
 const GAME_URL = 'https://www.roblox.com/games/' + PLACE_ID + '/';
 let cachedUniverse = null;
+let lastLiveStats = null;
+let pendingStats = null;
 const API_HEADERS = { 'Accept': 'application/json' };
 async function getJSON(url) {
   const ctrl = new AbortController();
@@ -19,11 +21,15 @@ async function getJSON(url) {
     return await r.json();
   } finally { clearTimeout(timer); }
 }
-async function fetchStats() {
+async function fetchStats(env = {}) {
+  // The configured Universe ID avoids relying on a second Roblox API for every
+  // cold start. Never confuse the Place ID with the Universe ID.
+  const override = typeof env.ROBLOX_UNIVERSE_ID === 'string' ? env.ROBLOX_UNIVERSE_ID.trim() : '';
+  if (/^[0-9]{4,20}$/.test(override)) cachedUniverse = override;
   if (!cachedUniverse) {
     const id = await getJSON('https://apis.roblox.com/universes/v1/places/' + PLACE_ID + '/universe');
-    if (!id.universeId) throw new Error('Universe ID niet gevonden');
-    cachedUniverse = id.universeId;
+    if (!/^\d+$/.test(String(id.universeId || ''))) throw new Error('Universe ID lookup returned no valid ID');
+    cachedUniverse = String(id.universeId);
   }
   const u = cachedUniverse;
   const endpoints = [
@@ -35,7 +41,13 @@ async function fetchStats() {
   const result = await Promise.allSettled(endpoints.map(getJSON));
   const data = n => result[n].status === 'fulfilled' ? result[n].value : {};
   const g = data(0).data?.[0];
-  if (!g) throw new Error('Geen gamegegevens van Roblox');
+  if (!g) {
+    // Keep an explicit upstream reason for diagnostics instead of silently
+    // conflating API errors with a legitimate zero-player game.
+    const fail = result[0];
+    if (fail.status === 'rejected') throw new Error('Game details: ' + String(fail.reason?.message || 'Roblox request failed'));
+    throw new Error('Game details: Roblox returned no matching universe');
+  }
   const v = data(1).data?.[0] || {};
   const likes = Number.isFinite(v.upVotes) ? v.upVotes : null;
   const dislikes = Number.isFinite(v.downVotes) ? v.downVotes : null;
@@ -49,8 +61,38 @@ async function fetchStats() {
     likes, dislikes, rating: total ? (likes / total) * 100 : null,
     created: g.created || null, updated: g.updated || null,
     icon: data(2).data?.[0]?.imageUrl || null,
-    thumbnail: image, timestamp: Date.now()
+    thumbnail: image, timestamp: Date.now(), stale: false
   };
+}
+function minimalStatus(err) {
+  const msg = String(err?.message || '');
+  const match = msg.match(/Roblox API HTTP (\d{3})/);
+  if (match) return {reason:'roblox_http',httpStatus:Number(match[1])};
+  if (/abort|timeout/i.test(msg)) return {reason:'timeout'};
+  if (/Universe ID/i.test(msg)) return {reason:'universe_lookup'};
+  if (/Game details/i.test(msg)) return {reason:'game_details'};
+  return {reason:'upstream'};
+}
+// Only real measurements can be used as stale fallback. No inferred values.
+async function readLastSample(db) {
+  if (!db) return null;
+  try {
+    await ensureDB(db);
+    const rows = await db.prepare(
+      'SELECT t,ccu,visits,favorites,likes,dislikes FROM samples ORDER BY t DESC LIMIT 1'
+    ).all();
+    const p = rows.results?.[0];
+    if (!p || !Number.isFinite(p.t) || !Number.isFinite(p.ccu)) return null;
+    const votes = (p.likes ?? 0)+(p.dislikes ?? 0);
+    return {
+      source:'Last recorded Roblox sample (Cloudflare D1)', placeId:PLACE_ID,
+      name:'TRENDING EMOTES!', playing:p.ccu, visits:p.visits,
+      favorites:p.favorites, likes:p.likes, dislikes:p.dislikes,
+      rating:votes?100*(p.likes??0)/votes:null,
+      created:null, updated:null, icon:null, thumbnail:null,
+      timestamp:p.t, stale:true
+    };
+  } catch { return null; }
 }
 async function ensureDB(db) {
   if (!db) return;
@@ -136,7 +178,7 @@ const dateTime=t=>new Date(t).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:
 function animateNumber(id,num,extra){const el=$(id);if(!el||!Number.isFinite(num)){if(el)el.textContent='—';return;}const old=Number(el.dataset.value);el.dataset.value=num;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;if(!Number.isFinite(old)||reduced){el.textContent=fmt(num)+(extra||'');return;}const start=performance.now();function step(now){const k=Math.min(1,(now-start)/680),e=1-Math.pow(1-k,3);el.textContent=fmt(old+(num-old)*e)+(extra||'');if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step)}
 function state(msg,err){$('status').textContent=msg;$('pulse').style.background=err?'var(--danger)':'var(--green)';$('lastUpdate').textContent=err?msg:'Updated '+dateTime(Date.now())}
 function loadImage(url,target,parent){if(typeof url!=='string'||!url.startsWith('https://'))return;const box=$(target);if(!box)return;if(parent){const existing=box.querySelector('img');if(existing&&existing.src===url)return;const el=document.createElement('img');el.src=url;el.alt='TRENDING EMOTES! Roblox artwork';el.decoding='async';box.replaceChildren(el);}else{if(box.src!==url)box.src=url;box.alt='TRENDING EMOTES! Roblox artwork';box.style.visibility='visible'}}
-async function stats(){try{const r=await fetch('/api/stats',{cache:'no-store'});const d=await r.json();if(!r.ok||d.error)throw Error(d.error||'Roblox niet beschikbaar');currentStats=d;animateNumber('playing',d.playing);animateNumber('heroCCU',d.playing);animateNumber('visits',d.visits);animateNumber('favorites',d.favorites);animateNumber('likes',d.likes);animateNumber('dislikes',d.dislikes);$('rating').textContent=Number.isFinite(d.rating)?d.rating.toFixed(1)+'%':'—';$('engagementRating').textContent=$('rating').textContent;$('ratingFill').style.width=(d.rating||0)+'%';if(d.name)$('gameTitle').textContent=d.name;loadImage(d.icon,'poster',true);loadImage(d.thumbnail,'cover',true);loadImage(d.icon,'gameIcon',false);state('LIVE • CONNECTED',false);if(Number.isFinite(d.playing)){browserHistory.push({t:Date.now(),ccu:d.playing,visits:d.visits,favorites:d.favorites,likes:d.likes});browserHistory=browserHistory.filter(x=>x.t>Date.now()-30*86400000).slice(-2500);try{localStorage.setItem(TIMEKEY,JSON.stringify(browserHistory));}catch{}}await loadHistory();}catch(err){state('DATA UNAVAILABLE',true);$('lastUpdate').textContent='Roblox API tijdelijk niet bereikbaar';console.warn(err)}}
+async function stats(){try{const r=await fetch('/api/stats',{cache:'no-store'});const d=await r.json();if(!r.ok||d.error)throw Error(d.error||'Roblox niet beschikbaar');currentStats=d;animateNumber('playing',d.playing);animateNumber('heroCCU',d.playing);animateNumber('visits',d.visits);animateNumber('favorites',d.favorites);animateNumber('likes',d.likes);animateNumber('dislikes',d.dislikes);$('rating').textContent=Number.isFinite(d.rating)?d.rating.toFixed(1)+'%':'—';$('engagementRating').textContent=$('rating').textContent;$('ratingFill').style.width=(d.rating||0)+'%';if(d.name)$('gameTitle').textContent=d.name;loadImage(d.icon,'poster',true);loadImage(d.thumbnail,'cover',true);loadImage(d.icon,'gameIcon',false);state(d.stale?'CACHED • ROBLOX UNAVAILABLE':'LIVE • CONNECTED',Boolean(d.stale));if(d.stale){$('lastUpdate').textContent='Last confirmed Roblox measurement: '+new Date(d.timestamp).toLocaleString('en-GB');}if(!d.stale&&Number.isFinite(d.playing)){browserHistory.push({t:Date.now(),ccu:d.playing,visits:d.visits,favorites:d.favorites,likes:d.likes});browserHistory=browserHistory.filter(x=>x.t>Date.now()-30*86400000).slice(-2500);try{localStorage.setItem(TIMEKEY,JSON.stringify(browserHistory));}catch{}}await loadHistory();}catch(err){state('DATA UNAVAILABLE',true);$('lastUpdate').textContent='Roblox public stats temporarily unavailable. Check /api/stats for a safe diagnostic code.';console.warn(err)}}
 function getPoints(){const since=Date.now()-spans[currentRange];const base=usingCloud?cloudHistory:browserHistory;return base.filter(x=>x.t>=since&&Number.isFinite(x[currentMetric]));}
 async function loadHistory(){try{const r=await fetch('/api/history?range='+currentRange,{cache:'no-store'});const data=await r.json();if(data.storage==='cloud'){usingCloud=true;cloudHistory=Array.isArray(data.points)?data.points:[];$('storageInfo').textContent='Historische data wordt opgeslagen in Cloudflare D1.';}else{usingCloud=false;$('storageInfo').textContent='Lokale data: alleen beschikbaar in deze browser. Voor 24/7-meting Cloudflare D1 toevoegen.';}}catch{usingCloud=false;}draw();await acquisition();}
 async function acquisition(){
@@ -231,10 +273,28 @@ export default {
     }
     if (url.pathname === '/api/stats') {
       try {
-        const stats = await fetchStats();
+        // Deduplicate concurrent page loads within the same Worker isolate.
+        if (!pendingStats) {
+          pendingStats = fetchStats(env).then(data => {
+            lastLiveStats = data;
+            return data;
+          }).finally(() => { pendingStats = null; });
+        }
+        const stats = await pendingStats;
         try { await record(env.DB, stats); } catch (e) { console.log('D1 write unavailable:', e.message); }
-        return Response.json(stats, { headers: {'Cache-Control':'public, max-age=30'} });
-      } catch (err) { return Response.json({error:String(err.message)}, {status:503,headers:{'Cache-Control':'no-store'}}); }
+        return Response.json(stats, { headers:{'Cache-Control':'public, max-age=30'} });
+      } catch (err) {
+        const diagnostic = minimalStatus(err);
+        const fallback = lastLiveStats || await readLastSample(env.DB);
+        if (fallback) {
+          return Response.json({...fallback,stale:true,warning:diagnostic},{
+            headers:{'Cache-Control':'no-store','X-Stats-Mode':'stale'}
+          });
+        }
+        return Response.json({error:'Roblox public statistics are unavailable', ...diagnostic},{
+          status:503,headers:{'Cache-Control':'no-store'}
+        });
+      }
     }
     if (url.pathname === '/api/history') {
       try { return Response.json(await history(env.DB,url.searchParams.get('range')),{headers:{'Cache-Control':'public, max-age=60'}}); }

@@ -104,6 +104,15 @@ assert.equal((await disabled.json()).state,'disabled');
 // Verify that repeat browser polls fetch a fresh, real CCU reading, but do not
 // needlessly re-fetch votes or thumbnails on every 20-second check.
 assert.ok(embeddedScript.includes('LIVE_POLL_MS=20000'),'Live polling interval missing');
+const liveClient=embeddedScript.slice(embeddedScript.indexOf('async function stats(){'),embeddedScript.indexOf('\nfunction getPoints()',embeddedScript.indexOf('async function stats(){')));
+assert.ok(liveClient.includes("window.dispatchEvent(new CustomEvent('kvn:verified-stats'"),'Live CCU event is not dispatched');
+assert.ok(!liveClient.includes('await loadHistory()'),'Live CCU polling is still blocked by historical queries');
+assert.ok(liveClient.includes('controller.abort()'),'Live stats fetch lacks a request timeout');
+assert.ok(liveClient.indexOf("window.dispatchEvent(new CustomEvent('kvn:verified-stats'") <
+  liveClient.indexOf('void loadHistory().catch('),'Live effects should update before history refresh');
+assert.ok(embeddedScript.includes('function getVerifiedHistory()'),'Live CCU history merge missing');
+assert.ok(embeddedScript.includes("typeof getVerifiedHistory==='function'"),'CCU sparklines do not use the latest live samples');
+assert.ok(embeddedScript.includes("document.addEventListener('visibilitychange',resumeLiveStats)"),'Automatic polling does not resume on tab focus');
 assert.ok(embeddedScript.includes('HISTORY_POLL_MS=60000'),'History throttle missing');
 assert.ok(embeddedScript.includes('OFFICIAL_REFRESH_MS=15*60*1000'),'Official analytics refresh missing');
 let fakeNow=Date.now();

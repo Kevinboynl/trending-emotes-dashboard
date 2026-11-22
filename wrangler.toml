@@ -10,9 +10,12 @@ workers_dev = true
 crons = ["*/5 * * * *"]
 
 # Only explicitly selected aggregated analytics are shown publicly.
+# Owner-approved on 2026-11-22: PayingUsers, DailyRevenue, ARPDAU and
+# ARPPU are intentionally published alongside payer conversion rate.
+# These metrics can reveal business revenue: remove them to make private again.
 # The Roblox API key must remain a Cloudflare Secret named ROBLOX_ANALYTICS_API_KEY.
 [vars]
-PUBLIC_ANALYTICS_METRICS = "DailyActiveUsers,Visits,AverageSessionLengthMinutes,AveragePlayTimeMinutesPerDAU,ForwardD1Retention,ForwardD7Retention,ForwardD30Retention,UniqueUsersWithImpressions,ThumbnailImpressions,UniqueUsersWithClicks,ImpressionCVR,ClickCVR,EndToEndCVR,ClientFpsAvg,ClientCrashRate15m,ClientMemoryUsageAvg,ClientCpuTimeAvg,PayingUsersCVR"
+PUBLIC_ANALYTICS_METRICS = "DailyActiveUsers,Visits,AverageSessionLengthMinutes,AveragePlayTimeMinutesPerDAU,ForwardD1Retention,ForwardD7Retention,ForwardD30Retention,UniqueUsersWithImpressions,ThumbnailImpressions,UniqueUsersWithClicks,ImpressionCVR,ClickCVR,EndToEndCVR,ClientFpsAvg,ClientCrashRate15m,ClientMemoryUsageAvg,ClientCpuTimeAvg,PayingUsersCVR,PayingUsers,DailyRevenue,AverageRevenuePerUser,AverageRevenuePerPayingUser"
 
 # Per-Cloudflare-location protection for public API endpoints. This binding
 # never stores or exposes the Roblox API key. Limits apply per endpoint and

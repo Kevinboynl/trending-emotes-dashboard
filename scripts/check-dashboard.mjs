@@ -111,6 +111,12 @@ assert.ok(liveClient.includes('controller.abort()'),'Live stats fetch lacks a re
 assert.ok(liveClient.indexOf("window.dispatchEvent(new CustomEvent('kvn:verified-stats'") <
   liveClient.indexOf('void loadHistory().catch('),'Live effects should update before history refresh');
 assert.ok(embeddedScript.includes('function getVerifiedHistory()'),'Live CCU history merge missing');
+assert.ok(embeddedScript.includes("function revealChip(diff)"),'Verified CCU change badge is missing');
+assert.ok(embeddedScript.includes("changeChipTimer=setTimeout(hideChip,5200)"),'CCU change badge should remain visible for five seconds');
+assert.ok(embeddedScript.includes("revealChip(diff);"),'CCU change event is not connected to badge');
+assert.ok(embeddedStyle.includes(".kvn-ccu-card[data-motion=\"up\"]"),'CCU rising blue pulse missing');
+assert.ok(embeddedStyle.includes(".kvn-ccu-card[data-motion=\"down\"]"),'CCU falling slate-blue pulse missing');
+assert.ok(html.includes('CHECKS EVERY 20 SEC'),'CCU refresh interval label out of date');
 assert.ok(embeddedScript.includes("typeof getVerifiedHistory==='function'"),'CCU sparklines do not use the latest live samples');
 assert.ok(embeddedScript.includes("document.addEventListener('visibilitychange',resumeLiveStats)"),'Automatic polling does not resume on tab focus');
 assert.ok(embeddedScript.includes('HISTORY_POLL_MS=60000'),'History throttle missing');

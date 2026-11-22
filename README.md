@@ -59,3 +59,83 @@ Open `https://JOUW-WORKER-URL/api/stats`. Als je een fout ziet, controleer Cloud
 - Cloudflare Workers en optionele D1.
 - Geen privé Roblox API-sleutels nodig voor de openbare cijfers.
 - Koppeling met jouw Roblox-experience is al ingevuld.
+
+## Open Cloud privéstatistieken veilig publiceren (opt-in)
+
+De website heeft nu een **publiek, alleen-lezen** endpoint: `GET /api/public-analytics`.
+Deze route geeft **uitsluitend expliciet geselecteerde, geaggregeerde cijferreeksen** door.
+Standaard staat publicatie **UIT**; bezoekers zien een nette melding totdat je beide instellingen activeert.
+`/api/stats`, `/api/history`, D1-opslag en bestaande live-CCU-functies blijven ongewijzigd.
+
+### 1. Roblox Open Cloud key
+
+In het [Roblox Creator Dashboard](https://create.roblox.com/dashboard/credentials) maak je een API-sleutel voor **de Universe van TRENDING EMOTES!**.
+Geef uitsluitend de scope `universe.analytics:read` bij `universe-analytics`.
+Dit is geen Roblox-wachtwoord en je deelt hem **niet in chat, GitHub, screenshots, commits of publieke variabelen**.
+
+### 2. Cloudflare secret instellen
+
+Ga naar **Cloudflare Dashboard → Workers & Pages → trending-emotes-dashboard → Settings → Variables and Secrets** (de precieze menunamen kunnen afwijken).
+
+Voeg een **Secret** toe (niet Plaintext):
+
+| Name | Value | Type |
+|---|---|---|
+| `ROBLOX_ANALYTICS_API_KEY` | Je echte Roblox Open Cloud API-sleutel | **Secret** |
+
+Er is geen API-sleutel in de repository opgeslagen. Je hoeft hem niet naar ChatGPT te sturen.
+
+### 3. Kies expliciet welke geaggregeerde statistieken OPENBAAR zijn
+
+Voeg een **Plaintext**-variabele toe met de naam `PUBLIC_ANALYTICS_METRICS`.
+Schrijf hierin alleen de metricnamen die iedereen mag zien, gescheiden door komma's.
+
+Bijvoorbeeld:
+
+```text
+DailyActiveUsers,AverageSessionLengthMinutes,ForwardD1Retention
+```
+
+Dit zijn de toegestane opties:
+
+| Metricnaam | Openbare kaart | Opmerking |
+|---|---|---|
+| `DailyActiveUsers` | DAU | Dagelijkse actieve gebruikers |
+| `Visits` | Sessions | Dagelijks aantal sessies; niet hetzelfde als unieke spelers |
+| `AverageSessionLengthMinutes` | Session time | Gemiddelde sessieduur in minuten |
+| `AveragePlayTimeMinutesPerDAU` | Playtime / DAU | Gemiddelde speeltijd per actieve gebruiker |
+| `ForwardD1Retention` | D1 retention | **Ruwe API-waarde** zonder onzekere omzetting naar procenten |
+| `ForwardD7Retention` | D7 retention | **Ruwe API-waarde** zonder onzekere omzetting naar procenten |
+
+**Er zijn geen inkomsten, uitsplitsingen naar leeftijd/land of individuele spelersgegevens toegelaten.**
+Niet-herkende namen worden genegeerd, en de browser kan geen andere metrics aanvragen.
+
+Laat `PUBLIC_ANALYTICS_METRICS` leeg of verwijder de variabele om de openbare publicatie direct uit te schakelen.
+
+**Optioneel:** voeg `ROBLOX_UNIVERSE_ID` als **Plaintext**-variabele toe wanneer de Universe ID-lookup niet lukt; gebruik het echte numerieke Universe ID uit Roblox Creator Dashboard, niet het Place ID `134944031090971`.
+
+### 4. Controleer de site
+
+Na het opslaan / opnieuw deployen:
+
+- Open `https://trending-emotes-dashboard.k-backx.workers.dev/api/public-analytics`
+- Bij geen selectie: `"state": "disabled"`
+- Bij selectie maar geen secret: `"state": "not_configured"`
+- Bij een werkende koppeling: `"state": "ready"` of `"partial"` met uitsluitend geselecteerde metrics
+- Bij een niet-beschikbare metric: `"state": "unavailable"` in de betreffende kaart
+- Bij langzaam laden: `"state": "pending"`
+
+De blauwe **OFFICIAL INSIGHTS**-sectie wordt automatisch met de geselecteerde geaggregeerde gegevens gevuld.
+Alle data bestaat uit afgeronde UTC-dagen (de API-query eindigt bij middernacht UTC). De weergave toont maximaal 31 dagen en cachet het resultaat in-memory maximaal 10 minuten.
+
+### Beveiliging en privacy
+
+- Roblox-aanvragen gaan **alleen vanuit de Worker** met de geheime `x-api-key` header.
+- Geen client-side API-key, geen aanname van een wachtwoord, geen publiek query-endpoint voor willekeurige metricnamen.
+- GET-only endpoint; niet alle privéstatistieken worden zomaar openbaar gemaakt.
+- Pending Open Cloud-opdrachten worden maximaal tweemaal opgevraagd per request.
+- Projected / NotStatisticallySignificant datapoints worden niet gepubliceerd.
+- API-fouten tonen neutrale foutmeldingen en geen gevoelige foutdetails.
+- Deze koppeling gebruikt de [officiële Roblox Analytics Query API](https://create.roblox.com/docs/cloud/guides/analytics).
+
+**Let op:** het aanmaken van de Cloudflare Secret is een eenmalige actie die de eigenaar zelf in Cloudflare moet uitvoeren. GitHub mag de sleutel nooit bevatten.

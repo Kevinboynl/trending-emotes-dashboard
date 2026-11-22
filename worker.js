@@ -233,6 +233,7 @@ async function stats(){try{const r=await fetch('/api/stats',{cache:'no-store'});
     $('lastUpdate').textContent='Roblox is not responding. Retrying automatically; /api/stats shows a safe diagnostic.';
   }
   document.querySelector('.metrics')?.classList.remove('is-loading');
+  try{await loadHistory();}catch{} // History still loads when the live Roblox API fails.
   window.dispatchEvent(new CustomEvent('kvn:stats-unavailable',{detail:{hasPrevious:Boolean(currentStats&&Number.isFinite(currentStats.playing))}}));
   console.warn(err);
 }}

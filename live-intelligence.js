@@ -81,7 +81,7 @@ export const liveIntelligenceCSS = String.raw`
 /* Polished 2.2s CCU motion system; existing KVN blue palette unchanged. */
 .kvn-ccu-card{isolation:isolate}
 .kvn-ccu-number-row{display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;min-width:0}
-.metrics .primary .kvn-ccu-number-row #playing{margin:22px 0 8px!important;min-width:3.35ch;white-space:nowrap}
+.metrics .primary .kvn-ccu-number-row #playing{margin:22px 0 8px!important;min-width:var(--kvn-ccu-reserved-width,3.35ch);max-width:100%;white-space:nowrap}
 .kvn-ccu-number-row .kvn-ccu-change{
  position:relative;inset:auto;top:auto;right:auto;left:auto;bottom:auto;
  display:inline-flex;align-items:center;gap:6px;
@@ -156,6 +156,14 @@ export const liveIntelligenceCSS = String.raw`
  .sparkline.kvn-spark-new-point .kvn-spark-head{animation:none!important}
  .kvn-ccu-change[data-visible="true"]{animation:none!important;opacity:1!important;transform:none!important}
 }
+
+/* Unified low-cost hover, independent of the event-driven CCU motion state. */
+@media(hover:hover) and (pointer:fine){
+ .metrics .card:not(.primary):hover,.metrics .primary:hover{
+  transform:translateY(-2px)!important;transition:transform .22s cubic-bezier(.2,.85,.2,1),border-color .22s ease
+ }
+}
+@media(prefers-reduced-motion:reduce){.metrics .card:hover{transform:none!important}}
 
 `;
 export const liveIntelligenceJS = String.raw`

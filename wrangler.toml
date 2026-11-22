@@ -24,3 +24,9 @@ namespace_id = "2026112201"
   [ratelimits.simple]
   limit = 60
   period = 60
+
+# Shared, five-minute measured history (owner's Cloudflare D1 database)
+[[d1_databases]]
+binding = "DB"
+database_name = "trending-emotes-metrics"
+database_id = "c8290c80-ccd7-4db0-91ac-0a631bd35e6b"

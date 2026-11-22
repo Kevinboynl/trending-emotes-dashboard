@@ -70,7 +70,29 @@ assert.equal((await worker.fetch(request('/api/stats?metric=secret'),{})).status
 assert.equal((await worker.fetch(request('/api/history?range=not-a-range'),{})).status,400);
 const history=await worker.fetch(request('/api/history?range=24h'),{});
 assert.equal(history.status,200);
-assert.equal((await history.json()).storage,'browser');
+const browserHistory=await history.json();
+assert.equal(browserHistory.storage,'browser');
+assert.equal(browserHistory.comparison.state,'d1_required');
+const checkTime=Date.now(),duration=86400000;
+const fakeDB={
+  prepare(query){
+    if(query.startsWith('CREATE TABLE'))return {run:async()=>({})};
+    if(query.startsWith('SELECT MIN(t)'))return {bind:()=>({all:async()=>({results:[]})})};
+    if(query.startsWith('SELECT CASE WHEN t>='))return {bind:()=>({all:async()=>({results:[
+      {period:0,samples:255,average:25.4,first_t:checkTime-2*duration,last_t:checkTime-duration-300000},
+      {period:1,samples:259,average:33.6,first_t:checkTime-duration,last_t:checkTime-300000}
+    ]})})};
+    throw Error('Unexpected D1 query');
+  }
+};
+const measuredHistory=await worker.fetch(request('/api/history?range=24h'),{DB:fakeDB});
+assert.equal(measuredHistory.status,200);
+const measuredBody=await measuredHistory.json();
+assert.equal(measuredBody.storage,'cloud');
+assert.equal(measuredBody.comparison.state,'ready');
+assert.equal(measuredBody.comparison.metric,'sampled_average_ccu');
+assert.equal(measuredBody.comparison.current,33.6);
+assert.equal(measuredBody.comparison.previous,25.4);
 const disabled=await worker.fetch(request('/api/public-analytics'),{});
 assert.equal(disabled.status,200);
 assert.equal((await disabled.json()).state,'disabled');

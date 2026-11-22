@@ -163,6 +163,85 @@ export const liveIntelligenceCSS = String.raw`
  .kvn-compare-value{align-items:flex-start}
 }
 
+/* Polished 2.2s CCU motion system; existing KVN blue palette unchanged. */
+.kvn-ccu-card{isolation:isolate}
+.kvn-ccu-number-row{display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;min-width:0}
+.metrics .primary .kvn-ccu-number-row #playing{margin:22px 0 8px!important;min-width:0;white-space:nowrap}
+.kvn-ccu-number-row .kvn-ccu-change{
+ position:relative;inset:auto;top:auto;right:auto;left:auto;bottom:auto;
+ display:inline-flex;align-items:center;gap:6px;
+ max-width:100%;margin:8px 0;padding:10px 14px;
+ transform:translate3d(0,8px,0) scale(.97);
+ white-space:nowrap;overflow:visible;flex:0 0 auto
+}
+.kvn-ccu-number-row .kvn-ccu-change[hidden]{display:none!important}
+.kvn-ccu-change[data-visible="true"]{
+ animation:kvnChipFloat 2.2s cubic-bezier(.2,.75,.2,1) both!important;
+ transition:none!important
+}
+@keyframes kvnChipFloat{
+ 0%{opacity:0;transform:translate3d(0,8px,0) scale(.97)}
+ 13%{opacity:1;transform:translate3d(0,0,0) scale(1)}
+ 61%{opacity:1;transform:translate3d(0,-1px,0) scale(1)}
+ 100%{opacity:0;transform:translate3d(0,-5px,0) scale(.99)}
+}
+.kvn-roll-slot{position:relative;display:inline-block;overflow:hidden;width:1ch;height:1em;line-height:1;vertical-align:-.03em;white-space:nowrap}
+.kvn-roll-track{position:absolute;inset:0 auto auto 0;width:100%;height:2em;display:flex;flex-direction:column;align-items:center;line-height:1}
+.kvn-roll-track>span{display:block;width:100%;min-width:0;height:1em;line-height:1em;text-align:center}
+.kvn-roll-slot[data-direction="up"] .kvn-roll-track{animation:kvnDigitUp .51s cubic-bezier(.2,.85,.2,1) var(--kvn-roll-delay,0ms) both}
+.kvn-roll-slot[data-direction="down"] .kvn-roll-track{animation:kvnDigitDown .51s cubic-bezier(.2,.85,.2,1) var(--kvn-roll-delay,0ms) both}
+@keyframes kvnDigitUp{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,-50%,0)}}
+@keyframes kvnDigitDown{from{transform:translate3d(0,-50%,0)}to{transform:translate3d(0,0,0)}}
+.kvn-ccu-travel{position:absolute;inset:0;border-radius:inherit;padding:2px;z-index:5;pointer-events:none;opacity:0;overflow:hidden;
+ -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+ -webkit-mask-composite:xor;mask-composite:exclude
+}
+.kvn-ccu-travel::before{content:"";position:absolute;inset:-110%;background:conic-gradient(from 0deg,transparent 0deg,transparent 288deg,rgba(92,203,255,.08) 308deg,#91e8ff 325deg,rgba(73,174,255,.2) 338deg,transparent 353deg);transform:rotate(-100deg)}
+.kvn-ccu-card[data-motion="down"] .kvn-ccu-travel::before{background:conic-gradient(from 0deg,transparent 0deg,transparent 288deg,rgba(115,153,208,.05) 310deg,#9cb6d9 325deg,rgba(89,133,189,.12) 338deg,transparent 353deg)}
+.kvn-ccu-card[data-motion] .kvn-ccu-travel{animation:kvnEdgeOpacity 1.27s ease-out both}
+.kvn-ccu-card[data-motion] .kvn-ccu-travel::before{animation:kvnEdgeLap 1.15s cubic-bezier(.45,.1,.5,1) both}
+@keyframes kvnEdgeOpacity{0%{opacity:0}8%{opacity:1}75%{opacity:1}100%{opacity:0}}
+@keyframes kvnEdgeLap{from{transform:rotate(-100deg)}to{transform:rotate(260deg)}}
+.kvn-ccu-wave{position:absolute;left:30%;top:55%;z-index:1;pointer-events:none;width:360px;height:360px;max-width:85vw;border-radius:50%;transform:translate(-50%,-50%) scale(.18);opacity:0;background:radial-gradient(circle,rgba(69,185,255,.21),rgba(71,148,255,.08) 45%,transparent 70%)}
+.kvn-ccu-card[data-motion="down"] .kvn-ccu-wave{background:radial-gradient(circle,rgba(130,161,214,.15),rgba(100,139,205,.06) 45%,transparent 70%)}
+.kvn-ccu-card[data-motion="up"] .kvn-ccu-wave{animation:kvnWaveUp 1.6s ease-out both}
+.kvn-ccu-card[data-motion="down"] .kvn-ccu-wave{animation:kvnWaveDown 1.6s ease-out both}
+@keyframes kvnWaveUp{0%{opacity:0;transform:translate(-50%,-50%) scale(.18)}23%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.28)}}
+@keyframes kvnWaveDown{0%{opacity:0;transform:translate(-50%,-50%) scale(.18)}23%{opacity:.72}100%{opacity:0;transform:translate(-50%,-50%) scale(1.18)}}
+.kvn-ccu-card[data-motion="up"] .kvn-ccu-flash{animation:kvnCcuVisibleRise 1.6s ease-out both!important}
+.kvn-ccu-card[data-motion="down"] .kvn-ccu-flash{animation:kvnCcuVisibleFall 1.6s ease-out both!important}
+.kvn-ccu-card[data-motion="up"] .kvn-ccu-flash::after{animation:kvnCcuRing 1.6s ease-out both!important}
+.kvn-ccu-card[data-motion="down"] .kvn-ccu-flash::after{animation:kvnCcuRingDown 1.6s ease-out both!important}
+.kvn-ccu-card[data-motion="up"]{border-color:rgba(89,203,255,.63)!important;box-shadow:0 0 0 1px rgba(74,171,255,.36),0 0 29px rgba(48,131,255,.15)!important}
+.kvn-ccu-card[data-motion="down"]{border-color:rgba(133,165,206,.4)!important;box-shadow:0 0 0 1px rgba(130,162,205,.23),0 0 21px rgba(80,112,166,.08)!important}
+.kvn-ccu-record{overflow:visible}
+.kvn-ccu-record.is-new-peak{animation:kvnPeakAppear 2.6s cubic-bezier(.2,.7,.2,1) both}
+.kvn-ccu-record.is-new-peak::before,.kvn-ccu-record.is-new-peak::after{
+ content:"";position:absolute;inset:-3px;border-radius:inherit;border:1px solid rgba(117,223,255,.68);pointer-events:none
+}
+.kvn-ccu-record.is-new-peak::before{animation:kvnPeakRing 1.55s ease-out 0s both}
+.kvn-ccu-record.is-new-peak::after{animation:kvnPeakRing 1.55s ease-out .23s both}
+@keyframes kvnPeakAppear{0%{opacity:0;transform:translateY(5px)}15%,75%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-3px)}}
+@keyframes kvnPeakRing{0%{opacity:0;transform:scale(1)}18%{opacity:.8}100%{opacity:0;transform:scale(1.12)}}
+.primary .sparkline .kvn-spark-head{fill:#c5edff;stroke:#398dff;stroke-width:1.6;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 3px rgba(105,212,255,.7))}
+.sparkline.kvn-spark-new-point .kvn-spark-head{animation:kvnSparkHead 1s ease-out both;transform-box:fill-box;transform-origin:center}
+@keyframes kvnSparkHead{0%{opacity:.45;transform:scale(.65)}30%{opacity:1;transform:scale(1.48)}100%{opacity:1;transform:scale(1)}}
+@media(max-width:690px){
+ .metrics .primary .kvn-ccu-number-row #playing{margin:14px 0 6px!important}
+ .kvn-ccu-number-row{gap:6px 11px;align-items:center}
+ .kvn-ccu-number-row .kvn-ccu-change{font-size:13px;padding:7px 9px;margin:4px 0}
+ .kvn-ccu-travel{padding:1.5px}
+ .kvn-ccu-wave{width:260px;height:260px}
+}
+@media(prefers-reduced-motion:reduce){
+ .kvn-roll-slot .kvn-roll-track,.kvn-ccu-card[data-motion] .kvn-ccu-travel,
+ .kvn-ccu-card[data-motion] .kvn-ccu-travel::before,
+ .kvn-ccu-card[data-motion] .kvn-ccu-wave,
+ .kvn-ccu-record.is-new-peak,.kvn-ccu-record.is-new-peak::before,.kvn-ccu-record.is-new-peak::after,
+ .sparkline.kvn-spark-new-point .kvn-spark-head{animation:none!important}
+ .kvn-ccu-change[data-visible="true"]{animation:none!important;opacity:1!important;transform:none!important}
+}
+
 `;
 export const liveIntelligenceJS = String.raw`
 /* Event-driven CCU presentation: never alters or estimates Roblox data. */

@@ -16,7 +16,7 @@ a:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:2px solid 
 .navlinks a[aria-current="location"]{color:var(--white);background:color-mix(in srgb,var(--blue) 17%,transparent)}
 .navlinks a[aria-current="location"]:after{transform:scaleX(1)}
 .hero{isolation:isolate}
-.hero-sheen{position:absolute;z-index:-1;left:50%;top:50%;width:330px;height:330px;border-radius:50%;opacity:.23;pointer-events:none;filter:blur(42px);background:radial-gradient(circle,var(--blue) 0%,transparent 70%);transform:translate3d(-50%,-50%,0);will-change:transform}
+.hero-sheen{position:absolute;z-index:1;left:0;top:0;width:290px;height:290px;border-radius:50%;opacity:0;pointer-events:none;filter:blur(25px);background:radial-gradient(circle,color-mix(in srgb,var(--cyan) 30%,transparent) 0%,color-mix(in srgb,var(--blue) 15%,transparent) 32%,transparent 72%);transform:translate3d(-600px,-600px,0);transition:opacity .22s ease;will-change:transform,opacity}
 .hero h1{max-width:750px}
 .hero .eyebrow{animation:refineIn .75s .08s var(--ease-enter) both}
 .hero .lead{max-width:590px}
@@ -149,6 +149,75 @@ footer .footer-brand{letter-spacing:-.4px}
 /* Responsive CCU hero: draw sparkline only when it has enough room. */
 @media(min-width:681px){.metrics .primary .sparkline{position:absolute;bottom:17px;right:33px;width:38%;height:44px;margin:0;opacity:.47}}
 @media(max-width:680px){.metrics .primary .sparkline{display:none}.metrics .card:not(.primary) .number{font-size:clamp(24px,6.8vw,34px)}}
+
+/* KVN Studios-inspired framing: the same blue theme, more deliberate composition. */
+.hero{min-height:535px;padding-top:41px;padding-bottom:48px;gap:clamp(16px,3vw,46px);grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);isolation:isolate}
+.hero:before{opacity:.48;animation:none}
+.hero:after{opacity:.55}
+.hero>.hero-copy{position:relative;z-index:2;min-width:0}
+.hero>.visual{position:relative;z-index:2;min-width:0}
+.hero .hero-copy h1{font-size:clamp(66px,7.2vw,112px);letter-spacing:-.075em;margin:22px 0 24px}
+.hero .lead{font-size:clamp(13px,1.15vw,16px);line-height:1.75;max-width:540px}
+.hero .hero-actions{margin-top:24px}
+.hero .hero-note{margin-top:15px}
+.hero .visual{height:370px}
+.hero .hero-poster{width:min(300px,72%);height:auto;aspect-ratio:1;border-radius:34px;box-shadow:0 32px 75px color-mix(in srgb,var(--blue) 18%,transparent),0 0 0 1px color-mix(in srgb,var(--cyan) 20%,transparent)}
+.hero .halo{width:275px;height:275px;opacity:.28;filter:blur(46px);animation:none}
+.hero .orbit{width:320px;height:320px}
+.hero .orbit:nth-child(2){width:410px;height:174px}
+.hero .floatbadge{right:1%;top:12%;padding:15px 19px}
+.hero .floatbadge strong{font-size:36px}
+.hero .floatbadge .small{letter-spacing:.8px}
+.hero .visual:before{width:min(350px,100%);height:auto;aspect-ratio:1;box-shadow:inset 0 0 55px color-mix(in srgb,var(--blue) 8%,transparent)}
+.ticker{position:relative;z-index:2;box-shadow:0 9px 36px color-mix(in srgb,var(--blue) 8%,transparent)}
+#dashboard>.bar{margin-top:44px}
+#dashboard .metrics .card{background-clip:padding-box;box-shadow:inset 0 1px color-mix(in srgb,var(--cyan) 9%,transparent),0 16px 42px rgba(0,0,0,.19)}
+#dashboard .metrics .card:hover{border-color:color-mix(in srgb,var(--cyan) 55%,transparent);box-shadow:inset 0 1px color-mix(in srgb,var(--cyan) 15%,transparent),0 26px 56px rgba(0,0,0,.26)}
+#dashboard .metrics .card .number{font-variant-numeric:tabular-nums lining-nums}
+#dashboard .metrics .card:not(.primary) .card-content{min-height:150px}
+#dashboard .metrics .primary .card-content{min-height:250px}
+#dashboard .metrics .card:not(.primary) .number{margin-top:25px}
+#dashboard .metrics .primary .number{margin-top:35px}
+.signal-strip{margin-top:13px}
+#analytics.bar{margin-top:50px}
+#details.bar{margin-top:57px}
+#officialMetrics .bar{margin-top:52px}
+.official-card{box-shadow:inset 0 1px color-mix(in srgb,var(--cyan) 10%,transparent),0 15px 42px rgba(0,0,0,.18)}
+@media(max-width:1100px){
+ .hero{min-height:485px;padding-top:38px;padding-bottom:38px}
+ .hero .hero-copy h1{font-size:clamp(57px,7vw,93px)}
+ .hero .visual{height:330px}
+ .hero .hero-poster{width:min(240px,75%)}
+ .hero .orbit{width:270px;height:270px}
+ .hero .orbit:nth-child(2){width:335px;height:137px}
+ .hero .floatbadge{right:0;top:14%;padding:12px 14px}
+ .hero .floatbadge strong{font-size:29px}
+}
+@media(max-width:690px){
+ .hero{grid-template-columns:minmax(0,1fr);gap:11px;min-height:0;padding-top:35px;padding-bottom:30px}
+ .hero .hero-copy h1{font-size:clamp(56px,13.5vw,83px);letter-spacing:-.072em;margin:22px 0 18px}
+ .hero .lead{max-width:500px}
+ .hero .visual{height:265px}
+ .hero .hero-poster{width:190px;height:190px;border-radius:27px}
+ .hero .orbit{width:237px;height:237px}
+ .hero .orbit:nth-child(2){width:285px;height:120px}
+ .hero .visual:before{width:235px}
+ .hero .halo{width:225px;height:225px;filter:blur(38px)}
+ .hero .floatbadge{top:11%;right:1%;padding:10px 12px}
+ .hero .floatbadge strong{font-size:25px}
+ .hero-sheen{display:none}
+ #dashboard>.bar{margin-top:30px}
+ #dashboard .metrics .card:not(.primary) .card-content{min-height:135px}
+ #dashboard .metrics .primary .card-content{min-height:195px}
+ #analytics.bar{margin-top:33px}
+ #details.bar{margin-top:40px}
+ #officialMetrics .bar{margin-top:42px}
+}
+@media(prefers-reduced-motion:reduce){
+ .hero-sheen{display:none!important}
+ .hero .hero-poster{animation:none}
+}
+
 `;
 export const refinementJS = String.raw`
 /* A progressive enhancement. It never requests private data or changes API payloads. */
@@ -188,13 +257,21 @@ document.querySelectorAll('.metrics .card').forEach((card,i)=>card.style.setProp
 const hero=document.querySelector('.hero');
 if(hero&&!reduce.matches&&fine.matches){
   const light=document.createElement('i');
-  light.className='hero-sheen';light.setAttribute('aria-hidden','true');
+  light.className='hero-sheen';
+  light.setAttribute('aria-hidden','true');
   hero.append(light);
-  hero.addEventListener('pointermove',throttle(e=>{
+  const positionLight=throttle((x,y)=>{
+    // The light starts at left:0/top:0, so position = cursor minus half of its dimensions.
+    light.style.transform='translate3d('+(x-145)+'px,'+(y-145)+'px,0)';
+  });
+  hero.addEventListener('pointermove',e=>{
     const r=hero.getBoundingClientRect();
-    light.style.transform='translate3d('+(e.clientX-r.left-165)+'px,'+(e.clientY-r.top-165)+'px,0)';
-  }),{passive:true});
-  hero.addEventListener('pointerleave',()=>{light.style.transform='translate3d(-700px,-700px,0)'});
+    positionLight(e.clientX-r.left,e.clientY-r.top);
+    light.style.opacity='1';
+  },{passive:true});
+  hero.addEventListener('pointerleave',()=>{
+    light.style.opacity='0';
+  },{passive:true});
 }
 if(!reduce.matches&&fine.matches){
   for(const card of document.querySelectorAll('.metrics .card')){

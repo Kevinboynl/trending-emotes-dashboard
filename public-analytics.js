@@ -219,6 +219,10 @@ export const publicAnalyticsClient = String.raw`
    try{
      const r=await fetch('/api/public-analytics',{cache:'no-store'});
      const data=await r.json();
+     // Reuse ONLY already approved public metrics for the Acquisition cards.
+     // This does not expose new private data and does not perform a second API call.
+     window.__kvnPublishedAnalytics=(r.ok && ['ready','partial'].includes(data?.state))?data:null;
+     window.dispatchEvent(new Event('kvn:official-analytics'));
      if(!Array.isArray(data.metrics) || !data.metrics.length){
        const msg=data.state==='disabled'?'Er zijn nog geen privé-analytics geselecteerd voor openbare weergave.':data.state==='not_configured'?'De Open Cloud-koppeling is voorbereid. Alleen de eigenaar kan hem met een Cloudflare Secret activeren.':data.note||'De geselecteerde analytics zijn momenteel niet beschikbaar.';
        message(msg);return;

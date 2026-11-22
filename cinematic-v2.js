@@ -233,7 +233,7 @@ for(const link of document.querySelectorAll('a.playbtn,a.outlinebtn')){
     link.replaceChild(after,child);link.insertBefore(arrow,after);link.insertBefore(before,arrow);
   }
 }
-const setPressed=(selector,attr)=>{
+const setPressed=(selector)=>{
   const bar=document.querySelector(selector);
   if(!bar)return;
   bar.setAttribute('role','group');
@@ -245,8 +245,8 @@ const setPressed=(selector,attr)=>{
   update();
   bar.addEventListener('click',()=>requestAnimationFrame(update));
 };
-setPressed('#ranges','range');
-setPressed('#metrics','metric');
+setPressed('#ranges');
+setPressed('#metrics');
 // Group chart accessible for keyboard use. Never create synthetic data points.
 const chart=document.getElementById('chart');
 if(chart){
@@ -281,6 +281,26 @@ if(chart){
   const curve=document.getElementById('curve');
   if(curve)new MutationObserver(()=>{index=0;}).observe(curve,{attributes:true,attributeFilter:['d']});
 }
+// Two composited, differently paced side movements add depth without
+// resizing the statistics column or forcing layout on every scroll.
+if(!reduce.matches && window.matchMedia('(min-width: 1201px) and (pointer:fine)').matches){
+  const sideLayers=[...document.querySelectorAll('.kvn-sidefx')];
+  if(sideLayers.length===2){
+    let frame=0;
+    const paint=()=>{
+      frame=0;
+      const shift=Math.min(24,Math.max(-24,window.scrollY*.017));
+      sideLayers[0].style.translate='0 '+(-shift).toFixed(1)+'px';
+      sideLayers[1].style.translate='0 '+(shift*.68).toFixed(1)+'px';
+    };
+    window.addEventListener('scroll',()=>{
+      if(document.hidden||frame)return;
+      frame=requestAnimationFrame(paint);
+    },{passive:true});
+    paint();
+  }
+}
+
 const empty=document.getElementById('noData');
 if(empty){
   empty.setAttribute('role','status');

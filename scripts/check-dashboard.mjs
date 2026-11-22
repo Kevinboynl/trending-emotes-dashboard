@@ -111,14 +111,14 @@ assert.ok(liveClient.includes('controller.abort()'),'Live stats fetch lacks a re
 assert.ok(liveClient.indexOf("window.dispatchEvent(new CustomEvent('kvn:verified-stats'") <
   liveClient.indexOf('void loadHistory().catch('),'Live effects should update before history refresh');
 assert.ok(embeddedScript.includes('function getVerifiedHistory()'),'Live CCU history merge missing');
-assert.ok(embeddedScript.includes("function revealChip(diff)"),'Verified CCU change badge is missing');
+assert.ok(embeddedScript.includes("function revealChip(diff,context='live')"),'Verified CCU change badge is missing');
 assert.ok(embeddedScript.includes("changeChipTimer=setTimeout(hideChip,2200)"),'CCU change badge should fade out after 2.2 seconds');
-assert.ok(embeddedScript.includes("revealChip(diff);"),'CCU change event is not connected to badge');
+assert.ok(embeddedScript.includes("revealChip(diff,info.context==='return'?'return':'live');"),'CCU change event is not connected to badge');
 
 assert.ok(embeddedScript.includes("const numberRow=document.createElement('div')"),'CCU badge must use responsive in-flow layout');
 assert.ok(embeddedScript.includes("numberRow.append(player,changeChip)"),'CCU badge must stay next to the player count');
 assert.ok(embeddedScript.includes("movementTimer=setTimeout(clearMovement,1600)"),'CCU glow must settle after 1.6 seconds');
-assert.ok(embeddedScript.includes("record.textContent='✦ NEW PEAK · 24H'"),'Measured peak status missing');
+assert.ok(embeddedScript.includes("record.textContent='✦ NEW 24H PEAK'"),'Measured peak status missing');
 assert.ok(embeddedScript.includes("d.playing>priorValue"),'Peak must only trigger on a verified increase');
 assert.ok(embeddedScript.includes("previous&&!previous.stale"),'Do not animate stale prior values');
 assert.ok(embeddedScript.includes("if(id==='playing')"),'Selective CCU digit rolling missing');
@@ -136,8 +136,21 @@ assert.ok(embeddedStyle.includes(".kvn-ccu-card[data-motion=\"up\"]"),'CCU risin
 assert.ok(embeddedStyle.includes(".kvn-ccu-card[data-motion=\"down\"]"),'CCU falling slate-blue pulse missing');
 assert.ok(html.includes('CHECKS EVERY 20 SEC'),'CCU refresh interval label out of date');
 assert.ok(embeddedScript.includes("typeof getVerifiedHistory==='function'"),'CCU sparklines do not use the latest live samples');
-assert.ok(embeddedScript.includes("document.addEventListener('visibilitychange',resumeLiveStats)"),'Automatic polling does not resume on tab focus');
+assert.ok(embeddedScript.includes("document.addEventListener('visibilitychange',()=>"),'Automatic polling does not resume on tab focus');
 assert.ok(embeddedScript.includes('HISTORY_POLL_MS=60000'),'History throttle missing');
+
+assert.ok(embeddedScript.includes("const LAST_VISIBLE_CCU_KEY="),'Last visible snapshot storage missing');
+assert.ok(embeddedScript.includes("const VISIBLE_SNAPSHOT_TTL=48*60*60*1000"),'Return snapshot max age missing');
+assert.ok(embeddedScript.includes('function readLastVisibleCCU()'),'Cannot restore visible snapshot');
+assert.ok(embeddedScript.includes('function rememberVisibleCCU(sample)'),'Cannot persist genuinely displayed snapshot');
+assert.ok(embeddedScript.includes('const requestStartedVisible=!document.hidden'),'Hidden fetch must not update visible CCU');
+assert.ok(embeddedScript.includes('requestVisibilityEpoch!==visibilityEpoch'),'Background request race guard missing');
+assert.ok(embeddedScript.includes("context,returning:context==='return'"),'Return-specific metadata missing');
+assert.ok(embeddedScript.includes("info.context==='return'?'SINCE LAST VISIT'"),'Return UI labeling missing');
+assert.ok(embeddedScript.includes('displaySavedVisibleCCU();\nstats();'),'Previous visible count must render before new request');
+assert.ok(embeddedScript.includes("window.addEventListener('pageshow',event=>"),'Back-forward cache lifecycle missing');
+assert.ok(embeddedScript.includes("window.addEventListener('focus',resumeLiveStats)"),'Focus resume missing');
+
 assert.ok(embeddedScript.includes('OFFICIAL_REFRESH_MS=15*60*1000'),'Official analytics refresh missing');
 let fakeNow=Date.now();
 class TestClock extends Date { static now(){return fakeNow;} }

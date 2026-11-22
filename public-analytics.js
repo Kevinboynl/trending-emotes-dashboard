@@ -216,16 +216,16 @@ export const publicAnalyticsClient = String.raw`
    try{
      const r=await fetch('/api/public-analytics',{cache:'no-store'});
      const data=await r.json();
-     if(!r.ok || !['ready','partial'].includes(data.state)){
-       const msg=data.state==='disabled'?'Er zijn nog geen privé-analytics geselecteerd voor openbare weergave.':data.state==='not_configured'?'De Open Cloud-koppeling is voorbereid. Alleen de eigenaar kan hem met een Cloudflare Secret activeren.':data.state==='pending'?'Roblox verwerkt de geselecteerde statistieken. Probeer het later opnieuw.':'De geselecteerde analytics zijn momenteel niet beschikbaar.';
+     if(!Array.isArray(data.metrics) || !data.metrics.length){
+       const msg=data.state==='disabled'?'Er zijn nog geen privé-analytics geselecteerd voor openbare weergave.':data.state==='not_configured'?'De Open Cloud-koppeling is voorbereid. Alleen de eigenaar kan hem met een Cloudflare Secret activeren.':data.note||'De geselecteerde analytics zijn momenteel niet beschikbaar.';
        message(msg);return;
      }
      root.replaceChildren();const grid=document.createElement('div');grid.className='official-grid';
      for(const metric of data.metrics||[]){
        const card=document.createElement('article');card.className='official-card';
        const heading=document.createElement('small');heading.textContent=metric.label;
-       const amount=document.createElement('strong');amount.textContent=metric.latest?fmt(metric.latest.value,metric.dp)+(metric.unit==='min'?' min':''): '—';
-       const note=document.createElement('p');note.textContent=metric.state==='ready'?'Laatste afgeronde dag ('+metric.latest.date+') · '+metric.unit+(metric.unit==='API value'?' (ongeconverteerd)':''):'Geen betrouwbare, afgeronde meting beschikbaar';
+       const amount=document.createElement('strong');amount.textContent=metric.latest?fmt(metric.latest.value,metric.dp)+(metric.unit==='min'?' min':''): '—';amount.title=metric.latest?'Geautoriseerde, geaggregeerde Roblox-data':'Nog geen geverifieerde waarde beschikbaar';
+       const note=document.createElement('p');const problem={authorization:'Geen toestemming vanuit Roblox voor deze game.',request_invalid:'Roblox heeft de aanvraag geweigerd.',universe_lookup:'Universe ID kan niet worden opgehaald.',rate_limited:'Roblox vraagt om later opnieuw te proberen.',no_data:'Nog geen definitieve meetgegevens.',pending:'Roblox verwerkt deze statistiek nog.',upstream:'Roblox Analytics tijdelijk niet bereikbaar.',invalid_response:'Onverwacht Roblox-antwoord.'};note.textContent=metric.state==='ready'?'Laatste afgeronde dag ('+metric.latest.date+') · '+metric.unit+(metric.unit==='API value'?' (ongeconverteerd)':''):problem[metric.reason]||'Geen betrouwbare, afgeronde meting beschikbaar';
        card.append(heading,amount,note);
        if(Array.isArray(metric.points) && metric.points.length>1){
           const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');

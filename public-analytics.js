@@ -15,7 +15,18 @@ export const ANALYTICS_CATALOG = Object.freeze({
   ImpressionCVR: { label:'Impression click-through (raw value)', short:'Impression CTR', unit:'API value', dp:3, category:'Acquisition' },
   ClientFpsAvg: { label:'Average client frame rate', short:'Average FPS', unit:'fps', dp:1, category:'Performance' },
   ClientCrashRate15m: { label:'Client crash rate (raw API value)', short:'Crash rate', unit:'API value', dp:3, category:'Performance' },
-  PayingUsersCVR: { label:'Paying-user conversion (raw API value)', short:'Payer conversion', unit:'API value', dp:3, category:'Monetization' }
+
+  PayingUsersCVR: { label:'Paying-user conversion (raw API value)', short:'Payer conversion', unit:'API value', dp:3, category:'Monetization' },
+  UniqueUsersWithClicks: { label:'Unique detail-page visitors', short:'Page visitors', unit:'users', dp:0, category:'Acquisition' },
+  ClickCVR: { label:'Users detail page CTR (raw API value)', short:'Detail-page CTR', unit:'API value', dp:3, category:'Acquisition' },
+  EndToEndCVR: { label:'Play rate per unique user (raw API value)', short:'Play-through rate', unit:'API value', dp:3, category:'Acquisition' },
+  ThumbnailImpressions: { label:'Thumbnail impressions', short:'Thumbnail impressions', unit:'impressions', dp:0, category:'Acquisition' },
+  ClientMemoryUsageAvg: { label:'Average client memory usage', short:'Client memory', unit:'API value', dp:2, category:'Performance' },
+  ClientCpuTimeAvg: { label:'Average client CPU time', short:'Client CPU', unit:'API value', dp:2, category:'Performance' },
+  // Sensitive finance metrics remain opt-in. Never enable them by default on a public Worker.
+  DailyRevenue: { label:'Daily Robux revenue', short:'Robux revenue', unit:'Robux', dp:0, category:'Monetization' },
+  AverageRevenuePerUser: { label:'Average revenue per daily active user', short:'ARPDAU', unit:'Robux', dp:2, category:'Monetization' },
+  AverageRevenuePerPayingUser: { label:'Average revenue per paying user', short:'ARPPU', unit:'Robux', dp:2, category:'Monetization' }
 });
 const PLACE_ID = '134944031090971';
 const BASE = 'https://apis.roblox.com/analytics-query-api/';
@@ -26,7 +37,7 @@ let universeCache = null;
 function selectedMetrics(env) {
   const raw = typeof env.PUBLIC_ANALYTICS_METRICS === 'string' ? env.PUBLIC_ANALYTICS_METRICS : '';
   const selected = [...new Set(raw.split(',').map(x => x.trim()).filter(x => Object.prototype.hasOwnProperty.call(ANALYTICS_CATALOG, x)))];
-  return selected.slice(0, 12);
+  return selected.slice(0, 24);
 }
 function output(body, code = 200) {
   return Response.json(body, {
@@ -82,7 +93,7 @@ async function loadOperation(metric, universeId, key, now, fetcher) {
   midnight.setUTCHours(0, 0, 0, 0);
   const endTime = midnight.toISOString();
   // Technical performance metrics only retain 28 days in the official API.
-  const days = (metric === 'ClientFpsAvg' || metric === 'ClientCrashRate15m') ? 27 : 31;
+  const days = ['ClientFpsAvg','ClientCrashRate15m','ClientMemoryUsageAvg','ClientCpuTimeAvg'].includes(metric) ? 27 : 31;
   const startTime = new Date(midnight.getTime()-days*86400000).toISOString();
   const path = 'v1/universes/' + universeId + '/metrics';
   const headers = { 'x-api-key':key, 'Content-Type':'application/json', Accept:'application/json' };
@@ -270,7 +281,210 @@ export const publicAnalyticsClient = String.raw`
    const card=document.createElement('article');card.className='kvn-insight-card'+(ready?' is-ready':'');
    const header=document.createElement('div');header.className='k-label';header.textContent=title;
    const value=document.createElement('div');value.className='k-value';
-   value.textContent=ready?fmt(metric.latest.value,metric.dp||0)+(metric.unit==='fps'?' FPS':''):'—';
+   value.textContent=ready?fmt(metric.latest.value,metric.dp||0)+(metric.unit==='fps'?' FPS':metric.unit==='Robux'?' R
+   const status=document.createElement('p');status.className='k-status';
+   status.textContent=ready?'Verified Roblox data · '+metric.latest.date+(metric.unit==='API value'?' · raw API value': ''):detailMessage(metric);
+   const meta=document.createElement('span');meta.className='k-meta';
+   meta.textContent=metric?'ROBLOX OPEN CLOUD':'NOT ENABLED · '+id;
+   card.append(header,value,status,meta);
+   if(ready && Array.isArray(metric.points) && metric.points.length>1){
+     const ns='http://www.w3.org/2000/svg';
+     const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 300 75');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('role','img');svg.setAttribute('aria-label',title+' history');
+     const line=document.createElementNS(ns,'polyline');line.setAttribute('points',svgPoints(metric.points.map(x=>x.value)));line.setAttribute('fill','none');line.setAttribute('stroke','#62bdff');line.setAttribute('stroke-width','3');line.setAttribute('vector-effect','non-scaling-stroke');
+     svg.append(line);card.append(svg);
+   }
+   return card;
+ };
+ const makeBanner=(title,description,href,label)=>{
+   const b=document.createElement('div');b.className='kvn-insight-banner';
+   const h=document.createElement('strong');h.textContent=title;
+   const p=document.createElement('p');p.textContent=description;
+   b.append(h,p);
+   if(href){const link=document.createElement('a');link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=label||'Open Creator Dashboard';b.append(link);}
+   return b;
+ };
+ const panelData=[
+   ['retention',[['ForwardD1Retention','Day 1 retention'],['ForwardD7Retention','Day 7 retention'],['ForwardD30Retention','Day 30 retention']]],
+   ['performance',[['ClientFpsAvg','Average client FPS'],['ClientCrashRate15m','Client crash rate'],['ClientMemoryUsageAvg','Client memory usage'],['ClientCpuTimeAvg','Client CPU time']]],
+   ['monetization',[['PayingUsersCVR','Paying-user conversion'],['DailyRevenue','Daily Robux revenue'],['AverageRevenuePerUser','ARPDAU'],['AverageRevenuePerPayingUser','ARPPU']]]
+ ];
+ const renderPanels=(payload)=>{
+   for(const [page,metrics] of panelData){
+     const tab=document.querySelector('.tabbody[data-page="'+page+'"]');
+     if(!tab)continue;
+     const grid=document.createElement('div');grid.className='kvn-insights';
+     for(const [id,title] of metrics)grid.append(makeInsight(id,title,payload));
+     if(page==='monetization')grid.append(makeBanner(
+       'Revenue stays private',
+       'Revenue, ARPDAU and ARPPU are sensitive. The owner must explicitly authorize each metric for this public website. Otherwise the cards stay blank.',
+       'https://create.roblox.com/dashboard/creations','View private revenue ↗'));
+     if(page==='performance')grid.append(makeBanner(
+       'Official performance telemetry',
+       'These graphs use Roblox Open Cloud data, not browser estimates. Enable FPS and crash-rate metrics explicitly to publish them.',
+       'https://create.roblox.com/docs/cloud/guides/analytics','Analytics API guide ↗'));
+     tab.replaceChildren(grid);
+   }
+   const acq=document.querySelector('.tabbody[data-page="acquisition"] .details');
+   if(acq){
+     acq.querySelectorAll('.kvn-insight-card').forEach(x=>x.remove());
+     const old=acq.children[2];if(old && !old.classList.contains('kvn-insight-card'))old.remove();
+     acq.append(makeInsight('UniqueUsersWithImpressions','Unique impression viewers',payload));
+     acq.append(makeInsight('ThumbnailImpressions','Thumbnail impressions (not search)',payload));
+     acq.append(makeInsight('UniqueUsersWithClicks','Unique detail-page visitors',payload));
+     acq.append(makeInsight('ImpressionCVR','Impression CTR',payload));
+     acq.append(makeInsight('ClickCVR','Detail-page CTR',payload));
+     acq.append(makeInsight('EndToEndCVR','Play-through rate',payload));
+   }
+ };
+ async function fetchPublished(){
+   try{
+     const r=await fetch('/api/public-analytics',{cache:'no-store'});
+     const data=await r.json();
+     renderPanels(data);
+     // Reuse ONLY already approved public metrics for the Acquisition cards.
+     // This does not expose new private data and does not perform a second API call.
+     window.__kvnPublishedAnalytics=(r.ok && ['ready','partial'].includes(data?.state))?data:null;
+     window.dispatchEvent(new Event('kvn:official-analytics'));
+     if(!Array.isArray(data.metrics) || !data.metrics.length){
+       const msg=data.state==='disabled'?'No owner-approved metrics have been selected for public display.':data.state==='not_configured'?'Open Cloud is ready. The owner must configure a Cloudflare Secret to enable the connection.':data.note||'The selected analytics are currently unavailable.';
+       message(msg);return;
+     }
+     root.replaceChildren();const grid=document.createElement('div');grid.className='official-grid';
+     for(const metric of data.metrics||[]){
+       const card=document.createElement('article');card.className='official-card';
+       const heading=document.createElement('small');heading.textContent=metric.label;
+       const amount=document.createElement('strong');amount.textContent=metric.latest?fmt(metric.latest.value,metric.dp)+(metric.unit==='min'?' min':metric.unit==='Robux'?' Ramount.title=metric.latest?'Verified aggregated Roblox data':'No verified value available yet';
+       const note=document.createElement('p');note.textContent=metric.state==='ready'?'Last complete day ('+metric.latest.date+') · '+metric.unit+(metric.unit==='API value'?' (raw, not converted)':''):detailMessage(metric);
+       card.append(heading,amount,note);
+       if(Array.isArray(metric.points) && metric.points.length>1){
+          const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+          svg.setAttribute('viewBox','0 0 300 75');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('role','img');svg.setAttribute('aria-label','Dagelijkse historische waarden van '+metric.label);
+          const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+          line.setAttribute('points',svgPoints(metric.points.map(p=>p.value)));
+          line.setAttribute('stroke','#68bdff');line.setAttribute('stroke-width','2.5');line.setAttribute('fill','none');line.setAttribute('vector-effect','non-scaling-stroke');
+          svg.append(line);card.append(svg);
+       }
+       grid.append(card);
+     }
+     if(!grid.children.length){message('No selected metrics available.');return}
+     root.append(grid);
+   }catch{renderPanels(null);message('Authorized Creator Analytics are temporarily unavailable.');}
+ }
+ fetchPublished();
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchPublished()});
+})();
+`;
+:''):'—';
+   const status=document.createElement('p');status.className='k-status';
+   status.textContent=ready?'Verified Roblox data · '+metric.latest.date+(metric.unit==='API value'?' · raw API value': ''):detailMessage(metric);
+   const meta=document.createElement('span');meta.className='k-meta';
+   meta.textContent=metric?'ROBLOX OPEN CLOUD':'NOT ENABLED · '+id;
+   card.append(header,value,status,meta);
+   if(ready && Array.isArray(metric.points) && metric.points.length>1){
+     const ns='http://www.w3.org/2000/svg';
+     const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 300 75');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('role','img');svg.setAttribute('aria-label',title+' history');
+     const line=document.createElementNS(ns,'polyline');line.setAttribute('points',svgPoints(metric.points.map(x=>x.value)));line.setAttribute('fill','none');line.setAttribute('stroke','#62bdff');line.setAttribute('stroke-width','3');line.setAttribute('vector-effect','non-scaling-stroke');
+     svg.append(line);card.append(svg);
+   }
+   return card;
+ };
+ const makeBanner=(title,description,href,label)=>{
+   const b=document.createElement('div');b.className='kvn-insight-banner';
+   const h=document.createElement('strong');h.textContent=title;
+   const p=document.createElement('p');p.textContent=description;
+   b.append(h,p);
+   if(href){const link=document.createElement('a');link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=label||'Open Creator Dashboard';b.append(link);}
+   return b;
+ };
+ const panelData=[
+   ['retention',[['ForwardD1Retention','Day 1 retention'],['ForwardD7Retention','Day 7 retention'],['ForwardD30Retention','Day 30 retention']]],
+   ['performance',[['ClientFpsAvg','Average client FPS'],['ClientCrashRate15m','Client crash rate']]],
+   ['monetization',[['PayingUsersCVR','Paying-user conversion']]]
+ ];
+ const renderPanels=(payload)=>{
+   for(const [page,metrics] of panelData){
+     const tab=document.querySelector('.tabbody[data-page="'+page+'"]');
+     if(!tab)continue;
+     const grid=document.createElement('div');grid.className='kvn-insights';
+     for(const [id,title] of metrics)grid.append(makeInsight(id,title,payload));
+     if(page==='monetization')grid.append(makeBanner(
+       'Revenue stays private',
+       'Your Robux earnings are not exposed on this public dashboard. View revenue, ARPDAU, and purchase trends in the owner-only Roblox Creator Dashboard.',
+       'https://create.roblox.com/dashboard/creations','View private revenue ↗'));
+     if(page==='performance')grid.append(makeBanner(
+       'Official performance telemetry',
+       'These graphs use Roblox Open Cloud data, not browser estimates. Enable FPS and crash-rate metrics explicitly to publish them.',
+       'https://create.roblox.com/docs/cloud/guides/analytics','Analytics API guide ↗'));
+     tab.replaceChildren(grid);
+   }
+   const acq=document.querySelector('.tabbody[data-page="acquisition"] .details');
+   if(acq){
+     acq.querySelectorAll('.kvn-insight-card').forEach(x=>x.remove());
+     const old=acq.children[2];if(old && !old.classList.contains('kvn-insight-card'))old.remove();
+     acq.append(makeInsight('UniqueUsersWithImpressions','Unique impression viewers',payload));
+     acq.append(makeInsight('ImpressionCVR','Impression CTR',payload));
+   }
+ };
+ async function fetchPublished(){
+   try{
+     const r=await fetch('/api/public-analytics',{cache:'no-store'});
+     const data=await r.json();
+     renderPanels(data);
+     // Reuse ONLY already approved public metrics for the Acquisition cards.
+     // This does not expose new private data and does not perform a second API call.
+     window.__kvnPublishedAnalytics=(r.ok && ['ready','partial'].includes(data?.state))?data:null;
+     window.dispatchEvent(new Event('kvn:official-analytics'));
+     if(!Array.isArray(data.metrics) || !data.metrics.length){
+       const msg=data.state==='disabled'?'No owner-approved metrics have been selected for public display.':data.state==='not_configured'?'Open Cloud is ready. The owner must configure a Cloudflare Secret to enable the connection.':data.note||'The selected analytics are currently unavailable.';
+       message(msg);return;
+     }
+     root.replaceChildren();const grid=document.createElement('div');grid.className='official-grid';
+     for(const metric of data.metrics||[]){
+       const card=document.createElement('article');card.className='official-card';
+       const heading=document.createElement('small');heading.textContent=metric.label;
+       const amount=document.createElement('strong');amount.textContent=metric.latest?fmt(metric.latest.value,metric.dp)+(metric.unit==='min'?' min':''): '—';amount.title=metric.latest?'Verified aggregated Roblox data':'No verified value available yet';
+       const note=document.createElement('p');note.textContent=metric.state==='ready'?'Last complete day ('+metric.latest.date+') · '+metric.unit+(metric.unit==='API value'?' (raw, not converted)':''):detailMessage(metric);
+       card.append(heading,amount,note);
+       if(Array.isArray(metric.points) && metric.points.length>1){
+          const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+          svg.setAttribute('viewBox','0 0 300 75');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('role','img');svg.setAttribute('aria-label','Dagelijkse historische waarden van '+metric.label);
+          const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+          line.setAttribute('points',svgPoints(metric.points.map(p=>p.value)));
+          line.setAttribute('stroke','#68bdff');line.setAttribute('stroke-width','2.5');line.setAttribute('fill','none');line.setAttribute('vector-effect','non-scaling-stroke');
+          svg.append(line);card.append(svg);
+       }
+       grid.append(card);
+     }
+     if(!grid.children.length){message('No selected metrics available.');return}
+     root.append(grid);
+   }catch{renderPanels(null);message('Authorized Creator Analytics are temporarily unavailable.');}
+ }
+ fetchPublished();
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchPublished()});
+})();
+`;
+:''): '—';amount.title=metric.latest?'Verified aggregated Roblox data':'No verified value available yet';
+       const note=document.createElement('p');note.textContent=metric.state==='ready'?'Last complete day ('+metric.latest.date+') · '+metric.unit+(metric.unit==='API value'?' (raw, not converted)':''):detailMessage(metric);
+       card.append(heading,amount,note);
+       if(Array.isArray(metric.points) && metric.points.length>1){
+          const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+          svg.setAttribute('viewBox','0 0 300 75');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('role','img');svg.setAttribute('aria-label','Dagelijkse historische waarden van '+metric.label);
+          const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+          line.setAttribute('points',svgPoints(metric.points.map(p=>p.value)));
+          line.setAttribute('stroke','#68bdff');line.setAttribute('stroke-width','2.5');line.setAttribute('fill','none');line.setAttribute('vector-effect','non-scaling-stroke');
+          svg.append(line);card.append(svg);
+       }
+       grid.append(card);
+     }
+     if(!grid.children.length){message('No selected metrics available.');return}
+     root.append(grid);
+   }catch{renderPanels(null);message('Authorized Creator Analytics are temporarily unavailable.');}
+ }
+ fetchPublished();
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchPublished()});
+})();
+`;
+:''):'—';
    const status=document.createElement('p');status.className='k-status';
    status.textContent=ready?'Verified Roblox data · '+metric.latest.date+(metric.unit==='API value'?' · raw API value': ''):detailMessage(metric);
    const meta=document.createElement('span');meta.className='k-meta';

@@ -40,6 +40,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Test responsive layout and interactions
         run: node scripts/check-layout.mjs
+      - name: Verify deployed CCU visual effects (read-only browser test)
+        run: node scripts/check-live-animation.mjs
       - name: Upload browser screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -47,3 +49,16 @@ jobs:
           name: responsive-dashboard-screenshots
           path: test-artifacts/*.png
           if-no-files-found: ignore
+
+  live-ccu-diagnostics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inspect live HTML and public CCU endpoints (read-only)
+        run: node scripts/diagnose-live.mjs

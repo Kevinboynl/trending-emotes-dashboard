@@ -8,6 +8,7 @@ body{overflow-x:clip}
 body.kvn-page-hidden .kvn-star,body.kvn-page-hidden .kvn-sidefx *,
 body.kvn-page-hidden .orbit,body.kvn-page-hidden .halo,
 body.kvn-page-hidden .ticker-inner{animation-play-state:paused!important}
+.kvn-sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .kvn-pointer-core{position:fixed;left:0;top:0;z-index:0;pointer-events:none;width:275px;height:275px;border-radius:50%;opacity:0;transform:translate3d(-999px,-999px,0) translate(-50%,-50%);background:radial-gradient(circle,rgba(71,179,255,.21) 0%,rgba(48,133,255,.09) 28%,transparent 70%);filter:blur(12px);will-change:transform,opacity;transition:opacity .28s ease}
 .hero{contain:layout}
 .hero .hero-copy{isolation:isolate}
@@ -181,6 +182,8 @@ const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');
 const fine=window.matchMedia('(hover:hover) and (pointer:fine)');
 const hero=document.querySelector('.hero');
 if(hero){
+  const eyebrow=hero.querySelector('.eyebrow');
+  if(eyebrow)eyebrow.textContent='THE KVN ANALYTICS LAB';
   const title=hero.querySelector('h1');
   if(title && !title.querySelector('.kvn-line-one')){
     const first=[...title.childNodes].find(node=>node.nodeType===Node.TEXT_NODE&&node.textContent.trim());
@@ -254,6 +257,11 @@ if(chart){
   chart.setAttribute('aria-label','Verified Roblox historical chart. Use left and right arrow keys to explore measurements.');
   let index=0;
   const tooltip=document.getElementById('tooltip'),point=document.getElementById('point');
+  const chartAnnouncer=document.createElement('div');
+  chartAnnouncer.className='kvn-sr-only';
+  chartAnnouncer.setAttribute('aria-live','polite');
+  chartAnnouncer.setAttribute('aria-atomic','true');
+  chart.parentElement?.append(chartAnnouncer);
   const move=(to)=>{
     if(typeof chartPoints==='undefined'||!Array.isArray(chartPoints)||chartPoints.length<2)return;
     index=Math.max(0,Math.min(chartPoints.length-1,to));
@@ -268,6 +276,7 @@ if(chart){
       tooltip.style.left=Math.max(80,Math.min(box.width-80,p.x/860*box.width))+'px';
       tooltip.style.top=p.y/300*box.height+'px';
       tooltip.textContent=dateTime(p.raw.t)+' · '+fmt(p.raw[currentMetric])+' '+valueFields[currentMetric];
+      chartAnnouncer.textContent=tooltip.textContent;
     }
   };
   chart.addEventListener('keydown',e=>{

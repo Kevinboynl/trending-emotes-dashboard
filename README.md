@@ -139,3 +139,28 @@ Alle data bestaat uit afgeronde UTC-dagen (de API-query eindigt bij middernacht 
 - Deze koppeling gebruikt de [officiële Roblox Analytics Query API](https://create.roblox.com/docs/cloud/guides/analytics).
 
 **Let op:** het aanmaken van de Cloudflare Secret is een eenmalige actie die de eigenaar zelf in Cloudflare moet uitvoeren. GitHub mag de sleutel nooit bevatten.
+
+## Iedereen de geselecteerde statistieken laten bekijken
+
+Je website is openbaar. De route `/api/public-analytics` vereist **geen bezoekerslogin**. Alleen de twee metrics uit
+`PUBLIC_ANALYTICS_METRICS = "DailyActiveUsers,AverageSessionLengthMinutes"` worden als geaggregeerde cijfers zichtbaar.
+De API-key wordt uitsluitend in de Cloudflare Worker gebruikt en nooit gepubliceerd.
+
+### Wat betekent `state: unavailable`?
+
+De publicatie staat aan, maar de Worker kreeg nog geen bruikbare gegevens van Roblox. In de nieuwste versie hebben metrics nu
+een veilige `reason` zodat jij kunt zien wat je moet oplossen, zonder de API-key te tonen:
+
+- `authorization`: controleer of de API-key `universe.analytics:read` heeft voor **de juiste Universe ID** en of de key-eigenaar toegang heeft tot de analytics van de groepsgame. De lock van de groep kan hier mogelijk mee samenhangen.
+- `request_invalid`: Roblox wijst deze metric of de query af.
+- `no_data`: Roblox heeft in de laatste 31 volledig afgesloten UTC-dagen geen definitieve numerieke meetpunten teruggestuurd.
+- `pending`: de query is nog in verwerking.
+- `rate_limited` / `upstream`: tijdelijke Roblox-beperking of storing.
+- `universe_lookup`: controleer of het numerieke universe ID is gevonden. Optioneel `ROBLOX_UNIVERSE_ID` als **niet-geheime Plaintext-variabele** instellen.
+- `invalid_response`: onverwacht responseformaat.
+
+Open na de volgende Cloudflare-deployment
+`https://trending-emotes-dashboard.k-backx.workers.dev/api/public-analytics`.
+De `reason` staat per metric. Stuur **nooit** de API-key zelf of een screenshot waarop hij zichtbaar is.
+
+De website toont een waarde pas zodra Roblox die werkelijk retourneert. Er worden geen willekeurige of verzonnen waarden gegenereerd.

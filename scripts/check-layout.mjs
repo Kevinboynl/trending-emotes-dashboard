@@ -119,11 +119,40 @@ try{
       };
     });
     assert(rect.documentWidth<=width+2,'Page horizontally overflows at '+width+': '+JSON.stringify(rect));
-    assert(rect.chartGap>=7,'Chart controls overlap plot at '+width+': '+JSON.stringify(rect));
+    assert(rect.chartGap>=18,'Chart controls overlap plot at '+width+': '+JSON.stringify(rect));
     assert(rect.plotLeft>=rect.panelLeft-2 && rect.plotRight<=rect.panelRight+2,
       'Chart extends beyond panel at '+width+': '+JSON.stringify(rect));
     assert(rect.buttonTop>=rect.groupTop-2 && rect.buttonBottom<=rect.groupBottom+2,
       'Visits button is clipped vertically at '+width+': '+JSON.stringify(rect));
+
+    // The header labels and tooltip belong in a reserved upper lane;
+    // the plotted line must NEVER overlap them, even at a record high.
+    await page.waitForFunction(()=>Boolean(document.getElementById('curve')?.getAttribute('d')?.startsWith('M')));
+    const plotWidth=await page.locator('#chart').evaluate(el=>el.getBoundingClientRect().width);
+    await page.locator('#chart').hover({position:{x:Math.max(8,plotWidth*.6),y:100}});
+    const safeZone=await page.evaluate(()=>{
+      const tooltip=document.getElementById('tooltip');
+      const plot=document.getElementById('chart');
+      const bubble=tooltip.getBoundingClientRect();
+      const rect=plot.getBoundingClientRect();
+      const highest=Math.min(...chartPoints.map(p=>p.y));
+      const lineTop=rect.top+highest/300*rect.height;
+      return {
+        visible:getComputedStyle(tooltip).display!=='none',
+        highest,tooltipBottom:bubble.bottom,plotTop:rect.top,lineTop,
+        tooltipLeft:bubble.left,tooltipRight:bubble.right,
+        plotLeft:rect.left,plotRight:rect.right
+      };
+    });
+    assert(safeZone.visible,'Hover tooltip is absent at '+width);
+    assert(safeZone.highest>=100,'The chart has no reserved label lane at '+width+': '+JSON.stringify(safeZone));
+    assert(safeZone.tooltipBottom+12<=safeZone.lineTop,
+      'Chart line overlaps tooltip text at '+width+': '+JSON.stringify(safeZone));
+    assert(safeZone.tooltipLeft>=safeZone.plotLeft-2 &&
+      safeZone.tooltipRight<=safeZone.plotRight+2,
+      'Chart tooltip overflows its width at '+width+': '+JSON.stringify(safeZone));
+    await page.locator('#chart').evaluate(el=>el.dispatchEvent(new Event('pointerleave')));
+
     await page.locator('#tabs [data-tab="retention"]').click();
     assert.equal(await page.locator('.tabbody[data-page="retention"]').evaluate(el=>el.classList.contains('active')),true,
       'Retention tab did not activate at '+width);

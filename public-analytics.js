@@ -23,7 +23,7 @@ export const ANALYTICS_CATALOG = Object.freeze({
   ThumbnailImpressions: { label:'Thumbnail impressions', short:'Thumbnail impressions', unit:'impressions', dp:0, category:'Acquisition' },
   ClientMemoryUsageAvg: { label:'Average client memory usage', short:'Client memory', unit:'API value', dp:2, category:'Performance' },
   ClientCpuTimeAvg: { label:'Average client CPU time', short:'Client CPU', unit:'API value', dp:2, category:'Performance' },
-  // Sensitive financial metrics are optional; do not enable publicly by default.
+  // Financial metrics appear only when PUBLIC_ANALYTICS_METRICS explicitly authorizes them.
   DailyRevenue: { label:'Daily Robux revenue', short:'Robux revenue', unit:'Robux', dp:0, category:'Monetization' },
   AverageRevenuePerUser: { label:'Average revenue per daily active user', short:'ARPDAU', unit:'Robux', dp:2, category:'Monetization' },
   AverageRevenuePerPayingUser: { label:'Average revenue per paying user', short:'ARPPU', unit:'Robux', dp:2, category:'Monetization' }
@@ -267,7 +267,7 @@ export const publicAnalyticsMarkup = String.raw`
 <section class="wrap" id="officialMetrics" aria-label="Selected official Roblox statistics">
  <div class="bar reveal"><div><div class="sec-label">04 / AUTHORIZED ANALYTICS</div>
  <h2>OFFICIAL <span style="color:#74c6ff">INSIGHTS.</span></h2>
- <p class="official-sub">Only owner-approved aggregated Roblox Creator Analytics. No private player data, unpublished revenue, or fabricated estimates.</p></div>
+ <p class="official-sub">Owner-approved aggregated Roblox Creator Analytics. Selected financial metrics may be public; no private player data or fabricated estimates.</p></div>
  <span class="livepill">OPEN CLOUD • READ ONLY</span></div>
  <div id="publicMetricsContent" aria-live="polite"><div class="official-grid" aria-hidden="true">
    <div class="official-card"><div class="official-placeholder"></div><p>Loading authorized metrics...</p></div>
@@ -374,10 +374,16 @@ export const publicAnalyticsClient = String.raw`
        'Today versus finalized statistics',
        'Creator Dashboard may show a value for today. The public Open Cloud bridge uses complete UTC days only, so these figures can differ. We never substitute a previous day and label it as today.',
        'https://create.roblox.com/docs/cloud/guides/analytics','How daily API periods work ↗'));
-     if(page==='monetization')grid.append(makeBanner(
-       'Revenue stays private',
-       'Revenue, ARPDAU and ARPPU are private by default. The owner must explicitly authorize each metric before publishing any of these numbers.',
-       'https://create.roblox.com/dashboard/creations','View private revenue ↗'));
+     if(page==='monetization'){
+       const financialIds=['DailyRevenue','AverageRevenuePerUser','AverageRevenuePerPayingUser'];
+       const approved=financialIds.filter(id=>Boolean(findMetric(payload,id)));
+       grid.append(makeBanner(
+         approved.length?'Owner-authorized monetization metrics':'Revenue stays private',
+         approved.length?
+           'The owner explicitly enabled these aggregated monetization metrics for public display. Figures use Roblox Open Cloud finalized UTC days; unavailable values are never estimated.':
+           'Revenue, ARPDAU and ARPPU are private by default unless the owner enables them. Only selected aggregated statistics are shown.',
+         'https://create.roblox.com/dashboard/creations','Open Creator Dashboard ↗'));
+     }
      if(page==='performance')grid.append(makeBanner(
        'Official performance telemetry',
        'These graphs use Roblox Open Cloud data, not browser estimates. Enable FPS and crash-rate metrics explicitly to publish them.',

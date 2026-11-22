@@ -29,6 +29,8 @@ Als je al een Worker hebt: ga naar die Worker → **Settings > Builds** → **Co
 
 De API-routes zijn `/api/stats` en `/api/history?range=24h`.
 
+**Nieuw:** [Stapsgewijze D1-configuratie en controle voor echte 24/7 metingen](docs/24-7-history.md). Zonder jouw eigen Cloudflare D1-database-ID kan deze koppeling nog niet worden geactiveerd. De website toont daarom voorlopig alleen lokaal verzamelde geschiedenis als er geen binding is ingesteld.
+
 ## Optioneel: 24/7 historische data met Cloudflare D1
 
 Standaard houdt het dashboard een lokale browsergeschiedenis bij; die wordt niet gedeeld tussen apparaten en loopt niet door als niemand de pagina opent. Voor echte doorlopende metingen:

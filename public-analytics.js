@@ -27,8 +27,7 @@ function output(body, code = 200) {
     status: code,
     headers: {
       'Cache-Control': 'public, max-age=120',
-      'X-Content-Type-Options': 'nosniff',
-      'Access-Control-Allow-Origin': 'null'
+      'X-Content-Type-Options': 'nosniff'
     }
   });
 }

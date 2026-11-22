@@ -3,6 +3,7 @@ import { publicAnalyticsResponse, publicAnalyticsStyles, publicAnalyticsMarkup, 
 import { premiumCSS } from './premium-theme.js';
 import { premiumJS } from './premium-interactions.js';
 import { studioUpgradeCSS, studioUpgradeJS } from './studio-upgrade.js';
+import { allowPublicApi, protectResponse, safeError, newPageNonce } from './security.js';
 /* TRENDING EMOTES — one-file Cloudflare Worker. Optional D1 binding: DB.
    Optional cron expression: every five minutes (collects without visitors).
    Place ID: 134944031090971. No API keys required for public metrics.
@@ -316,49 +317,92 @@ const THEMED_HTML = HTML
   .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n</script></body></html>');
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
-    if (url.pathname === '/api/public-analytics') {
-      if (request.method && request.method !== 'GET') {
-        return new Response('Method Not Allowed', { status:405, headers:{Allow:'GET'} });
+    // Only safe, read-only methods are accepted, including on the HTML route.
+    if(request.method!=='GET' && request.method!=='HEAD')
+      return safeError(405,'method_not_allowed','Only GET and HEAD are supported.');
+    if(request.url.length>2048)
+      return safeError(414,'uri_too_long','The URL is too long.');
+
+    const url=new URL(request.url);
+    const pathname=url.pathname;
+    const api=pathname==='/api/stats'||pathname==='/api/history'||pathname==='/api/public-analytics';
+    if(!api && pathname!=='/')
+      return safeError(404,'not_found','This route does not exist.');
+
+    // HEAD must not trigger billable upstream requests. A lightweight 204 is
+    // sufficient for an uptime probe; all actual data is fetched with GET.
+    if(request.method==='HEAD')
+      return protectResponse(new Response(null,{status:204,headers:{'Cache-Control':'no-store'}}));
+
+    if(api){
+      // Disallow arbitrary query parameters and surprise URL variants.
+      // The only supported API parameter is the predefined history range.
+      if(pathname==='/api/history'){
+        const allowed=new Set(['1h','24h','7d','30d']);
+        const range=url.searchParams.get('range');
+        if(url.searchParams.size>1 || (url.searchParams.size===1 && (!url.searchParams.has('range') || !allowed.has(range))))
+          return safeError(400,'invalid_query','Supported history ranges are 1h, 24h, 7d, and 30d.');
+      }else if(url.searchParams.size){
+        return safeError(400,'invalid_query','This endpoint does not accept query parameters.');
       }
-      return publicAnalyticsResponse(env);
+      if(!(await allowPublicApi(request,env,pathname)))
+        return safeError(429,'rate_limited','Too many requests. Please retry after one minute.');
     }
-    if (url.pathname === '/api/stats') {
-      try {
-        // Deduplicate concurrent page loads within the same Worker isolate.
-        const now = Date.now();
-        if (!lastLiveStats || now >= liveCacheUntil) {
-          if (!pendingStats) {
-            pendingStats = fetchStats(env).then(data => {
-              lastLiveStats = data;
-              liveCacheUntil = Date.now() + LIVE_CACHE_MS;
+
+    if(pathname==='/api/public-analytics'){
+      return protectResponse(await publicAnalyticsResponse(env));
+    }
+    if(pathname==='/api/stats'){
+      try{
+        // Deduplicate concurrent loads within the same Worker isolate.
+        const now=Date.now();
+        if(!lastLiveStats || now>=liveCacheUntil){
+          if(!pendingStats){
+            pendingStats=fetchStats(env).then(data=>{
+              lastLiveStats=data;
+              liveCacheUntil=Date.now()+LIVE_CACHE_MS;
               return data;
-            }).finally(() => { pendingStats = null; });
+            }).finally(()=>{pendingStats=null;});
           }
           await pendingStats;
         }
-        const stats = lastLiveStats;
-        try { await record(env.DB, stats); } catch (e) { console.log('D1 write unavailable:', e.message); }
-        return Response.json(stats, { headers:{'Cache-Control':'public, max-age=30'} });
-      } catch (err) {
-        const diagnostic = minimalStatus(err);
-        const fallback = lastLiveStats || await readLastSample(env.DB);
-        if (fallback) {
-          return Response.json({...fallback,stale:true,warning:diagnostic},{
+        const stats=lastLiveStats;
+        try{await record(env.DB,stats);}catch{console.log('D1 sample write unavailable');}
+        return protectResponse(Response.json(stats,{
+          headers:{'Cache-Control':'public, max-age=30'}
+        }));
+      }catch(err){
+        const diagnostic=minimalStatus(err);
+        const fallback=lastLiveStats||await readLastSample(env.DB);
+        if(fallback){
+          return protectResponse(Response.json({...fallback,stale:true,warning:diagnostic},{
             headers:{'Cache-Control':'no-store','X-Stats-Mode':'stale'}
-          });
+          }));
         }
-        return Response.json({error:'Roblox public statistics are unavailable', ...diagnostic},{
-          status:503,headers:{'Cache-Control':'no-store'}
-        });
+        return protectResponse(Response.json({
+          error:'Roblox public statistics are unavailable',...diagnostic
+        },{status:503,headers:{'Cache-Control':'no-store'}}));
       }
     }
-    if (url.pathname === '/api/history') {
-      try { return Response.json(await history(env.DB,url.searchParams.get('range')),{headers:{'Cache-Control':'public, max-age=60'}}); }
-      catch(e){ return Response.json({error:String(e.message)},{status:503}); }
+    if(pathname==='/api/history'){
+      try{
+        return protectResponse(Response.json(await history(env.DB,url.searchParams.get('range')),{
+          headers:{'Cache-Control':'public, max-age=60'}
+        }));
+      }catch{
+        // Do not return raw SQL errors or database configuration details.
+        return safeError(503,'history_unavailable','Historical measurements are temporarily unavailable.');
+      }
     }
-    if (url.pathname !== '/') return new Response('Not found',{status:404});
-    return new Response(THEMED_HTML, {headers:{'Content-Type':'text/html; charset=utf-8','X-Content-Type-Options':'nosniff'}});
+
+    const nonce=newPageNonce();
+    const html=THEMED_HTML.replace('<script>','<script nonce="'+nonce+'">');
+    return protectResponse(new Response(html,{
+      headers:{
+        'Content-Type':'text/html; charset=utf-8',
+        'Cache-Control':'private, no-store, max-age=0'
+      }
+    }),nonce);
   },
   async scheduled(event, env, ctx) {
     if (env.DB) ctx.waitUntil(fetchStats(env).then(s=>record(env.DB,s)));

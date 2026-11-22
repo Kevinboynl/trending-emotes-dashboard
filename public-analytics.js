@@ -15,7 +15,8 @@ export const ANALYTICS_CATALOG = Object.freeze({
   ImpressionCVR: { label:'Impression click-through (raw value)', short:'Impression CTR', unit:'API value', dp:3, category:'Acquisition' },
   ClientFpsAvg: { label:'Average client frame rate', short:'Average FPS', unit:'fps', dp:1, category:'Performance' },
   ClientCrashRate15m: { label:'Client crash rate (raw API value)', short:'Crash rate', unit:'API value', dp:3, category:'Performance' },
-  PayingUsersCVR: { label:'Paying-user conversion (raw API value)', short:'Payer conversion', unit:'API value', dp:3, category:'Monetization' },
+  PayingUsersCVR: { label:'Payer conversion rate', short:'Payer conversion', unit:'rate', dp:2, category:'Monetization' },
+  PayingUsers: { label:'Paying users', short:'Paying users', unit:'users', dp:0, category:'Monetization' },
   UniqueUsersWithClicks: { label:'Unique detail-page visitors', short:'Page visitors', unit:'users', dp:0, category:'Acquisition' },
   ClickCVR: { label:'Users detail page CTR (raw API value)', short:'Detail-page CTR', unit:'API value', dp:3, category:'Acquisition' },
   EndToEndCVR: { label:'Play rate per unique user (raw API value)', short:'Play-through rate', unit:'API value', dp:3, category:'Acquisition' },
@@ -249,16 +250,20 @@ export const publicAnalyticsClient = String.raw`
  if(!root)return;
  const fmt=(n,dp=0)=>Number(n).toLocaleString('en-US',{maximumFractionDigits:dp});
  const isRetention=id=>/^ForwardD(?:1|7|30)Retention$/.test(String(id));
+ const isConversion=id=>['PayingUsersCVR','ImpressionCVR','ClickCVR','EndToEndCVR'].includes(String(id));
+ const isFractionalRate=id=>isRetention(id)||isConversion(id);
  const valueText=(metric)=>{
    if(!metric?.latest || !Number.isFinite(metric.latest.value))return '—';
    const v=metric.latest.value;
    // Retention is a fractional cohort return ratio (e.g. 0.144 => 14.4%).
-   if(isRetention(metric.id) && v>=0 && v<=1)return fmt(v*100,1)+'%';
+   if(isFractionalRate(metric.id) && v>=0 && v<=1)return fmt(v*100,2)+'%';
    return fmt(v,metric.dp||0)+(metric.unit==='min'?' min':metric.unit==='fps'?' FPS':metric.unit==='Robux'?' R$':'');
  };
  const statusText=(metric)=>{
    if(!metric?.latest)return '';
    if(isRetention(metric.id))return 'New-player cohort: '+metric.latest.date+' · '+metric.short+' · Roblox API';
+   if(metric.id==='PayingUsersCVR')return 'Last complete UTC day: '+metric.latest.date+' · not today’s live conversion rate';
+   if(isConversion(metric.id))return 'Last complete UTC day: '+metric.latest.date+' · Roblox API';
    return 'Verified Roblox data · '+metric.latest.date+(metric.unit==='API value'?' · raw API value':'');
  };
  const svgPoints=arr=>{
@@ -318,7 +323,7 @@ export const publicAnalyticsClient = String.raw`
  const panelData=[
    ['retention',[['ForwardD1Retention','Day 1 retention'],['ForwardD7Retention','Day 7 retention'],['ForwardD30Retention','Day 30 retention']]],
    ['performance',[['ClientFpsAvg','Average client FPS'],['ClientCrashRate15m','Client crash rate'],['ClientMemoryUsageAvg','Client memory usage'],['ClientCpuTimeAvg','Client CPU time']]],
-   ['monetization',[['PayingUsersCVR','Paying-user conversion'],['DailyRevenue','Daily Robux revenue'],['AverageRevenuePerUser','ARPDAU'],['AverageRevenuePerPayingUser','ARPPU']]]
+   ['monetization',[['PayingUsersCVR','Payer conversion rate'],['PayingUsers','Paying users'],['DailyRevenue','Daily Robux revenue'],['AverageRevenuePerUser','ARPDAU'],['AverageRevenuePerPayingUser','ARPPU']]]
  ];
  const renderPanels=(payload)=>{
    for(const [page,metrics] of panelData){
@@ -330,6 +335,10 @@ export const publicAnalyticsClient = String.raw`
        'Why this may differ from Creator Dashboard',
        'Each percentage above is for the latest finalized first-play cohort shown on its card. D7 and D30 mature later than D1. Creator Dashboard may display an aggregate over a different date range; compare the same cohort date to compare the figures.',
        'https://create.roblox.com/docs/production/analytics/retention','About Roblox retention ↗'));
+     if(page==='monetization')grid.append(makeBanner(
+       'Today versus finalized statistics',
+       'Creator Dashboard may show a value for today. The public Open Cloud bridge uses complete UTC days only, so these figures can differ. We never substitute a previous day and label it as today.',
+       'https://create.roblox.com/docs/cloud/guides/analytics','How daily API periods work ↗'));
      if(page==='monetization')grid.append(makeBanner(
        'Revenue stays private',
        'Revenue, ARPDAU and ARPPU are private by default. The owner must explicitly authorize each metric before publishing any of these numbers.',

@@ -452,27 +452,35 @@ function getVerifiedHistory(){
   return cloudHistory.concat(liveTail).sort((a,b)=>a.t-b.t);
 }
 function getPoints(){const since=Date.now()-spans[currentRange];return getVerifiedHistory().filter(x=>x.t>=since&&Number.isFinite(x[currentMetric]));}
+let historyRequestVersion=0;
 async function loadHistory(){
+  const requestedRange=currentRange,version=++historyRequestVersion;
   let unavailable=false;
   let comparison={state:'unavailable'};
   try{
-    const r=await fetch('/api/history?range='+currentRange,{cache:'no-store'});
+    const r=await fetch('/api/history?range='+requestedRange,{cache:'no-store'});
     if(!r.ok)throw Error('history unavailable');
     const data=await r.json();
-    comparison=data.comparison&&typeof data.comparison==='object'?data.comparison:{state:'unavailable'};
+    // A slow 7D response must never replace a newer 24H selection.
+    if(version!==historyRequestVersion||requestedRange!==currentRange)return;
+    comparison=data.comparison&&typeof data.comparison==='object'
+      ?data.comparison:{state:'unavailable'};
     if(data.storage==='cloud'){
       usingCloud=true;
-      cloudHistory=Array.isArray(data.points)?data.points.filter(p=>p&&Number.isFinite(p.t)):[];
+      cloudHistory=Array.isArray(data.points)?
+        data.points.filter(p=>p&&Number.isFinite(p.t)):[];
       $('storageInfo').textContent='Cloudflare D1 history · collected automatically when scheduled tasks are running.';
     }else{
       usingCloud=false;
       $('storageInfo').textContent='Browser-only history · 24/7 tracking needs a Cloudflare D1 database binding.';
     }
   }catch{
+    if(version!==historyRequestVersion||requestedRange!==currentRange)return;
     unavailable=true;
     usingCloud=false;
     $('storageInfo').textContent='History service unavailable · showing any locally saved measurements.';
   }
+  if(version!==historyRequestVersion||requestedRange!==currentRange)return;
   draw();
   const empty=$('noData');
   if(empty){
@@ -483,7 +491,11 @@ async function loadHistory(){
     }
   }
   await acquisition();
-  window.dispatchEvent(new CustomEvent('kvn:history-loaded',{detail:{range:currentRange,comparison,cloud:usingCloud,error:unavailable}}));
+  if(version===historyRequestVersion&&requestedRange===currentRange){
+    window.dispatchEvent(new CustomEvent('kvn:history-loaded',{
+      detail:{range:requestedRange,comparison,cloud:usingCloud,error:unavailable}
+    }));
+  }
 }
 async function acquisition(){
   let source=browserHistory;
@@ -544,7 +556,19 @@ async function acquisition(){
 }
 function getPointsForRange(range){const since=Date.now()-spans[range];return (usingCloud?cloudHistory:browserHistory).filter(x=>x.t>=since&&Number.isFinite(x.visits));}
 function draw(){const values=getPoints();const curve=$('curve'),shade=$('shade'),nodata=$('noData'),point=$('point');point.setAttribute('visibility','hidden');if(!values.length){chartPoints=[];curve.setAttribute('d','');shade.setAttribute('d','');nodata.style.display='flex';$('avgValue').textContent='—';$('maxValue').textContent='—';$('peak').textContent='—';$('axisStart').textContent='—';$('axisEnd').textContent='—';return;}const yVals=values.map(x=>x[currentMetric]);const lo=Math.min(...yVals),hi=Math.max(...yVals),gap=Math.max(1,hi-lo);const t0=values[0].t,t1=values[values.length-1].t;chartPoints=values.map((x,i)=>({x:18+(t1===t0?0:(x.t-t0)/(t1-t0))*824,y:270-((x[currentMetric]-lo)/gap)*235,raw:x}));let d=chartPoints.length?'M'+chartPoints[0].x.toFixed(2)+' '+chartPoints[0].y.toFixed(2):'';for(let i=1;i<chartPoints.length;i++){const p=chartPoints[i-1],q=chartPoints[i],dx=(q.x-p.x)*.36;d+=' C'+(p.x+dx).toFixed(2)+' '+p.y.toFixed(2)+' '+(q.x-dx).toFixed(2)+' '+q.y.toFixed(2)+' '+q.x.toFixed(2)+' '+q.y.toFixed(2);}if(chartPoints.length===1)d+=' L842 '+chartPoints[0].y.toFixed(2);curve.setAttribute('d',d);shade.setAttribute('d',d+' L842 300 L18 300 Z');nodata.style.display=values.length<2?'flex':'none';nodata.querySelector('strong').textContent='One more verified measurement needed';$('avgLabel').textContent='AVERAGE '+valueFields[currentMetric].toUpperCase();$('maxLabel').textContent='HIGHEST '+valueFields[currentMetric].toUpperCase();$('avgValue').textContent=fmt(yVals.reduce((a,b)=>a+b,0)/yVals.length);$('maxValue').textContent=fmt(hi);$('axisStart').textContent=new Date(t0).toLocaleString('en-US',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});$('axisEnd').textContent=dateTime(t1);const ccuWindow=(usingCloud?cloudHistory:browserHistory).filter(x=>x.t>=Date.now()-spans[currentRange]&&Number.isFinite(x.ccu));$('peak').textContent=ccuWindow.length?fmt(Math.max(...ccuWindow.map(x=>x.ccu))):'—';if(matchMedia('(prefers-reduced-motion: reduce)').matches){curve.style.transition='none';curve.style.strokeDasharray='none';curve.style.strokeDashoffset='0';}else{const len=curve.getTotalLength();curve.style.transition='none';curve.style.strokeDasharray=len;curve.style.strokeDashoffset=len;requestAnimationFrame(()=>{curve.style.transition='stroke-dashoffset .95s cubic-bezier(.3,.7,.2,1)';curve.style.strokeDashoffset='0'});}}
-$('ranges').addEventListener('click',e=>{const b=e.target.closest('[data-range]');if(!b)return;currentRange=b.dataset.range;for(const x of $('ranges').querySelectorAll('button'))x.classList.toggle('active',x===b);loadHistory();});
+$('ranges').addEventListener('click',e=>{
+  const b=e.target.closest('[data-range]');
+  if(!b||b.dataset.range===currentRange)return;
+  currentRange=b.dataset.range;
+  for(const x of $('ranges').querySelectorAll('button'))x.classList.toggle('active',x===b);
+  $('curve').setAttribute('d','');$('shade').setAttribute('d','');
+  $('point').setAttribute('visibility','hidden');
+  chartPoints=[];
+  const empty=$('noData');
+  empty.style.display='flex';
+  empty.querySelector('strong').textContent='Loading verified '+currentRange.toUpperCase()+' history…';
+  void loadHistory();
+});
 $('metrics').addEventListener('click',e=>{const b=e.target.closest('[data-metric]');if(!b)return;currentMetric=b.dataset.metric;for(const x of $('metrics').querySelectorAll('button'))x.classList.toggle('active',x===b);draw();});
 $('tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;for(const x of $('tabs').querySelectorAll('button'))x.classList.toggle('active',x===b);for(const x of document.querySelectorAll('.tabbody'))x.classList.toggle('active',x.dataset.page===b.dataset.tab);});
 $('chart').addEventListener('pointermove',e=>{if(chartPoints.length<2)return;const box=$('chart').getBoundingClientRect();const pointer=(e.clientX-box.left)/box.width*860;let best=chartPoints[0];for(const p of chartPoints)if(Math.abs(p.x-pointer)<Math.abs(best.x-pointer))best=p;const tip=$('tooltip');tip.style.display='block';tip.textContent=dateTime(best.raw.t)+' · '+fmt(best.raw[currentMetric])+' '+valueFields[currentMetric];tip.style.left=Math.min(box.width-90,Math.max(90,best.x/860*box.width))+'px';tip.style.top=best.y/300*box.height+'px';$('point').setAttribute('cx',best.x);$('point').setAttribute('cy',best.y);$('point').setAttribute('visibility','visible')});

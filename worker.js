@@ -265,7 +265,86 @@ let currentRange='24h',currentMetric='ccu',currentStats=null,cloudHistory=[],usi
 const spans={'1h':3600000,'24h':86400000,'7d':7*86400000,'30d':30*86400000};
 const valueFields={ccu:'Players',visits:'Visits',favorites:'Favorites',likes:'Likes'};
 const dateTime=t=>new Date(t).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-function animateNumber(id,num,extra){const el=$(id);if(!el||!Number.isFinite(num)){if(el)el.textContent='—';return;}const old=Number(el.dataset.value);el.dataset.value=num;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;if(!Number.isFinite(old)||reduced){el.textContent=fmt(num)+(extra||'');return;}const start=performance.now();function step(now){const k=Math.min(1,(now-start)/680),e=1-Math.pow(1-k,3);el.textContent=fmt(old+(num-old)*e)+(extra||'');if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step)}
+const numberAnimations=new WeakMap();
+function animateNumber(id,num,extra,verifiedCcuChange=false){
+  const el=$(id);
+  if(!el||!Number.isFinite(num)){
+    if(el)el.textContent='—';
+    return;
+  }
+  const old=Number(el.dataset.value);
+  const target=fmt(num)+(extra||'');
+  el.dataset.value=String(num);
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const active=numberAnimations.get(el);
+  if(active){
+    if(active.frame)cancelAnimationFrame(active.frame);
+    if(active.timer)clearTimeout(active.timer);
+    numberAnimations.delete(el);
+  }
+  // Only animate truly new, verified concurrent-player observations.
+  if(id==='playing'){
+    el.setAttribute('aria-label','Concurrent players: '+fmt(num));
+    if(!verifiedCcuChange||!Number.isFinite(old)||old===num||reduce){
+      el.textContent=target;
+      return;
+    }
+    const before=fmt(old),after=fmt(num);
+    if(before.length!==after.length || before.length>12){
+      el.textContent=target;
+      el.animate?.([{opacity:.66,transform:'translateY(7px)'},{opacity:1,transform:'translateY(0)'}],
+        {duration:540,easing:'cubic-bezier(.2,.8,.2,1)'});
+      return;
+    }
+    const increasing=num>old;
+    const fragment=document.createDocumentFragment();
+    let changed=0;
+    for(let i=0;i<after.length;i++){
+      const previous=before[i],next=after[i];
+      if(previous===next||!/[0-9]/.test(previous)||!/[0-9]/.test(next)){
+        fragment.append(document.createTextNode(next));
+        continue;
+      }
+      changed++;
+      const slot=document.createElement('span');
+      slot.className='kvn-roll-slot';
+      slot.setAttribute('aria-hidden','true');
+      slot.dataset.direction=increasing?'up':'down';
+      slot.style.setProperty('--kvn-roll-delay',String(Math.min(4,after.length-i-1)*45)+'ms');
+      const track=document.createElement('span');
+      track.className='kvn-roll-track';
+      const first=document.createElement('span'),second=document.createElement('span');
+      first.textContent=increasing?previous:next;
+      second.textContent=increasing?next:previous;
+      track.append(first,second);
+      slot.append(track);
+      fragment.append(slot);
+    }
+    if(!changed){el.textContent=target;return;}
+    el.replaceChildren(fragment);
+    const timer=setTimeout(()=>{
+      el.textContent=target;
+      numberAnimations.delete(el);
+    },710);
+    numberAnimations.set(el,{timer});
+    return;
+  }
+  if(!Number.isFinite(old)||reduce||old===num){
+    el.textContent=target;
+    return;
+  }
+  const start=performance.now();
+  const state={frame:0};
+  const step=now=>{
+    const progress=Math.min(1,(now-start)/600);
+    const eased=1-Math.pow(1-progress,3);
+    el.textContent=fmt(old+(num-old)*eased)+(extra||'');
+    if(progress<1)state.frame=requestAnimationFrame(step);
+    else {el.textContent=target;numberAnimations.delete(el);}
+  };
+  numberAnimations.set(el,state);
+  state.frame=requestAnimationFrame(step);
+}
 function state(msg,err){$('status').textContent=msg;$('pulse').style.background=err?'var(--danger)':'var(--green)';$('lastUpdate').textContent=err?msg:'Updated '+dateTime(Date.now())}
 function loadImage(url,target,parent){if(typeof url!=='string'||!url.startsWith('https://'))return;const box=$(target);if(!box)return;if(parent){const existing=box.querySelector('img');if(existing&&existing.src===url)return;const el=document.createElement('img');el.src=url;el.alt='TRENDING EMOTES! Roblox artwork';el.decoding='async';box.replaceChildren(el);}else{if(box.src!==url)box.src=url;box.alt='TRENDING EMOTES! Roblox artwork';box.style.visibility='visible'}}
 // Fast public polls; slower D1 history requests avoid needless database work.
@@ -295,7 +374,11 @@ async function stats(){
       for(const [id,key] of [
         ['playing','playing'],['heroCCU','playing'],['visits','visits'],
         ['favorites','favorites'],['likes','likes'],['dislikes','dislikes']
-      ])animateNumber(id,d[key]);
+      ])animateNumber(id,d[key],undefined,
+        id==='playing'&&!d.stale&&Boolean(previous)&&!previous.stale
+        &&Number.isFinite(previous.timestamp)&&Number.isFinite(d.timestamp)
+        &&previous.timestamp<d.timestamp
+      );
       const rating=Number.isFinite(d.rating)?d.rating.toFixed(1)+'%':'—';
       $('rating').textContent=rating;
       $('engagementRating').textContent=rating;

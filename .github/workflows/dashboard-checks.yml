@@ -1,0 +1,25 @@
+name: Dashboard quality checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify dashboard and API safety
+        run: node scripts/check-dashboard.mjs
+      - name: Compile Cloudflare Worker without deploying
+        run: npx --yes wrangler@4 deploy --dry-run --outdir /tmp/dashboard-worker-build

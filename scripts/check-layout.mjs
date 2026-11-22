@@ -47,7 +47,9 @@ const app=createServer(async(req,res)=>{
         'Invalid synthetic CCU test fixture');
       fixtureCCU=value;
       fixtureStale=url.searchParams.get('stale')==='true';
-      fixtureStamp=Math.max(Date.now(),fixtureStamp+1);
+      if(url.searchParams.get('sameStamp')!=='true'){
+        fixtureStamp=Math.max(Date.now(),fixtureStamp+1);
+      }
       return json(res,{ok:true});
     }
     if(url.pathname==='/__test__/settings'){

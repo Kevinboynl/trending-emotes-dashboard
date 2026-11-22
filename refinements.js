@@ -335,15 +335,17 @@ const statNodes=['playing','visits','favorites','rating','heroCCU','peak'];
 for(const name of statNodes){
   const el=$id(name);if(!el)continue;
   let last=el.textContent;
+  let settle;
   const watch=new MutationObserver(()=>{
     if(el.textContent===last)return;
     last=el.textContent;
+    clearTimeout(settle);
     if(reduce.matches || last==='—')return;
-    if(el.closest('.metrics')) {
-      el.removeAttribute('data-updated');
-      void el.offsetWidth;
-      el.setAttribute('data-updated','');
-    }
+    settle=setTimeout(()=>{
+      if(!el.isConnected || !el.closest('.metrics'))return;
+      el.animate([{opacity:.84,transform:'translateY(2px)'},{opacity:1,transform:'translateY(0)'}],
+        {duration:340,easing:'cubic-bezier(.16,1,.3,1)'});
+    },780);
   });
   watch.observe(el,{childList:true,characterData:true,subtree:true});
 }

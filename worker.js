@@ -1,3 +1,5 @@
+import { premiumCSS } from './premium-theme.js';
+import { premiumJS } from './premium-interactions.js';
 /* TRENDING EMOTES — one-file Cloudflare Worker. Optional D1 binding: DB.
    Optional cron expression: every five minutes (collects without visitors).
    Place ID: 134944031090971. No API keys required for public metrics.
@@ -153,7 +155,7 @@ async function acquisition(){
   animateNumber('visits7d',delta('7d'));
 }
 function getPointsForRange(range){const since=Date.now()-spans[range];return (usingCloud?cloudHistory:browserHistory).filter(x=>x.t>=since&&Number.isFinite(x.visits));}
-function draw(){const values=getPoints();const curve=$('curve'),shade=$('shade'),nodata=$('noData'),point=$('point');point.setAttribute('visibility','hidden');if(!values.length){curve.setAttribute('d','');shade.setAttribute('d','');nodata.style.display='flex';$('avgValue').textContent='—';$('maxValue').textContent='—';$('axisStart').textContent='—';$('axisEnd').textContent='—';return;}const yVals=values.map(x=>x[currentMetric]);const lo=Math.min(...yVals),hi=Math.max(...yVals),gap=Math.max(1,hi-lo);const t0=values[0].t,t1=values[values.length-1].t;chartPoints=values.map((x,i)=>({x:18+(t1===t0?0:(x.t-t0)/(t1-t0))*824,y:270-((x[currentMetric]-lo)/gap)*235,raw:x}));let d=chartPoints.map((p,i)=>(i?'L':'M')+p.x.toFixed(2)+' '+p.y.toFixed(2)).join(' ');if(chartPoints.length===1)d+=' L842 '+chartPoints[0].y.toFixed(2);curve.setAttribute('d',d);shade.setAttribute('d',d+' L842 300 L18 300 Z');nodata.style.display=values.length<2?'flex':'none';nodata.querySelector('strong').textContent='Nog één extra meting nodig';$('avgLabel').textContent='GEMIDDELDE '+valueFields[currentMetric].toUpperCase();$('maxLabel').textContent='HOOGSTE '+valueFields[currentMetric].toUpperCase();$('avgValue').textContent=fmt(yVals.reduce((a,b)=>a+b,0)/yVals.length);$('maxValue').textContent=fmt(hi);$('axisStart').textContent=new Date(t0).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});$('axisEnd').textContent=dateTime(t1);$('peak').textContent=fmt(Math.max(...(usingCloud?cloudHistory:browserHistory).map(x=>x.ccu).filter(Number.isFinite)));const len=curve.getTotalLength();curve.style.transition='none';curve.style.strokeDasharray=len;curve.style.strokeDashoffset=len;requestAnimationFrame(()=>{curve.style.transition='stroke-dashoffset .95s cubic-bezier(.3,.7,.2,1)';curve.style.strokeDashoffset='0'});}
+function draw(){const values=getPoints();const curve=$('curve'),shade=$('shade'),nodata=$('noData'),point=$('point');point.setAttribute('visibility','hidden');if(!values.length){curve.setAttribute('d','');shade.setAttribute('d','');nodata.style.display='flex';$('avgValue').textContent='—';$('maxValue').textContent='—';$('axisStart').textContent='—';$('axisEnd').textContent='—';return;}const yVals=values.map(x=>x[currentMetric]);const lo=Math.min(...yVals),hi=Math.max(...yVals),gap=Math.max(1,hi-lo);const t0=values[0].t,t1=values[values.length-1].t;chartPoints=values.map((x,i)=>({x:18+(t1===t0?0:(x.t-t0)/(t1-t0))*824,y:270-((x[currentMetric]-lo)/gap)*235,raw:x}));let d=chartPoints.map((p,i)=>(i?'L':'M')+p.x.toFixed(2)+' '+p.y.toFixed(2)).join(' ');if(chartPoints.length===1)d+=' L842 '+chartPoints[0].y.toFixed(2);curve.setAttribute('d',d);shade.setAttribute('d',d+' L842 300 L18 300 Z');nodata.style.display=values.length<2?'flex':'none';nodata.querySelector('strong').textContent='Nog één extra meting nodig';$('avgLabel').textContent='GEMIDDELDE '+valueFields[currentMetric].toUpperCase();$('maxLabel').textContent='HOOGSTE '+valueFields[currentMetric].toUpperCase();$('avgValue').textContent=fmt(yVals.reduce((a,b)=>a+b,0)/yVals.length);$('maxValue').textContent=fmt(hi);$('axisStart').textContent=new Date(t0).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});$('axisEnd').textContent=dateTime(t1);const ccuWindow=(usingCloud?cloudHistory:browserHistory).filter(x=>x.t>=Date.now()-spans[currentRange]&&Number.isFinite(x.ccu));$('peak').textContent=ccuWindow.length?fmt(Math.max(...ccuWindow.map(x=>x.ccu))):'—';if(matchMedia('(prefers-reduced-motion: reduce)').matches){curve.style.transition='none';curve.style.strokeDasharray='none';curve.style.strokeDashoffset='0';}else{const len=curve.getTotalLength();curve.style.transition='none';curve.style.strokeDasharray=len;curve.style.strokeDashoffset=len;requestAnimationFrame(()=>{curve.style.transition='stroke-dashoffset .95s cubic-bezier(.3,.7,.2,1)';curve.style.strokeDashoffset='0'});}}
 $('ranges').addEventListener('click',e=>{const b=e.target.closest('[data-range]');if(!b)return;currentRange=b.dataset.range;for(const x of $('ranges').querySelectorAll('button'))x.classList.toggle('active',x===b);loadHistory();});
 $('metrics').addEventListener('click',e=>{const b=e.target.closest('[data-metric]');if(!b)return;currentMetric=b.dataset.metric;for(const x of $('metrics').querySelectorAll('button'))x.classList.toggle('active',x===b);draw();});
 $('tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;for(const x of $('tabs').querySelectorAll('button'))x.classList.toggle('active',x===b);for(const x of document.querySelectorAll('.tabbody'))x.classList.toggle('active',x.dataset.page===b.dataset.tab);});
@@ -164,6 +166,16 @@ const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(
 $('footerTime').textContent='© '+new Date().getFullYear()+' KVN STUDIOS';
 stats();setInterval(()=>{if(!document.hidden)stats();},60000);
 </script></body></html>`;
+
+/* Render-time composition keeps the Roblox API, database schema and API routes unchanged.
+   This visual layer is maintained separately in premium-theme.js and premium-interactions.js. */
+const THEMED_HTML = HTML
+  .replaceAll('KVN STUDIOS', 'KVN CLOTHING')
+  .replaceAll('<b>STUDIOS</b>', '<b>CLOTHING</b>')
+  .replaceAll('#b6ff69', '#5daeff')
+  .replaceAll('#aaff62', '#5daeff')
+  .replace('</style>', '\n' + premiumCSS + '\n</style>')
+  .replace('</script></body></html>', '\n' + premiumJS + '\n</script></body></html>');
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -179,7 +191,7 @@ export default {
       catch(e){ return Response.json({error:String(e.message)},{status:503}); }
     }
     if (url.pathname !== '/') return new Response('Not found',{status:404});
-    return new Response(HTML, {headers:{'Content-Type':'text/html; charset=utf-8','X-Content-Type-Options':'nosniff'}});
+    return new Response(THEMED_HTML, {headers:{'Content-Type':'text/html; charset=utf-8','X-Content-Type-Options':'nosniff'}});
   },
   async scheduled(event, env, ctx) {
     if (env.DB) ctx.waitUntil(fetchStats().then(s=>record(env.DB,s)));

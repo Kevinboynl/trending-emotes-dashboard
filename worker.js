@@ -285,6 +285,7 @@ let visibilityEpoch=0;
 let requestVisibilityEpoch=null;
 let resumeQueued=false;
 let lastResumeAttempt=0;
+let lastResumeEpoch=-1;
 let visitorAway=false;
 function displaySavedVisibleCCU(){
   if(!validVisibleSnapshot(lastVisibleCCU))return;
@@ -691,8 +692,9 @@ function resumeLiveStats(){
   const wasAway=visitorAway;
   visitorAway=false;
   const now=Date.now();
-  if(now-lastResumeAttempt<1200)return;
+  if(lastResumeEpoch===visibilityEpoch && now-lastResumeAttempt<1200)return;
   if(!wasAway&&!returnComparisonPending&&now-lastLiveCheckAt<9000)return;
+  lastResumeEpoch=visibilityEpoch;
   lastResumeAttempt=now;
   if(liveStatsInFlight){
     // Reuse requests from this visible epoch; replace one that started

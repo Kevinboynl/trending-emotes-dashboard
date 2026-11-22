@@ -19,7 +19,10 @@ const timeRanges={ '1h':3600000,'24h':86400000,'7d':604800000,'30d':2592000000 }
 const fixtureNow=Date.now();
 let fixtureCCU=48;
 let fixtureStale=false;
-let fixtureStamp=fixtureNow;
+let fixtureStamp=Date.now();
+let fixtureDelayMs=0;
+let fixtureFailure=false;
+let fixtureRequestCount=0;
 
 function json(res,body){
   res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
@@ -44,14 +47,32 @@ const app=createServer(async(req,res)=>{
         'Invalid synthetic CCU test fixture');
       fixtureCCU=value;
       fixtureStale=url.searchParams.get('stale')==='true';
-      fixtureStamp+=20000; // Each local test response has a distinct timestamp.
+      fixtureStamp=Math.max(Date.now(),fixtureStamp+1);
       return json(res,{ok:true});
     }
+    if(url.pathname==='/__test__/settings'){
+      if(url.searchParams.has('delay')){
+        fixtureDelayMs=Math.max(0,Math.min(1500,Number(url.searchParams.get('delay'))||0));
+      }
+      if(url.searchParams.has('failure')){
+        fixtureFailure=url.searchParams.get('failure')==='true';
+      }
+      return json(res,{ok:true,delay:fixtureDelayMs,failure:fixtureFailure});
+    }
+    if(url.pathname==='/__test__/requests')return json(res,{count:fixtureRequestCount});
     if(url.pathname==='/api/stats'){
-      return json(res,{source:'Local browser test fixture',placeId:'134944031090971',
+      fixtureRequestCount++;
+      const snapshot={source:'Local browser test fixture',placeId:'134944031090971',
         name:'TRENDING EMOTES!',playing:fixtureCCU,visits:12870,favorites:630,
         likes:425,dislikes:16,rating:96.37,icon:null,thumbnail:null,
-        timestamp:fixtureStamp,stale:fixtureStale});
+        timestamp:fixtureStamp,stale:fixtureStale};
+      if(fixtureDelayMs)await new Promise(resolve=>setTimeout(resolve,fixtureDelayMs));
+      if(fixtureFailure){
+        res.writeHead(503,{'Content-Type':'application/json; charset=utf-8'});
+        res.end(JSON.stringify({error:'Local synthetic API failure'}));
+        return;
+      }
+      return json(res,snapshot);
     }
     if(url.pathname==='/api/history')return json(res,fixtureHistory(url.searchParams.get('range')));
     if(url.pathname==='/api/public-analytics')return json(res,{state:'disabled',metrics:[]});
@@ -66,7 +87,8 @@ const sizes=[360,390,430,768,1024,1440,1920];
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{
   for(const width of sizes){
-    fixtureCCU=48;fixtureStale=false;fixtureStamp+=20000;
+    fixtureCCU=48;fixtureStale=false;fixtureStamp=Date.now();
+    fixtureDelayMs=0;fixtureFailure=false;
     const page=await browser.newPage({viewport:{width,height:900},deviceScaleFactor:1});
     const errors=[];
     page.on('pageerror',e=>errors.push(e.message));

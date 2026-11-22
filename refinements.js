@@ -376,7 +376,7 @@ if(chart && frame && curve){
 // 6. Mini charts: real samples only; no filler lines when history is empty.
 function renderSparks(){
   const range=typeof currentRange==='string'&&spans[currentRange]?currentRange:'24h';
-  const base=typeof usingCloud!=='undefined'&&usingCloud?cloudHistory:browserHistory;
+  const base=typeof getVerifiedHistory==='function'?getVerifiedHistory():(typeof usingCloud!=='undefined'&&usingCloud?cloudHistory:browserHistory);
   const filtered=safeArray(base).filter(p=>Number.isFinite(p?.t)&&p.t>=Date.now()-spans[range]);
   for(const [target,[field,label]] of Object.entries(metricMap)){
     const num=$id(target);const card=num?.closest('.card');if(!num||!card)continue;

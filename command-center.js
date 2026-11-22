@@ -46,6 +46,32 @@ export const commandCenterJS = String.raw`
  }
  window.addEventListener('scroll',()=>{if(!ticking){ticking=true;requestAnimationFrame(updateProgress)}},{passive:true});
  window.addEventListener('resize',updateProgress,{passive:true});updateProgress();
+ // The existing page-wide blue ambient fog tracks the actual viewport pointer.
+ // Use a single bounded animation frame loop for a gentle, performance-aware follow.
+ if(!reduced.matches && window.matchMedia('(hover: hover) and (pointer: fine)').matches){
+  const root=document.documentElement;
+  let x=window.innerWidth*.77,y=window.innerHeight*.08;
+  let targetX=x,targetY=y,frame=0;
+  const animateFog=()=>{
+   x+=(targetX-x)*.18;
+   y+=(targetY-y)*.18;
+   root.style.setProperty('--fog-x',(100*x/Math.max(1,window.innerWidth)).toFixed(2)+'%');
+   root.style.setProperty('--fog-y',(100*y/Math.max(1,window.innerHeight)).toFixed(2)+'%');
+   if(Math.abs(targetX-x)>.3 || Math.abs(targetY-y)>.3)frame=requestAnimationFrame(animateFog);
+   else frame=0;
+  };
+  window.addEventListener('pointermove',e=>{
+   if(e.pointerType!=='mouse' && e.pointerType!=='pen')return;
+   targetX=Math.min(window.innerWidth,Math.max(0,e.clientX));
+   targetY=Math.min(window.innerHeight,Math.max(0,e.clientY));
+   if(!frame)frame=requestAnimationFrame(animateFog);
+  },{passive:true});
+  window.addEventListener('resize',()=>{
+   targetX=Math.min(targetX,window.innerWidth);
+   targetY=Math.min(targetY,window.innerHeight);
+   if(!frame)frame=requestAnimationFrame(animateFog);
+  },{passive:true});
+ }
  const actions=document.querySelector('.hero-actions');
  if(actions){
   const status=document.createElement('div');

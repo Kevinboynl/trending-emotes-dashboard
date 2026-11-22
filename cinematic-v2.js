@@ -273,9 +273,10 @@ if(chart){
     point?.setAttribute('visibility','visible');
     if(tooltip){
       tooltip.style.display='block';
-      tooltip.style.left=Math.max(80,Math.min(box.width-80,p.x/860*box.width))+'px';
-      tooltip.style.top=p.y/300*box.height+'px';
       tooltip.textContent=dateTime(p.raw.t)+' · '+fmt(p.raw[currentMetric])+' '+valueFields[currentMetric];
+      const half=Math.min(box.width/2-10,Math.max(50,tooltip.getBoundingClientRect().width/2+10));
+      tooltip.style.left=Math.max(half,Math.min(box.width-half,p.x/860*box.width))+'px';
+      tooltip.style.top='12px';
       chartAnnouncer.textContent=tooltip.textContent;
     }
   };

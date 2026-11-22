@@ -413,9 +413,12 @@ let lastLiveCheckAt=0;
 async function stats(){
   if(liveStatsInFlight)return liveStatsInFlight;
   lastLiveCheckAt=Date.now();
+  // A request started before the tab became hidden must not be treated as a
+  // visible update, even if it finishes after the visitor comes back.
+  requestVisibilityEpoch=visibilityEpoch;
+  const requestStartedVisible=!document.hidden;
   liveStatsInFlight=(async()=>{
     try{
-      // A stalled network request must not permanently block the poll loop.
       const controller=new AbortController();
       const timeout=setTimeout(()=>controller.abort(),12000);
       let response;
@@ -424,18 +427,44 @@ async function stats(){
       }finally{clearTimeout(timeout);}
       const d=await response.json();
       if(!response.ok||d.error)throw Error(d.error||'Roblox unavailable');
+      lastFetchedCCU=d;
+      const isAuthoritative=!d.stale&&Number.isSafeInteger(d.playing)&&d.playing>=0
+        &&d.playing<=1e9&&Number.isFinite(d.timestamp)&&d.timestamp>0
+        &&d.timestamp<=Date.now()+30000&&Date.now()-d.timestamp<=VISIBLE_SNAPSHOT_TTL;
+      if(isAuthoritative&&(!latestVerifiedCCU||d.timestamp>latestVerifiedCCU.timestamp)){
+        latestVerifiedCCU={playing:d.playing,timestamp:d.timestamp};
+        storeVerifiedStats(d);
+      }
+      if(!requestStartedVisible||document.hidden||requestVisibilityEpoch!==visibilityEpoch){
+        // The visitor did not see this result. Never change lastVisibleCCU.
+        return;
+      }
+      if(isAuthoritative && lastVisibleCCU && d.timestamp<lastVisibleCCU.timestamp){
+        state('WAITING FOR A NEWER VERIFIED ROBLOX MEASUREMENT',true);
+        return;
+      }
+      const visibleBefore=lastVisibleCCU&&validVisibleSnapshot(lastVisibleCCU)
+        ?{...lastVisibleCCU}:null;
+      const isNewSample=isAuthoritative&&visibleBefore
+        &&d.timestamp>visibleBefore.timestamp;
+      const changed=isNewSample&&d.playing!==visibleBefore.playing;
+      const context=returnComparisonPending&&isNewSample?'return':'live';
+      const comparisonPrevious=visibleBefore?{
+        playing:visibleBefore.playing,timestamp:visibleBefore.timestamp,stale:false
+      }:null;
 
-      const previous=currentStats;
+      // The previous actually SEEN count remains visible throughout the fetch.
+      // The CCU rolling system runs only after a newer authoritative reading.
       currentStats=d;
-      storeVerifiedStats(d);
       for(const [id,key] of [
         ['playing','playing'],['heroCCU','playing'],['visits','visits'],
         ['favorites','favorites'],['likes','likes'],['dislikes','dislikes']
-      ])animateNumber(id,d[key],undefined,
-        id==='playing'&&!d.stale&&Boolean(previous)&&!previous.stale
-        &&Number.isFinite(previous.timestamp)&&Number.isFinite(d.timestamp)
-        &&previous.timestamp<d.timestamp
-      );
+      ]){
+        if((id==='playing'||id==='heroCCU')&&!isAuthoritative&&visibleBefore)continue;
+        if((id==='playing'||id==='heroCCU')&&!isAuthoritative&&
+          (!Number.isSafeInteger(d.playing)||d.playing<0))continue;
+        animateNumber(id,d[key],undefined,id==='playing'&&Boolean(changed));
+      }
       const rating=Number.isFinite(d.rating)?d.rating.toFixed(1)+'%':'—';
       $('rating').textContent=rating;
       $('engagementRating').textContent=rating;
@@ -444,15 +473,14 @@ async function stats(){
       loadImage(d.icon,'poster',true);
       loadImage(d.thumbnail,'cover',true);
       loadImage(d.icon,'gameIcon',false);
-      state(d.stale?'CACHED • ROBLOX UNAVAILABLE':'LIVE • CONNECTED',Boolean(d.stale));
+      state(!isAuthoritative?'CACHED • WAITING FOR ROBLOX':'LIVE • CONNECTED',!isAuthoritative);
       if(Number.isFinite(d.timestamp)){
-        $('lastUpdate').textContent=(d.stale?'Last verified sample (cached): ':'Last verified sample: ')+new Date(d.timestamp).toLocaleString('en-GB');
+        $('lastUpdate').textContent=(!isAuthoritative?'Last verified (cached): ':'Last verified sample: ')+
+          new Date(d.timestamp).toLocaleString('en-GB');
       }
-      // Only a newly verified upstream sample is recorded. Never duplicate
-      // a cached sample or create a fictitious intermediate player count.
-      if(!d.stale && Number.isFinite(d.playing) && Number.isFinite(d.timestamp)){
+      if(isAuthoritative){
         const last=browserHistory[browserHistory.length-1];
-        if(!last||last.t!==d.timestamp){
+        if(!last||last.t<d.timestamp){
           browserHistory.push({
             t:d.timestamp,ccu:d.playing,
             visits:d.visits,favorites:d.favorites,likes:d.likes
@@ -461,24 +489,33 @@ async function stats(){
           try{localStorage.setItem(TIMEKEY,JSON.stringify(browserHistory));}catch{}
         }
       }
-      // Update charts and CCU effects immediately after the verified API
-      // response. D1 history can be slow; it must not block the next poll.
       draw();
       window.dispatchEvent(new CustomEvent('kvn:verified-stats',{detail:{
-        stats:d,previous,range:currentRange,
-        history:getVerifiedHistory().filter(
-          x=>x&&Number.isFinite(x.t)&&Number.isFinite(x.ccu)&&x.t>=Date.now()-86400000
-        ),
+        stats:d,previous:comparisonPrevious,range:currentRange,
+        context,returning:context==='return',lastSeenAt:visibleBefore?.shownAt??null,
+        history:getVerifiedHistory().filter(x=>x&&Number.isFinite(x.t)
+          &&Number.isFinite(x.ccu)&&x.t>=Date.now()-86400000),
         cloud:usingCloud
       }}));
+      // After the verified count has been presented, it becomes the new
+      // visible baseline. Updating the network cache alone never does this.
+      if(isAuthoritative&&(!visibleBefore||d.timestamp>=visibleBefore.timestamp)){
+        rememberVisibleCCU(d);
+        if(isNewSample||!visibleBefore)returnComparisonPending=false;
+      }
       if(!lastHistoryRefresh||Date.now()-lastHistoryRefresh>=HISTORY_POLL_MS){
         lastHistoryRefresh=Date.now();
         void loadHistory().catch(err=>console.warn('History refresh delayed',err));
       }
     }catch(err){
+      if(document.hidden||requestVisibilityEpoch!==visibilityEpoch)return;
       state('ROBLOX TEMPORARILY UNAVAILABLE',true);
-      if(currentStats&&Number.isFinite(currentStats.playing)){
-        $('lastUpdate').textContent='Refresh delayed · last verified sample: '+new Date(currentStats.timestamp).toLocaleString('en-GB');
+      if(lastVisibleCCU&&validVisibleSnapshot(lastVisibleCCU)){
+        $('lastUpdate').textContent='Refresh delayed · last visible verified sample: '+
+          new Date(lastVisibleCCU.timestamp).toLocaleString('en-GB');
+      }else if(currentStats&&Number.isFinite(currentStats.playing)){
+        $('lastUpdate').textContent='Refresh delayed · last verified sample: '+
+          new Date(currentStats.timestamp).toLocaleString('en-GB');
       }else if(!restoreVerifiedStats()){
         $('lastUpdate').textContent='Waiting for verified Roblox statistics. Automatically retrying.';
       }
@@ -488,7 +525,7 @@ async function stats(){
         void loadHistory().catch(()=>{});
       }
       window.dispatchEvent(new CustomEvent('kvn:stats-unavailable',{detail:{
-        hasPrevious:Boolean(currentStats&&Number.isFinite(currentStats.playing))
+        hasPrevious:Boolean(lastVisibleCCU||currentStats)
       }}));
       console.warn('Roblox live refresh failed',err);
     }
@@ -635,14 +672,49 @@ for(const card of document.querySelectorAll('.card'))card.addEventListener('poin
 const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('show');observer.unobserve(entry.target)}},{threshold:.07});document.querySelectorAll('.reveal').forEach(x=>observer.observe(x));
 $('footerTime').textContent='© '+new Date().getFullYear()+' KVN STUDIOS';
 window.addEventListener('kvn:official-analytics',()=>{acquisition();});
+// Restore other previously verified public fields, then put the last
+// actually visible player count back before the FIRST network request.
+restoreVerifiedStats();
+displaySavedVisibleCCU();
 stats();
 setInterval(()=>{if(!document.hidden)stats();},LIVE_POLL_MS);
-// Browsers throttle background tabs. Resume polling immediately on return.
-const resumeLiveStats=()=>{
-  if(!document.hidden && Date.now()-lastLiveCheckAt>9000)stats();
-};
-document.addEventListener('visibilitychange',resumeLiveStats);
+function markVisitorAway(){
+  visibilityEpoch++;
+  returnComparisonPending=Boolean(lastVisibleCCU&&validVisibleSnapshot(lastVisibleCCU));
+}
+function resumeLiveStats(){
+  if(document.hidden)return;
+  const now=Date.now();
+  if(now-lastResumeAttempt<1200)return;
+  if(!returnComparisonPending&&now-lastLiveCheckAt<9000)return;
+  lastResumeAttempt=now;
+  if(liveStatsInFlight){
+    // Reuse requests from this visible epoch; replace one that started
+    // before the visitor left, after it has finished.
+    if(requestVisibilityEpoch===visibilityEpoch)return;
+    if(!resumeQueued){
+      resumeQueued=true;
+      void liveStatsInFlight.finally(()=>{
+        resumeQueued=false;
+        if(!document.hidden)void stats();
+      });
+    }
+    return;
+  }
+  void stats();
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)markVisitorAway();
+  else resumeLiveStats();
+});
+window.addEventListener('blur',()=>{
+  if(!document.hidden)markVisitorAway();
+});
 window.addEventListener('focus',resumeLiveStats);
+window.addEventListener('pageshow',event=>{
+  if(event.persisted)markVisitorAway();
+  resumeLiveStats();
+});
 window.addEventListener('online',resumeLiveStats);
 </script></body></html>`;
 

@@ -212,7 +212,7 @@ function hideChip(){
   changeChip.removeAttribute('data-visible');
   changeChip.hidden=true;
 }
-function revealChip(diff){
+function revealChip(diff,context='live'){
   if(!Number.isFinite(diff)||diff===0)return;
   if(changeChipTimer){clearTimeout(changeChipTimer);changeChipTimer=null;}
   const trend=diff>0?'up':'down';
@@ -220,6 +220,9 @@ function revealChip(diff){
   changeChip.textContent=(diff>0?'+':'−')+Math.abs(diff).toLocaleString('en-US')+' ';
   const small=document.createElement('small');small.textContent='CCU';
   changeChip.append(small);
+  changeChip.title=context==='return'?
+    'Net CCU change since your last visible verified measurement':
+    'Net CCU change since the previous verified sample';
   changeChip.hidden=false;
   // Re-arm the actual CSS entrance on every new verified change.
   changeChip.removeAttribute('data-visible');
@@ -280,11 +283,12 @@ window.addEventListener('kvn:verified-stats',event=>{
   if(fresh&&Number.isFinite(priorValue)){
     const diff=d.playing-priorValue;
     delta.dataset.direction=diff>0?'up':diff<0?'down':'flat';
-    delta.textContent=diff>0?'MEASURED CCU INCREASE':
-      diff<0?'MEASURED CCU DECREASE':'PLAYER COUNT UNCHANGED';
+    delta.textContent=diff===0?'PLAYER COUNT UNCHANGED':
+      info.context==='return'?'SINCE LAST VISIT':
+      'SINCE PREVIOUS SAMPLE';
     if(diff!==0){
       showMotion(diff>0?'up':'down');
-      revealChip(diff);
+      revealChip(diff,info.context==='return'?'return':'live');
     }else{
       clearMovement();
       hideChip();

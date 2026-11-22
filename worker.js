@@ -44,6 +44,10 @@ async function fetchStats(env = {}) {
   }
   const u=cachedUniverse;
   const gameUrl='https://games.roblox.com/v1/games?universeIds='+u;
+  // Start the fast-changing game request immediately, in parallel with the
+  // less frequent enrichment calls. Catch immediately to avoid an unhandled
+  // rejection while the optional requests are still resolving.
+  const gamePending=getJSON(gameUrl).then(value=>({value}),error=>({error}));
   const secondaryUrls=[
     'https://games.roblox.com/v1/games/votes?universeIds='+u,
     'https://thumbnails.roblox.com/v1/games/icons?universeIds='+u+'&size=512x512&format=Png&isCircular=false',
@@ -78,11 +82,12 @@ async function fetchStats(env = {}) {
   }
   // Retry a transient game-details error once; do not invent game stats.
   let gameData;
-  try {gameData=await getJSON(gameUrl);}
-  catch(error){
+  const initial=await gamePending;
+  if(initial.error){
+    const error=initial.error;
     if(/Roblox API HTTP 4(?!29)\d\d/.test(String(error?.message||'')))throw error;
     gameData=await getJSON(gameUrl);
-  }
+  }else gameData=initial.value;
   const g=gameData?.data?.[0];
   if(!g)throw new Error('Game details: Roblox returned no matching universe');
   const likes=support?.likes??null;

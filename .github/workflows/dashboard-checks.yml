@@ -40,6 +40,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Test responsive layout and interactions
         run: node scripts/check-layout.mjs
+      - name: Verify deployed CCU visual effects (read-only browser test)
+        run: node scripts/check-live-animation.mjs
       - name: Upload browser screenshots
         if: always()
         uses: actions/upload-artifact@v4

@@ -25,10 +25,10 @@ export const premiumJS = String.raw`
   if (metricGrid) {
     const strip = document.createElement('div');
     strip.className = 'signal-strip reveal';
-    strip.setAttribute('aria-label', 'Aanvullende meetgegevens');
-    strip.innerHTML = '<div class="signal-card"><div><span>GEMETEN CCU-VERSCHIL · 1H</span><strong id="signalChange">—</strong></div><em aria-hidden="true">↗</em></div>' +
-      '<div class="signal-card"><div><span>MEETPUNTEN · GEKOZEN PERIODE</span><strong id="signalSamples">—</strong></div><em aria-hidden="true">◷</em></div>' +
-      '<div class="signal-card"><div><span>HUIDIGE DATABRON</span><strong id="signalSource">—</strong></div><em aria-hidden="true">◈</em></div>';
+    strip.setAttribute('aria-label', 'Additional measured statistics');
+    strip.innerHTML = '<div class="signal-card"><div><span>MEASURED CCU CHANGE · 1H</span><strong id="signalChange">—</strong></div><em aria-hidden="true">↗</em></div>' +
+      '<div class="signal-card"><div><span>DATA POINTS · SELECTED RANGE</span><strong id="signalSamples">—</strong></div><em aria-hidden="true">◷</em></div>' +
+      '<div class="signal-card"><div><span>CURRENT DATA SOURCE</span><strong id="signalSource">—</strong></div><em aria-hidden="true">◈</em></div>';
     metricGrid.insertAdjacentElement('afterend', strip);
     if (typeof observer !== 'undefined') observer.observe(strip);
     else strip.classList.add('show');
@@ -36,7 +36,7 @@ export const premiumJS = String.raw`
   const tabBar = $id('tabs');
   if (tabBar) {
     tabBar.setAttribute('role', 'tablist');
-    tabBar.setAttribute('aria-label','Analytics categorieën');
+    tabBar.setAttribute('aria-label','Analytics categories');
     for (const b of tabBar.querySelectorAll('button[data-tab]')) {
       b.setAttribute('type', 'button');
       b.setAttribute('role', 'tab');
@@ -80,15 +80,15 @@ export const premiumJS = String.raw`
     const source = $id('signalSource');
     if (!change || !samples || !source) return;
     samples.textContent = String(sampled.length);
-    source.textContent = usingCloud ? 'CLOUDFLARE D1' : 'DEZE BROWSER';
+    source.textContent = usingCloud ? 'CLOUDFLARE D1' : 'THIS BROWSER';
     const hasCoverage = oneHour.length>=2 && oneHour[oneHour.length-1].t-oneHour[0].t>=45*60000;
     if (hasCoverage) {
       const diff = oneHour[oneHour.length-1].ccu-oneHour[0].ccu;
-      change.textContent = (diff>0?'+':'')+diff.toLocaleString('nl-NL');
+      change.textContent = (diff>0?'+':'')+diff.toLocaleString('en-US');
       change.style.color = diff<0?'#ffa8bd':diff>0?'#7cd7ff':'#e4f5ff';
     } else {
       change.textContent='—';
-      change.title='Verschil verschijnt zodra er minimaal 45 minuten aan echte metingen zijn.';
+      change.title='Change appears once 45 minutes of real measurements are available.';
     }
   }
   const ranges = $id('ranges');

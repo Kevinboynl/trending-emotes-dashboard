@@ -150,6 +150,67 @@ footer{border-top-color:rgba(89,157,255,.25)}
 @media(max-width:1200px){.kvn-sidefx{display:none}}
 @media(prefers-reduced-motion:reduce){.kvn-sidefx *, .kvn-sidefx::before, .kvn-sidefx__ring::before,.kvn-sidefx__ring::after,.kvn-sidefx__track::before{animation:none!important}.kvn-sidefx__track::after{transition:none}}
 
+/* KVN typography refresh: sharper display, bright cool-white text and electric-blue hierarchy.
+   Only typographic presentation is affected; existing surfaces and charts stay intact. */
+:root{
+  --kvn-type-body:'Inter','DM Sans',system-ui,sans-serif;
+  --kvn-type-display:'Space Grotesk','Inter',system-ui,sans-serif;
+  --kvn-text-main:#f6faff;
+  --kvn-text-bright:#e7f4ff;
+  --kvn-text-secondary:#b8ccef;
+  --kvn-text-muted:#98afd3;
+  --kvn-text-label:#91c9ff;
+  --kvn-text-accent:#63bdff;
+}
+body,button,input,select,textarea{font-family:var(--kvn-type-body);color:var(--kvn-text-main)}
+body{font-weight:450;letter-spacing:-.008em;font-synthesis:none}
+h1,h2,h3,.number,.wordmark,.game-title,.chart-foot .big,.detail .value,
+.floatbadge strong,.signal-card strong,.official-card strong,.kvn-insight-card .k-value{
+  font-family:var(--kvn-type-display)!important;
+  font-synthesis:none;
+}
+h1,h2,h3,.bar h2,.panel-head h3,.detail h3{color:var(--kvn-text-main);font-weight:800;letter-spacing:-.045em}
+.hero .hero-copy h1{font-weight:800;letter-spacing:-.084em}
+.hero h1 span{
+  background:linear-gradient(110deg,#f0faff 2%,#a4d8ff 38%,#4b99ff 70%,#a7e5ff 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.bar h2 span{color:var(--kvn-text-accent)!important}
+.hero .lead,.desc,.official-sub{color:var(--kvn-text-secondary);font-family:var(--kvn-type-body);font-weight:450}
+.hero .lead{line-height:1.85}
+.wordmark,.footer-brand{font-family:var(--kvn-type-display);color:var(--kvn-text-main);font-weight:800}
+.wordmark b,.footer-brand b{color:var(--kvn-text-accent);text-shadow:0 0 24px rgba(71,154,255,.19)}
+.navlinks a,.nav-right,.hero-actions,.metric-switch button,.switches button,.tabs button{font-family:var(--kvn-type-body);font-weight:700}
+.navlinks a,.metric-switch button,.switches button,.tabs button{letter-spacing:.012em}
+.navlinks a:not(:hover):not([aria-current]),.metric-switch button:not(.active),.switches button:not(.active),.tabs button:not(.active){color:#a9bfdf}
+.navlinks a.active,.navlinks a[aria-current],.metric-switch button.active,.switches button.active,.tabs button.active{color:#fff}
+.eyebrow,.sec-label,.metric-label,.detail .tag,.official-card small,.kvn-insight-card .k-label,
+.signal-card span,.chart-foot small,.game-sub,.updated,.livepill,.hero-note{
+  font-family:var(--kvn-type-body);font-weight:800;letter-spacing:.11em;
+}
+.eyebrow,.sec-label,.detail .tag,.official-card small,.kvn-insight-card .k-label,
+.signal-card span,.hero-note{color:var(--kvn-text-label)}
+.metric-label{color:#b8d7ff}
+.metrics .number,.detail .value,.official-card strong,.kvn-insight-card .k-value,
+.signal-card strong,.chart-foot .big,.floatbadge strong{color:var(--kvn-text-bright);font-weight:800}
+.metrics .primary .number{
+  background:linear-gradient(95deg,#ffffff 0%,#d6edff 40%,#83c8ff 78%,#69a9ff 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent
+}
+.metrics .metric-info,.detail p,.official-card p,.kvn-insight-card .k-status,
+.kvn-insight-banner p,.privacy p,.game-sub,.chart-key .key-source,.chart-axis,.chart-foot small{
+  color:var(--kvn-text-muted);font-family:var(--kvn-type-body);font-weight:450;letter-spacing:0;
+}
+.metrics .metric-info,.detail p,.official-card p,.kvn-insight-card .k-status{line-height:1.7}
+.chart-foot .big,.detail .value,.official-card strong,.kvn-insight-card .k-value{font-variant-numeric:tabular-nums}
+.official-message,.privacy,.kvn-insight-banner{color:var(--kvn-text-secondary);font-family:var(--kvn-type-body)}
+.tiny,.hero .hero-note,.chart-key,.updated,.metric-bottom,.signal-card em{color:var(--kvn-text-muted)}
+button:focus-visible,a:focus-visible{outline-color:var(--kvn-text-accent)}
+@media(max-width:690px){
+  .hero .hero-copy h1{letter-spacing:-.067em}
+  .eyebrow,.sec-label,.metric-label,.official-card small{letter-spacing:.08em}
+}
+
 `;
 export const studioUpgradeJS = String.raw`
 /* Visual-only enhancements. Does not change the analytics API, chart data or events. */

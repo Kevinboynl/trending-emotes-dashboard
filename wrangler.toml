@@ -1,0 +1,10 @@
+name = "trending-emotes-dashboard"
+main = "worker.js"
+compatibility_date = "2026-11-22"
+workers_dev = true
+
+# The dashboard works without a database, but history will be stored in
+# each visitor's browser only until you add a Cloudflare D1 binding named DB.
+# Once D1 is added, the scheduled job tracks game stats even with no visitors.
+[triggers]
+crons = ["*/5 * * * *"]

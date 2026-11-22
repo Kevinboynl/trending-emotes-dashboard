@@ -101,4 +101,60 @@ assert.equal(measuredBody.comparison.previous,25.4);
 const disabled=await worker.fetch(request('/api/public-analytics'),{});
 assert.equal(disabled.status,200);
 assert.equal((await disabled.json()).state,'disabled');
+// Verify that repeat browser polls fetch a fresh, real CCU reading, but do not
+// needlessly re-fetch votes or thumbnails on every 20-second check.
+assert.ok(embeddedScript.includes('LIVE_POLL_MS=20000'),'Live polling interval missing');
+assert.ok(embeddedScript.includes('HISTORY_POLL_MS=60000'),'History throttle missing');
+assert.ok(embeddedScript.includes('OFFICIAL_REFRESH_MS=15*60*1000'),'Official analytics refresh missing');
+let fakeNow=Date.now();
+class TestClock extends Date { static now(){return fakeNow;} }
+const requests={game:0,votes:0,icons:0,thumbnails:0};
+const mockFetch=async(url)=>{
+  const u=String(url);
+  if(u.includes('/universes/v1/places/'))return Response.json({universeId:123456});
+  if(u.startsWith('https://games.roblox.com/v1/games?')){
+    requests.game++;
+    return Response.json({data:[{
+      name:'TRENDING EMOTES!',playing:requests.game===1?10:11,
+      visits:150+requests.game,favoritedCount:42+requests.game
+    }]});
+  }
+  if(u.includes('/games/votes?')){
+    requests.votes++;
+    return Response.json({data:[{upVotes:26,downVotes:2}]});
+  }
+  if(u.includes('/games/icons?')){
+    requests.icons++;
+    return Response.json({data:[{imageUrl:'https://example.test/icon.png'}]});
+  }
+  if(u.includes('/multiget/thumbnails?')){
+    requests.thumbnails++;
+    return Response.json({data:[{thumbnails:[{imageUrl:'https://example.test/thumb.png'}]}]});
+  }
+  throw Error('Unexpected outgoing fetch: '+u);
+};
+const mockRuntime={...nativeContext,Date:TestClock,fetch:mockFetch};
+const measuredWorker=runInNewContext(bundle,mockRuntime,{timeout:4000})(...Object.values(modules)).worker;
+const first=await (await measuredWorker.fetch(request('/api/stats'),{})).json();
+assert.equal(first.playing,10);
+assert.equal(first.likes,26);
+assert.equal(first.favorites,43);
+assert.equal(requests.game,1);
+assert.equal(requests.votes,1);
+assert.equal(requests.icons,1);
+assert.equal(requests.thumbnails,1);
+const second=await (await measuredWorker.fetch(request('/api/stats'),{})).json();
+assert.equal(second.playing,10,'Short server cache should reuse the verified sample');
+assert.equal(requests.game,1,'Short server cache unexpectedly fetched Roblox again');
+fakeNow+=20000;
+const third=await (await measuredWorker.fetch(request('/api/stats'),{})).json();
+assert.equal(third.playing,11,'Next live poll did not refresh the measured CCU');
+assert.equal(third.visits,152);
+assert.equal(third.favorites,44);
+assert.equal(third.likes,26);
+assert.equal(requests.game,2);
+assert.equal(requests.votes,1,'Votes should be cached while CCU changes');
+assert.equal(requests.icons,1,'Artwork should be cached while CCU changes');
+assert.equal(third.timestamp,fakeNow);
+console.log('PASS: Browser 20s refresh, official analytics timer, verified CCU update and Roblox upstream caching.');
 console.log('PASS: Worker composition, dashboard JavaScript, selected filters, real-data wiring, CSS, CSP nonce, invalid routes and public API states.');

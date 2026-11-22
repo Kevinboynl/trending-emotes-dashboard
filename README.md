@@ -208,3 +208,14 @@ Wil je de *echt gemeten* geaggregeerde DAU en gemiddelde sessieduur **in TRENDIN
 **Geen Roblox API-key of Cloudflare Secret in Roblox Studio plaatsen.** Het script roept uitsluitend de URL `https://trending-emotes-dashboard.k-backx.workers.dev/api/public-analytics` aan en krijgt *alleen* jouw reeds openbaar gemaakte geaggregeerde cijfers. De Roblox Studio gamefiles zijn niet gekoppeld aan deze GitHub-repository: de bestanden zijn **klaar om te installeren, maar nog niet toegevoegd of gepubliceerd in je echte Roblox-game**.
 
 Dit in-game widget vervangt je bestaande emote-UI niet. Als je eigen interface op dezelfde plek staat, wijzig dan alleen de `Position` van `OpenStats` en `StatsPanel` in het LocalScript.
+
+## Acquisition: waarom staan sommige kaarten op een streepje?
+
+De site heeft standaard alleen `DailyActiveUsers` en `AverageSessionLengthMinutes` geselecteerd in `PUBLIC_ANALYTICS_METRICS`. De officiële DAU-geschiedenis is nu ook zichtbaar in het Acquisition-tabblad, **zonder nieuwe private metrics openbaar te maken**:
+
+- Wanneer er voldoende echte gemeten bezoeken zijn, blijven **New visits · 24H** en **New visits · 7D** beschikbaar.
+- Zolang de volledige bezoekhistorie ontbreekt, toont de eerste kaart de **DAU van de laatste volledige UTC-dag**; de tweede kaart het **gemiddelde van zeven opeenvolgende dagelijkse DAU-cijfers**. De labels en uitleg veranderen automatisch mee. Deze waarde is **geen weektotaal unieke bezoekers** en is ook **geen visits-metric**.
+- `Impressions & CTR` toont een link naar Roblox Creator Dashboard, geen verzonnen getal; deze privémetrics zijn niet geselecteerd of verbonden met het huidige endpoint.
+- De twee bestaande Cloudflare variables en je API-key hoeven hiervoor **niet veranderd te worden**.
+
+De frontend gebruikt hiervoor exact de bestaande openbare `/api/public-analytics` reactie en laat de overige API-rechten en data afgeschermd.

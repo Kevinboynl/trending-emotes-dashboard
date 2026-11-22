@@ -68,7 +68,7 @@ export const premiumJS = String.raw`
   for (const b of document.querySelectorAll('#ranges button,#metrics button')) b.type = 'button';
 
   const historyWindow = ms => {
-    const data = usingCloud ? cloudHistory : browserHistory;
+    const data = typeof getVerifiedHistory==='function' ? getVerifiedHistory() : (usingCloud ? cloudHistory : browserHistory);
     const cutoff = Date.now()-ms;
     return data.filter(x => Number.isFinite(x.t) && x.t>=cutoff && Number.isFinite(x.ccu));
   };

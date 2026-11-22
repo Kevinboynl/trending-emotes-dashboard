@@ -66,7 +66,7 @@ Open `https://JOUW-WORKER-URL/api/stats`. Als je een fout ziet, controleer Cloud
 
 De website heeft nu een **publiek, alleen-lezen** endpoint: `GET /api/public-analytics`.
 Deze route geeft **uitsluitend expliciet geselecteerde, geaggregeerde cijferreeksen** door.
-Standaard staat publicatie **UIT**; bezoekers zien een nette melding totdat je beide instellingen activeert.
+Publicatie wordt per metric geregeld in `PUBLIC_ANALYTICS_METRICS` en vereist een geldige Cloudflare Secret. De in `wrangler.toml` geselecteerde metrics worden na deployment voor websitebezoekers zichtbaar wanneer Roblox ze beschikbaar stelt.
 `/api/stats`, `/api/history`, D1-opslag en bestaande live-CCU-functies blijven ongewijzigd.
 
 ### 1. Roblox Open Cloud key
@@ -109,7 +109,7 @@ Dit zijn de toegestane opties:
 | `ForwardD1Retention` | D1 retention | **Ruwe API-waarde** zonder onzekere omzetting naar procenten |
 | `ForwardD7Retention` | D7 retention | **Ruwe API-waarde** zonder onzekere omzetting naar procenten |
 
-**Er zijn geen inkomsten, uitsplitsingen naar leeftijd/land of individuele spelersgegevens toegelaten.**
+**Op verzoek van de eigenaar zijn de geaggregeerde monetization-statistieken nu publiek ingeschakeld:** `PayingUsers`, `DailyRevenue`, `AverageRevenuePerUser` (ARPDAU) en `AverageRevenuePerPayingUser` (ARPPU), naast `PayingUsersCVR`. Individuele spelersgegevens en uitsplitsingen naar leeftijd/land worden niet gepubliceerd. Verwijder een metric uit `wrangler.toml` → `PUBLIC_ANALYTICS_METRICS` om de openbare publicatie daarvan te stoppen.
 Niet-herkende namen worden genegeerd, en de browser kan geen andere metrics aanvragen.
 
 Laat `PUBLIC_ANALYTICS_METRICS` leeg of verwijder de variabele om de openbare publicatie direct uit te schakelen.
@@ -144,8 +144,7 @@ Alle data bestaat uit afgeronde UTC-dagen (de API-query eindigt bij middernacht 
 
 ## Iedereen de geselecteerde statistieken laten bekijken
 
-Je website is openbaar. De route `/api/public-analytics` vereist **geen bezoekerslogin**. Alleen de twee metrics uit
-`PUBLIC_ANALYTICS_METRICS = "DailyActiveUsers,AverageSessionLengthMinutes"` worden als geaggregeerde cijfers zichtbaar.
+Je website is openbaar. De route `/api/public-analytics` vereist **geen bezoekerslogin**. De geselecteerde metrics in `wrangler.toml` → `PUBLIC_ANALYTICS_METRICS` zijn voor iedereen te bekijken zodra Roblox geldige Open Cloud-data beschikbaar stelt. De eigenaar heeft ook de vier revenue-/payer-metrics expliciet ingeschakeld.
 De API-key wordt uitsluitend in de Cloudflare Worker gebruikt en nooit gepubliceerd.
 
 ### Wat betekent `state: unavailable`?

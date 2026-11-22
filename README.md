@@ -164,3 +164,28 @@ Open na de volgende Cloudflare-deployment
 De `reason` staat per metric. Stuur **nooit** de API-key zelf of een screenshot waarop hij zichtbaar is.
 
 De website toont een waarde pas zodra Roblox die werkelijk retourneert. Er worden geen willekeurige of verzonnen waarden gegenereerd.
+
+## UI-upgrade zonder kleurverandering (22 november 2026)
+
+De premium redesign gebruikt **exact dezelfde kleurvariabelen als de bestaande blauwe KVN CLOTHING-website**.
+Er is geen nieuw kleurenpalet toegevoegd. Nieuwe UI-code staat los van de beveiligde backend in
+`refinements.js`, zodat API-endpoints en Cloudflare D1 intact blijven.
+
+Verbeteringen: actieve sticky navigatie, geanimeerde tabs, verfijnde grafiektooltip, interactieve crosshair,
+zachte kaart-hover en lichte 3D tilt op desktops met een precieze aanwijzer, loading skeletons,
+getekende mini-grafieken **uitsluitend met echte historische meetpunten**, soepel getekende hoofdgrafiek,
+staggered card reveals en verbeterde mobiele spacing. Bij `prefers-reduced-motion` zijn de effecten beperkt.
+
+Deze wijzigingen zijn via GitHub doorgevoerd. Een geslaagde Cloudflare-deployment en echte Roblox-data
+moeten worden gecontroleerd in het Cloudflare-dashboard; een lokale mocktest is geen bewijs van
+een succesvolle productie-deployment.
+
+### Nieuwe API-diagnose bij een Roblox-authenticatiefout
+
+De openbare API blijft `/api/public-analytics`. Na de nieuwste code-update:
+
+- `key_or_scope` = Roblox antwoordt met HTTP **401**. Controleer of de Cloudflare Secret exact de geldige User API Key bevat; selecteer in de Roblox Open Cloud API-key editor `universe-analytics` → `universe.analytics:read` en selecteer expliciet de juiste **Universe**.
+- `creator_access` = Roblox antwoordt met HTTP **403**. De API-key kan geldig zijn, maar de eigenaar van die key mag de analytics van deze groepsgame mogelijk niet inzien. Controleer de rol/toegang van dat Roblox-account. Een groepslock kan daarbij meespelen, maar bewijst op zichzelf niets.
+- Geen van deze fouten wordt opgelost door de publieke metrics-variabele uit te breiden. De dashboardbezoekers hebben geen Roblox-account of API-key nodig.
+
+Het endpoint toont alleen de veilige foutcategorie. **Nooit** de API-key in berichten, GitHub of screenshots zetten.

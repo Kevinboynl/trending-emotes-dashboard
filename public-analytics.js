@@ -129,11 +129,11 @@ async function loadOperation(metric, universeId, key, now, fetcher) {
 export async function publicAnalyticsResponse(env,fetcher=fetch,now=Date.now()){
   const selected=selectedMetrics(env||{});
   if (!selected.length) return output({
-    state:'disabled',metrics:[],note:'Er zijn geen geaggregeerde statistieken geselecteerd.'
+    state:'disabled',metrics:[],note:'No aggregated metrics have been selected.'
   });
   if (!env.ROBLOX_ANALYTICS_API_KEY) return output({
     state:'not_configured',metrics:[],
-    note:'De Cloudflare Secret ontbreekt. Er worden geen privéstatistieken gepubliceerd.'
+    note:'De Cloudflare Secret is missing. No private analytics are being published.'
   });
   // In-memory cache avoids querying Roblox on every visitor's page load.
   const cachedKey=selected.join('|')+'|'+String(env.ROBLOX_UNIVERSE_ID||'');

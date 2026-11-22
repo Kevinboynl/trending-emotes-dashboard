@@ -201,7 +201,7 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;bo
 <header class="top"><div class="wrap nav"><a href="#top" class="wordmark">KVN <b>STUDIOS</b><span class="slash">/</span><small>INTELLIGENCE</small></a><div class="navlinks"><a href="#dashboard">OVERVIEW</a><a href="#analytics">ANALYTICS</a><a href="#details">DEEP DIVE</a></div><div class="nav-right"><span class="livepill"><span class="pulse" id="pulse"></span><span id="status">CONNECTING</span></span><a class="playbtn" href="https://www.roblox.com/games/134944031090971/" target="_blank" rel="noopener">PLAY GAME ↗</a></div></div></header>
 <main id="top"><section class="hero wrap"><div><div class="eyebrow">THE KVN ANALYTICS LAB</div><h1>TRENDING<br><span>EMOTES!</span></h1><p class="lead">Real-time insights into your Roblox experience. Live players, growth, engagement, and historical trends — all in one place.</p><div class="hero-actions"><a class="playbtn" href="#dashboard">EXPLORE DASHBOARD ↓</a><a class="outlinebtn" href="https://www.roblox.com/communities/15819510" target="_blank" rel="noopener noreferrer">KVN STUDIOS ↗</a><span class="tiny">PLACE ID: 134944031090971</span></div></div><div class="visual"><div class="orbit"></div><div class="orbit"></div><div class="halo"></div><div class="hero-poster" id="poster"><span class="fallback">✳</span></div><div class="floatbadge">● LIVE CCU <strong id="heroCCU">—</strong><span class="small">PLAYERS RIGHT NOW</span></div><div class="spark sp1">✦</div><div class="spark sp2">✳</div></div></section>
 <div class="ticker" aria-hidden="true"><div class="ticker-inner">ROBLOX ANALYTICS <strong>✳</strong> PLAYERS IN REAL TIME <strong>✳</strong> POWERED BY KVN STUDIOS <strong>✳</strong> TRENDING EMOTES! <strong>✳</strong> ROBLOX ANALYTICS <strong>✳</strong> PLAYERS IN REAL TIME <strong>✳</strong> POWERED BY KVN STUDIOS <strong>✳</strong> TRENDING EMOTES! <strong>✳</strong></div></div>
-<section class="wrap" id="dashboard"><div class="bar reveal"><div><div class="sec-label">01 / EXPERIENCE OVERVIEW</div><h2>THE NUMBERS<span style="color:var(--green)">.</span></h2><p class="desc">Live public statistics, automatically refreshed every minute.</p></div><div class="updated"><span class="pulse"></span><span id="lastUpdate">Waiting for Roblox...</span></div></div>
+<section class="wrap" id="dashboard"><div class="bar reveal"><div><div class="sec-label">01 / EXPERIENCE OVERVIEW</div><h2>THE NUMBERS<span style="color:var(--green)">.</span></h2><p class="desc">Verified Roblox statistics, checked automatically every 20 seconds.</p></div><div class="updated"><span class="pulse"></span><span id="lastUpdate">Waiting for Roblox...</span></div></div>
 <div class="metrics reveal"><div class="card primary"><div class="card-content"><div class="label-row"><span class="metric-label">CONCURRENT PLAYERS</span><span class="corner">↗</span></div><div class="number" id="playing">—</div><div class="metric-info">Players enjoying TRENDING EMOTES! right now.</div></div><div class="metric-bottom"><span><span class="pulse"></span>LIVE ROBLOX API</span><span>~ 60 SEC</span></div></div>
 <div class="card"><div class="card-content"><div class="label-row"><span class="metric-label">TOTAL VISITS</span><span class="corner">↗</span></div><div class="number" id="visits">—</div><div class="metric-info">Total visits since launch</div></div></div>
 <div class="card"><div class="card-content"><div class="label-row"><span class="metric-label">FAVORITES</span><span class="corner">✧</span></div><div class="number" id="favorites">—</div><div class="metric-info">Players who favorited the experience</div></div></div>
@@ -263,18 +263,87 @@ const dateTime=t=>new Date(t).toLocaleTimeString('en-US',{hour:'2-digit',minute:
 function animateNumber(id,num,extra){const el=$(id);if(!el||!Number.isFinite(num)){if(el)el.textContent='—';return;}const old=Number(el.dataset.value);el.dataset.value=num;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;if(!Number.isFinite(old)||reduced){el.textContent=fmt(num)+(extra||'');return;}const start=performance.now();function step(now){const k=Math.min(1,(now-start)/680),e=1-Math.pow(1-k,3);el.textContent=fmt(old+(num-old)*e)+(extra||'');if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step)}
 function state(msg,err){$('status').textContent=msg;$('pulse').style.background=err?'var(--danger)':'var(--green)';$('lastUpdate').textContent=err?msg:'Updated '+dateTime(Date.now())}
 function loadImage(url,target,parent){if(typeof url!=='string'||!url.startsWith('https://'))return;const box=$(target);if(!box)return;if(parent){const existing=box.querySelector('img');if(existing&&existing.src===url)return;const el=document.createElement('img');el.src=url;el.alt='TRENDING EMOTES! Roblox artwork';el.decoding='async';box.replaceChildren(el);}else{if(box.src!==url)box.src=url;box.alt='TRENDING EMOTES! Roblox artwork';box.style.visibility='visible'}}
-async function stats(){try{const r=await fetch('/api/stats',{cache:'no-store'});const d=await r.json();if(!r.ok||d.error)throw Error(d.error||'Roblox unavailable');const priorStats=currentStats;currentStats=d;storeVerifiedStats(d);animateNumber('playing',d.playing);animateNumber('heroCCU',d.playing);animateNumber('visits',d.visits);animateNumber('favorites',d.favorites);animateNumber('likes',d.likes);animateNumber('dislikes',d.dislikes);$('rating').textContent=Number.isFinite(d.rating)?d.rating.toFixed(1)+'%':'—';$('engagementRating').textContent=$('rating').textContent;$('ratingFill').style.width=(d.rating||0)+'%';if(d.name)$('gameTitle').textContent=d.name;loadImage(d.icon,'poster',true);loadImage(d.thumbnail,'cover',true);loadImage(d.icon,'gameIcon',false);state(d.stale?'CACHED • ROBLOX UNAVAILABLE':'LIVE • CONNECTED',Boolean(d.stale));if(Number.isFinite(d.timestamp)){$('lastUpdate').textContent=(d.stale?'Last verified sample (cached): ':'Last verified sample: ')+new Date(d.timestamp).toLocaleString('en-GB');}if(!d.stale&&Number.isFinite(d.playing)){browserHistory.push({t:Date.now(),ccu:d.playing,visits:d.visits,favorites:d.favorites,likes:d.likes});browserHistory=browserHistory.filter(x=>x.t>Date.now()-30*86400000).slice(-2500);try{localStorage.setItem(TIMEKEY,JSON.stringify(browserHistory));}catch{}}await loadHistory();window.dispatchEvent(new CustomEvent('kvn:verified-stats',{detail:{stats:d,previous:priorStats,range:currentRange,history:(usingCloud?cloudHistory:browserHistory).filter(x=>x&&Number.isFinite(x.t)&&Number.isFinite(x.ccu)&&x.t>=Date.now()-86400000),cloud:usingCloud}}));}catch(err){
-  state('ROBLOX TEMPORARILY UNAVAILABLE',true);
-  if(currentStats && Number.isFinite(currentStats.playing)){
-    $('lastUpdate').textContent='Live refresh failed · last verified sample: '+new Date(currentStats.timestamp).toLocaleString('en-GB');
-  }else if(!restoreVerifiedStats()){
-    $('lastUpdate').textContent='Roblox is not responding. Retrying automatically; /api/stats shows a safe diagnostic.';
-  }
-  document.querySelector('.metrics')?.classList.remove('is-loading');
-  try{await loadHistory();}catch{} // History still loads when the live Roblox API fails.
-  window.dispatchEvent(new CustomEvent('kvn:stats-unavailable',{detail:{hasPrevious:Boolean(currentStats&&Number.isFinite(currentStats.playing))}}));
-  console.warn(err);
-}}
+// Fast public polls; slower D1 history requests avoid needless database work.
+const LIVE_POLL_MS=20000;
+const HISTORY_POLL_MS=60000;
+let liveStatsInFlight=null;
+let lastHistoryRefresh=0;
+let lastLiveCheckAt=0;
+async function stats(){
+  if(liveStatsInFlight)return liveStatsInFlight;
+  lastLiveCheckAt=Date.now();
+  liveStatsInFlight=(async()=>{
+    try{
+      const response=await fetch('/api/stats',{cache:'no-store'});
+      const d=await response.json();
+      if(!response.ok||d.error)throw Error(d.error||'Roblox unavailable');
+
+      const previous=currentStats;
+      currentStats=d;
+      storeVerifiedStats(d);
+      for(const [id,key] of [
+        ['playing','playing'],['heroCCU','playing'],['visits','visits'],
+        ['favorites','favorites'],['likes','likes'],['dislikes','dislikes']
+      ])animateNumber(id,d[key]);
+      const rating=Number.isFinite(d.rating)?d.rating.toFixed(1)+'%':'—';
+      $('rating').textContent=rating;
+      $('engagementRating').textContent=rating;
+      $('ratingFill').style.width=Number.isFinite(d.rating)?d.rating+'%':'0%';
+      if(d.name)$('gameTitle').textContent=d.name;
+      loadImage(d.icon,'poster',true);
+      loadImage(d.thumbnail,'cover',true);
+      loadImage(d.icon,'gameIcon',false);
+      state(d.stale?'CACHED • ROBLOX UNAVAILABLE':'LIVE • CONNECTED',Boolean(d.stale));
+      if(Number.isFinite(d.timestamp)){
+        $('lastUpdate').textContent=(d.stale?'Last verified sample (cached): ':'Last verified sample: ')+new Date(d.timestamp).toLocaleString('en-GB');
+      }
+      // Only a newly verified upstream sample is recorded. Never duplicate
+      // a cached sample or create a fictitious intermediate player count.
+      if(!d.stale && Number.isFinite(d.playing) && Number.isFinite(d.timestamp)){
+        const last=browserHistory[browserHistory.length-1];
+        if(!last||last.t!==d.timestamp){
+          browserHistory.push({
+            t:d.timestamp,ccu:d.playing,
+            visits:d.visits,favorites:d.favorites,likes:d.likes
+          });
+          browserHistory=browserHistory.filter(x=>x.t>Date.now()-30*86400000).slice(-2500);
+          try{localStorage.setItem(TIMEKEY,JSON.stringify(browserHistory));}catch{}
+        }
+      }
+      if(!lastHistoryRefresh||Date.now()-lastHistoryRefresh>=HISTORY_POLL_MS){
+        lastHistoryRefresh=Date.now();
+        await loadHistory();
+      }else if(!usingCloud){
+        draw();
+      }
+      window.dispatchEvent(new CustomEvent('kvn:verified-stats',{detail:{
+        stats:d,previous,range:currentRange,
+        history:(usingCloud?cloudHistory:browserHistory).filter(
+          x=>x&&Number.isFinite(x.t)&&Number.isFinite(x.ccu)&&x.t>=Date.now()-86400000
+        ),
+        cloud:usingCloud
+      }}));
+    }catch(err){
+      state('ROBLOX TEMPORARILY UNAVAILABLE',true);
+      if(currentStats&&Number.isFinite(currentStats.playing)){
+        $('lastUpdate').textContent='Refresh delayed · last verified sample: '+new Date(currentStats.timestamp).toLocaleString('en-GB');
+      }else if(!restoreVerifiedStats()){
+        $('lastUpdate').textContent='Waiting for verified Roblox statistics. Automatically retrying.';
+      }
+      document.querySelector('.metrics')?.classList.remove('is-loading');
+      if(!lastHistoryRefresh||Date.now()-lastHistoryRefresh>=HISTORY_POLL_MS){
+        lastHistoryRefresh=Date.now();
+        try{await loadHistory();}catch{}
+      }
+      window.dispatchEvent(new CustomEvent('kvn:stats-unavailable',{detail:{
+        hasPrevious:Boolean(currentStats&&Number.isFinite(currentStats.playing))
+      }}));
+      console.warn('Roblox live refresh failed',err);
+    }
+  })();
+  try{return await liveStatsInFlight;}
+  finally{liveStatsInFlight=null;}
+}
 function getPoints(){const since=Date.now()-spans[currentRange];const base=usingCloud?cloudHistory:browserHistory;return base.filter(x=>x.t>=since&&Number.isFinite(x[currentMetric]));}
 async function loadHistory(){
   let unavailable=false;
@@ -377,7 +446,15 @@ for(const card of document.querySelectorAll('.card'))card.addEventListener('poin
 const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('show');observer.unobserve(entry.target)}},{threshold:.07});document.querySelectorAll('.reveal').forEach(x=>observer.observe(x));
 $('footerTime').textContent='© '+new Date().getFullYear()+' KVN STUDIOS';
 window.addEventListener('kvn:official-analytics',()=>{acquisition();});
-stats();setInterval(()=>{if(!document.hidden)stats();},60000);
+stats();
+setInterval(()=>{if(!document.hidden)stats();},LIVE_POLL_MS);
+// Browsers throttle background tabs. Resume polling immediately on return.
+const resumeLiveStats=()=>{
+  if(!document.hidden && Date.now()-lastLiveCheckAt>9000)stats();
+};
+document.addEventListener('visibilitychange',resumeLiveStats);
+window.addEventListener('focus',resumeLiveStats);
+window.addEventListener('online',resumeLiveStats);
 </script></body></html>`;
 
 /* Render-time composition keeps the Roblox API, database schema and API routes unchanged.
@@ -457,7 +534,7 @@ export default {
         const stats=lastLiveStats;
         try{await record(env.DB,stats);}catch{console.log('D1 sample write unavailable');}
         return protectResponse(Response.json(stats,{
-          headers:{'Cache-Control':'public, max-age=30'}
+          headers:{'Cache-Control':'public, max-age=12'}
         }));
       }catch(err){
         const diagnostic=minimalStatus(err);

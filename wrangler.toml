@@ -13,3 +13,14 @@ crons = ["*/5 * * * *"]
 # The Roblox API key must remain a Cloudflare Secret named ROBLOX_ANALYTICS_API_KEY.
 [vars]
 PUBLIC_ANALYTICS_METRICS = "DailyActiveUsers,Visits,AverageSessionLengthMinutes,AveragePlayTimeMinutesPerDAU,ForwardD1Retention,ForwardD7Retention,ForwardD30Retention,UniqueUsersWithImpressions,ThumbnailImpressions,UniqueUsersWithClicks,ImpressionCVR,ClickCVR,EndToEndCVR,ClientFpsAvg,ClientCrashRate15m,ClientMemoryUsageAvg,ClientCpuTimeAvg,PayingUsersCVR"
+
+# Per-Cloudflare-location protection for public API endpoints. This binding
+# never stores or exposes the Roblox API key. Limits apply per endpoint and
+# connecting IP; local Workers also implement a bounded fallback limiter.
+# Requires Wrangler 4.36+ for Cloudflare's Rate Limiting binding.
+[[ratelimits]]
+name = "PUBLIC_API_LIMITER"
+namespace_id = "2026112201"
+  [ratelimits.simple]
+  limit = 60
+  period = 60

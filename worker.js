@@ -33,7 +33,7 @@ async function getJSON(url) {
     return await r.json();
   } finally { clearTimeout(timer); }
 }
-async function fetchStats(env = {}) {
+async function fetchStats(env = {}, ctx = null) {
   // The Universe ID, not Place ID, is required for public game statistics.
   const override=typeof env.ROBLOX_UNIVERSE_ID==='string'?env.ROBLOX_UNIVERSE_ID.trim():'';
   if(/^[0-9]{4,20}$/.test(override))cachedUniverse=override;
@@ -78,7 +78,11 @@ async function fetchStats(env = {}) {
         return values;
       }).finally(()=>{secondaryPending=null;});
     }
-    support=await secondaryPending;
+    // Votes and artwork are optional enrichment: never let slow endpoints
+    // delay a verified live CCU response. Cloudflare keeps this work alive.
+    if (ctx && typeof ctx.waitUntil === 'function') {
+      ctx.waitUntil(secondaryPending.catch(() => {}));
+    }
   }
   // Retry a transient game-details error once; do not invent game stats.
   let gameData;
@@ -88,6 +92,8 @@ async function fetchStats(env = {}) {
     if(/Roblox API HTTP 4(?!29)\d\d/.test(String(error?.message||'')))throw error;
     gameData=await getJSON(gameUrl);
   }else gameData=initial.value;
+  // Reuse enrichment if it completed while the live game request was pending.
+  support=secondaryCacheUniverse===u ? (secondaryCache??support) : support;
   const g=gameData?.data?.[0];
   if(!g)throw new Error('Game details: Roblox returned no matching universe');
   const likes=support?.likes??null;
@@ -737,7 +743,7 @@ const THEMED_HTML = HTML
   .replace('</section></main><footer', () => '</section>' + publicAnalyticsMarkup + '</main><footer')
   .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n</script></body></html>');
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     // Only safe, read-only methods are accepted, including on the HTML route.
     if(request.method!=='GET' && request.method!=='HEAD')
       return safeError(405,'method_not_allowed','Only GET and HEAD are supported.');
@@ -792,7 +798,7 @@ export default {
         const now=Date.now();
         if(!lastLiveStats || now>=liveCacheUntil){
           if(!pendingStats){
-            pendingStats=fetchStats(env).then(data=>{
+            pendingStats=fetchStats(env,ctx).then(data=>{
               lastLiveStats=data;
               liveCacheUntil=Date.now()+LIVE_CACHE_MS;
               return data;
@@ -839,6 +845,6 @@ export default {
     }),nonce);
   },
   async scheduled(event, env, ctx) {
-    if (env.DB) ctx.waitUntil(fetchStats(env).then(s=>record(env.DB,s)));
+    if (env.DB) ctx.waitUntil(fetchStats(env,ctx).then(s=>record(env.DB,s)));
   }
 };

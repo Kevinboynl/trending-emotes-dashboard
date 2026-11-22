@@ -285,6 +285,7 @@ let visibilityEpoch=0;
 let requestVisibilityEpoch=null;
 let resumeQueued=false;
 let lastResumeAttempt=0;
+let visitorAway=false;
 function displaySavedVisibleCCU(){
   if(!validVisibleSnapshot(lastVisibleCCU))return;
   // The old, actually seen count remains on-screen until a newer verified
@@ -416,7 +417,7 @@ async function stats(){
   // A request started before the tab became hidden must not be treated as a
   // visible update, even if it finishes after the visitor comes back.
   requestVisibilityEpoch=visibilityEpoch;
-  const requestStartedVisible=!document.hidden;
+  const requestStartedVisible=!document.hidden&&!visitorAway;
   liveStatsInFlight=(async()=>{
     try{
       const controller=new AbortController();
@@ -435,7 +436,7 @@ async function stats(){
         latestVerifiedCCU={playing:d.playing,timestamp:d.timestamp};
         storeVerifiedStats(d);
       }
-      if(!requestStartedVisible||document.hidden||requestVisibilityEpoch!==visibilityEpoch){
+      if(!requestStartedVisible||document.hidden||visitorAway||requestVisibilityEpoch!==visibilityEpoch){
         // The visitor did not see this result. Never change lastVisibleCCU.
         return;
       }
@@ -508,7 +509,7 @@ async function stats(){
         void loadHistory().catch(err=>console.warn('History refresh delayed',err));
       }
     }catch(err){
-      if(document.hidden||requestVisibilityEpoch!==visibilityEpoch)return;
+      if(document.hidden||visitorAway||requestVisibilityEpoch!==visibilityEpoch)return;
       state('ROBLOX TEMPORARILY UNAVAILABLE',true);
       if(lastVisibleCCU&&validVisibleSnapshot(lastVisibleCCU)){
         $('lastUpdate').textContent='Refresh delayed · last visible verified sample: '+
@@ -677,16 +678,20 @@ window.addEventListener('kvn:official-analytics',()=>{acquisition();});
 restoreVerifiedStats();
 displaySavedVisibleCCU();
 stats();
-setInterval(()=>{if(!document.hidden)stats();},LIVE_POLL_MS);
+setInterval(()=>{if(!document.hidden&&!visitorAway)stats();},LIVE_POLL_MS);
 function markVisitorAway(){
+  if(visitorAway)return;
+  visitorAway=true;
   visibilityEpoch++;
   returnComparisonPending=Boolean(lastVisibleCCU&&validVisibleSnapshot(lastVisibleCCU));
 }
 function resumeLiveStats(){
   if(document.hidden)return;
+  const wasAway=visitorAway;
+  visitorAway=false;
   const now=Date.now();
   if(now-lastResumeAttempt<1200)return;
-  if(!returnComparisonPending&&now-lastLiveCheckAt<9000)return;
+  if(!wasAway&&!returnComparisonPending&&now-lastLiveCheckAt<9000)return;
   lastResumeAttempt=now;
   if(liveStatsInFlight){
     // Reuse requests from this visible epoch; replace one that started

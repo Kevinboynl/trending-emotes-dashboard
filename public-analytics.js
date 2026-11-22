@@ -8,9 +8,9 @@ export const ANALYTICS_CATALOG = Object.freeze({
   Visits: { label:'Daily sessions', short:'Sessions', unit:'sessions', dp:0, category:'Engagement' },
   AverageSessionLengthMinutes: { label:'Average session duration', short:'Session time', unit:'min', dp:1, category:'Engagement' },
   AveragePlayTimeMinutesPerDAU: { label:'Average daily playtime', short:'Playtime / DAU', unit:'min', dp:1, category:'Engagement' },
-  ForwardD1Retention: { label:'Day 1 retention (raw API value)', short:'D1 retention', unit:'API value', dp:3, category:'Retention' },
-  ForwardD7Retention: { label:'Day 7 retention (raw API value)', short:'D7 retention', unit:'API value', dp:3, category:'Retention' },
-  ForwardD30Retention: { label:'Day 30 retention (raw API value)', short:'D30 retention', unit:'API value', dp:3, category:'Retention' },
+  ForwardD1Retention: { label:'Day 1 retention', short:'D1 retention', unit:'API value', dp:3, category:'Retention' },
+  ForwardD7Retention: { label:'Day 7 retention', short:'D7 retention', unit:'API value', dp:3, category:'Retention' },
+  ForwardD30Retention: { label:'Day 30 retention', short:'D30 retention', unit:'API value', dp:3, category:'Retention' },
   UniqueUsersWithImpressions: { label:'Unique users with impressions', short:'Impression reach', unit:'users', dp:0, category:'Acquisition' },
   ImpressionCVR: { label:'Impression click-through (raw value)', short:'Impression CTR', unit:'API value', dp:3, category:'Acquisition' },
   ClientFpsAvg: { label:'Average client frame rate', short:'Average FPS', unit:'fps', dp:1, category:'Performance' },
@@ -248,6 +248,19 @@ export const publicAnalyticsClient = String.raw`
  const root=document.getElementById('publicMetricsContent');
  if(!root)return;
  const fmt=(n,dp=0)=>Number(n).toLocaleString('en-US',{maximumFractionDigits:dp});
+ const isRetention=id=>/^ForwardD(?:1|7|30)Retention$/.test(String(id));
+ const valueText=(metric)=>{
+   if(!metric?.latest || !Number.isFinite(metric.latest.value))return '—';
+   const v=metric.latest.value;
+   // Retention is a fractional cohort return ratio (e.g. 0.144 => 14.4%).
+   if(isRetention(metric.id) && v>=0 && v<=1)return fmt(v*100,1)+'%';
+   return fmt(v,metric.dp||0)+(metric.unit==='min'?' min':metric.unit==='fps'?' FPS':metric.unit==='Robux'?' R$':'');
+ };
+ const statusText=(metric)=>{
+   if(!metric?.latest)return '';
+   if(isRetention(metric.id))return 'New-player cohort: '+metric.latest.date+' · '+metric.short+' · Roblox API';
+   return 'Verified Roblox data · '+metric.latest.date+(metric.unit==='API value'?' · raw API value':'');
+ };
  const svgPoints=arr=>{
    if(arr.length<2)return '';
    const min=Math.min(...arr),max=Math.max(...arr);
@@ -280,9 +293,9 @@ export const publicAnalyticsClient = String.raw`
    const card=document.createElement('article');card.className='kvn-insight-card'+(ready?' is-ready':'');
    const header=document.createElement('div');header.className='k-label';header.textContent=title;
    const value=document.createElement('div');value.className='k-value';
-   value.textContent=ready?fmt(metric.latest.value,metric.dp||0)+(metric.unit==='fps'?' FPS':metric.unit==='Robux'?' R$':''):'—';
+   value.textContent=ready?valueText(metric):'—';
    const status=document.createElement('p');status.className='k-status';
-   status.textContent=ready?'Verified Roblox data · '+metric.latest.date+(metric.unit==='API value'?' · raw API value': ''):detailMessage(metric);
+   status.textContent=ready?statusText(metric):detailMessage(metric);
    const meta=document.createElement('span');meta.className='k-meta';
    meta.textContent=metric?'ROBLOX OPEN CLOUD':'NOT ENABLED · '+id;
    card.append(header,value,status,meta);
@@ -313,6 +326,10 @@ export const publicAnalyticsClient = String.raw`
      if(!tab)continue;
      const grid=document.createElement('div');grid.className='kvn-insights';
      for(const [id,title] of metrics)grid.append(makeInsight(id,title,payload));
+     if(page==='retention')grid.append(makeBanner(
+       'Why this may differ from Creator Dashboard',
+       'Each percentage above is for the latest finalized first-play cohort shown on its card. D7 and D30 mature later than D1. Creator Dashboard may display an aggregate over a different date range; compare the same cohort date to compare the figures.',
+       'https://create.roblox.com/docs/production/analytics/retention','About Roblox retention ↗'));
      if(page==='monetization')grid.append(makeBanner(
        'Revenue stays private',
        'Revenue, ARPDAU and ARPPU are private by default. The owner must explicitly authorize each metric before publishing any of these numbers.',
@@ -352,8 +369,8 @@ export const publicAnalyticsClient = String.raw`
      for(const metric of data.metrics||[]){
        const card=document.createElement('article');card.className='official-card';
        const heading=document.createElement('small');heading.textContent=metric.label;
-       const amount=document.createElement('strong');amount.textContent=metric.latest?fmt(metric.latest.value,metric.dp)+(metric.unit==='min'?' min':metric.unit==='Robux'?' R$':''): '—';amount.title=metric.latest?'Verified aggregated Roblox data':'No verified value available yet';
-       const note=document.createElement('p');note.textContent=metric.state==='ready'?'Last complete day ('+metric.latest.date+') · '+metric.unit+(metric.unit==='API value'?' (raw, not converted)':''):detailMessage(metric);
+       const amount=document.createElement('strong');amount.textContent=valueText(metric);amount.title=metric.latest?'Verified aggregated Roblox data':'No verified value available yet';
+       const note=document.createElement('p');note.textContent=metric.state==='ready'?statusText(metric):detailMessage(metric);
        card.append(heading,amount,note);
        if(Array.isArray(metric.points) && metric.points.length>1){
           const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');

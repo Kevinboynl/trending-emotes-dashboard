@@ -17,7 +17,12 @@ let lastLiveStats = null;
 let pendingStats = null;
 let liveCacheUntil = 0;
 // The public Roblox APIs are rate limited; reuse measured responses briefly per isolate.
-const LIVE_CACHE_MS = 30000;
+const LIVE_CACHE_MS = 12000; // The browser checks every 20 seconds; allow a new verified sample.
+const SUPPORT_CACHE_MS = 120000; // Votes and artwork are slower-moving data.
+let secondaryCache = null;
+let secondaryCacheUntil = 0;
+let secondaryCacheUniverse = null;
+let secondaryPending = null;
 const API_HEADERS = { 'Accept': 'application/json' };
 async function getJSON(url) {
   const ctrl = new AbortController();
@@ -29,55 +34,71 @@ async function getJSON(url) {
   } finally { clearTimeout(timer); }
 }
 async function fetchStats(env = {}) {
-  // The configured Universe ID avoids relying on a second Roblox API for every
-  // cold start. Never confuse the Place ID with the Universe ID.
-  const override = typeof env.ROBLOX_UNIVERSE_ID === 'string' ? env.ROBLOX_UNIVERSE_ID.trim() : '';
-  if (/^[0-9]{4,20}$/.test(override)) cachedUniverse = override;
-  if (!cachedUniverse) {
-    const id = await getJSON('https://apis.roblox.com/universes/v1/places/' + PLACE_ID + '/universe');
-    if (!/^\d+$/.test(String(id.universeId || ''))) throw new Error('Universe ID lookup returned no valid ID');
-    cachedUniverse = String(id.universeId);
+  // The Universe ID, not Place ID, is required for public game statistics.
+  const override=typeof env.ROBLOX_UNIVERSE_ID==='string'?env.ROBLOX_UNIVERSE_ID.trim():'';
+  if(/^[0-9]{4,20}$/.test(override))cachedUniverse=override;
+  if(!cachedUniverse){
+    const id=await getJSON('https://apis.roblox.com/universes/v1/places/'+PLACE_ID+'/universe');
+    if(!/^\d+$/.test(String(id.universeId||'')))throw new Error('Universe ID lookup returned no valid ID');
+    cachedUniverse=String(id.universeId);
   }
-  const u = cachedUniverse;
-  const endpoints = [
-    'https://games.roblox.com/v1/games?universeIds=' + u,
-    'https://games.roblox.com/v1/games/votes?universeIds=' + u,
-    'https://thumbnails.roblox.com/v1/games/icons?universeIds=' + u + '&size=512x512&format=Png&isCircular=false',
-    'https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds=' + u + '&countPerUniverse=1&defaults=true&size=768x432&format=Png&isCircular=false'
+  const u=cachedUniverse;
+  const gameUrl='https://games.roblox.com/v1/games?universeIds='+u;
+  const secondaryUrls=[
+    'https://games.roblox.com/v1/games/votes?universeIds='+u,
+    'https://thumbnails.roblox.com/v1/games/icons?universeIds='+u+'&size=512x512&format=Png&isCircular=false',
+    'https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds='+u+'&countPerUniverse=1&defaults=true&size=768x432&format=Png&isCircular=false'
   ];
-  const result = await Promise.allSettled(endpoints.map(getJSON));
-  const data = n => result[n].status === 'fulfilled' ? result[n].value : {};
-  // The game details endpoint is essential. Retry it once when a transient
-  // Roblox/Cloudflare failure occurs; the other endpoints are optional.
-  if (result[0].status === 'rejected') {
-    const error = String(result[0].reason?.message || '');
-    if (!/Roblox API HTTP 4(?!29)\d\d/.test(error)) {
-      try { result[0] = {status:'fulfilled',value:await getJSON(endpoints[0])}; }
-      catch { /* Let the normal diagnostics / last verified sample handle it. */ }
+  // Refresh CCU, visits and favorites independently from slower-moving votes,
+  // icons, and thumbnails. Avoid four Roblox API calls every 20 seconds.
+  let support=secondaryCacheUniverse===u ? secondaryCache : null;
+  if(!support||Date.now()>=secondaryCacheUntil){
+    if(!secondaryPending||secondaryCacheUniverse!==u){
+      const previous=support||{};
+      secondaryCacheUniverse=u;
+      secondaryPending=Promise.allSettled(secondaryUrls.map(getJSON)).then(results=>{
+        const vote=results[0].status==='fulfilled'?results[0].value?.data?.[0]:null;
+        const icon=results[1].status==='fulfilled'?results[1].value?.data?.[0]?.imageUrl:null;
+        const thumbs=results[2].status==='fulfilled'?results[2].value?.data?.[0]?.thumbnails:null;
+        const thumbnail=Array.isArray(thumbs)?thumbs.find(x=>x?.imageUrl)?.imageUrl:null;
+        const values={
+          likes:Number.isFinite(vote?.upVotes)?vote.upVotes:(previous.likes??null),
+          dislikes:Number.isFinite(vote?.downVotes)?vote.downVotes:(previous.dislikes??null),
+          icon:typeof icon==='string'&&icon.startsWith('https://')?icon:(previous.icon??null),
+          thumbnail:typeof thumbnail==='string'&&thumbnail.startsWith('https://')?thumbnail:(previous.thumbnail??null),
+          voteTimestamp:vote&&Number.isFinite(vote.upVotes)&&Number.isFinite(vote.downVotes)?Date.now():(previous.voteTimestamp??null)
+        };
+        secondaryCache=values;
+        const anyNew=results.some(x=>x.status==='fulfilled');
+        secondaryCacheUntil=Date.now()+(anyNew?SUPPORT_CACHE_MS:45000);
+        return values;
+      }).finally(()=>{secondaryPending=null;});
     }
+    support=await secondaryPending;
   }
-  const g = data(0).data?.[0];
-  if (!g) {
-    // Keep an explicit upstream reason for diagnostics instead of silently
-    // conflating API errors with a legitimate zero-player game.
-    const fail = result[0];
-    if (fail.status === 'rejected') throw new Error('Game details: ' + String(fail.reason?.message || 'Roblox request failed'));
-    throw new Error('Game details: Roblox returned no matching universe');
+  // Retry a transient game-details error once; do not invent game stats.
+  let gameData;
+  try {gameData=await getJSON(gameUrl);}
+  catch(error){
+    if(/Roblox API HTTP 4(?!29)\d\d/.test(String(error?.message||'')))throw error;
+    gameData=await getJSON(gameUrl);
   }
-  const v = data(1).data?.[0] || {};
-  const likes = Number.isFinite(v.upVotes) ? v.upVotes : null;
-  const dislikes = Number.isFinite(v.downVotes) ? v.downVotes : null;
-  const total = (likes ?? 0) + (dislikes ?? 0);
-  const imageSets = data(3).data || [];
-  const image = imageSets[0]?.thumbnails?.find?.(x => x.imageUrl)?.imageUrl || null;
+  const g=gameData?.data?.[0];
+  if(!g)throw new Error('Game details: Roblox returned no matching universe');
+  const likes=support?.likes??null;
+  const dislikes=support?.dislikes??null;
+  const total=(likes??0)+(dislikes??0);
   return {
-    source: 'Roblox public API', placeId: PLACE_ID, universeId: u,
-    name: g.name || 'TRENDING EMOTES!', playing: g.playing ?? null,
-    visits: g.visits ?? null, favorites: g.favoritedCount ?? null,
-    likes, dislikes, rating: total ? (likes / total) * 100 : null,
-    created: g.created || null, updated: g.updated || null,
-    icon: data(2).data?.[0]?.imageUrl || null,
-    thumbnail: image, timestamp: Date.now(), stale: false
+    source:'Roblox public API',placeId:PLACE_ID,universeId:u,
+    name:g.name||'TRENDING EMOTES!',
+    playing:Number.isFinite(g.playing)?g.playing:null,
+    visits:Number.isFinite(g.visits)?g.visits:null,
+    favorites:Number.isFinite(g.favoritedCount)?g.favoritedCount:null,
+    likes,dislikes,rating:total?likes/total*100:null,
+    created:g.created||null,updated:g.updated||null,
+    icon:support?.icon??null,thumbnail:support?.thumbnail??null,
+    voteTimestamp:support?.voteTimestamp??null,
+    timestamp:Date.now(),stale:false
   };
 }
 function minimalStatus(err) {

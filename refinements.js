@@ -376,21 +376,23 @@ if(chart && frame && curve){
 // 6. Mini charts: real samples only; no filler lines when history is empty.
 function renderSparks(){
   const range=typeof currentRange==='string'&&spans[currentRange]?currentRange:'24h';
-  const base=typeof getVerifiedHistory==='function'?getVerifiedHistory():(typeof usingCloud!=='undefined'&&usingCloud?cloudHistory:browserHistory);
+  const base=typeof getVerifiedHistory==='function'?getVerifiedHistory():
+    (typeof usingCloud!=='undefined'&&usingCloud?cloudHistory:browserHistory);
   const filtered=safeArray(base).filter(p=>Number.isFinite(p?.t)&&p.t>=Date.now()-spans[range]);
   for(const [target,[field,label]] of Object.entries(metricMap)){
-    const num=$id(target);const card=num?.closest('.card');if(!num||!card)continue;
+    const num=$id(target),card=num?.closest('.card');if(!num||!card)continue;
     let svg=card.querySelector('.sparkline');
     const points=filtered.filter(p=>Number.isFinite(p[field])).sort((a,b)=>a.t-b.t);
     if(points.length<2){
       if(svg)svg.remove();
       continue;
     }
-    const max=Math.max(...points.map(p=>p[field])),min=Math.min(...points.map(p=>p[field]));
+    const max=Math.max(...points.map(p=>p[field]));
+    const min=Math.min(...points.map(p=>p[field]));
     const t0=points[0].t,t1=points[points.length-1].t;
     const coords=points.map((p,i)=>({
-      x: t1===t0?i/(points.length-1)*190:(p.t-t0)/(t1-t0)*190,
-      y: 37-(p[field]-min)/(max-min||1)*29
+      x:t1===t0?i/(points.length-1)*190:(p.t-t0)/(t1-t0)*190,
+      y:37-(p[field]-min)/(max-min||1)*29
     }));
     const d=coords.map((p,i)=>(i?'L':'M')+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' ');
     if(!svg){
@@ -399,17 +401,49 @@ function renderSparks(){
       svg.setAttribute('viewBox','0 0 190 44');
       svg.setAttribute('preserveAspectRatio','none');
       svg.setAttribute('role','img');
-      svg.setAttribute('aria-label','Measured trend for '+label);
+      svg.setAttribute('aria-label','Verified measured trend for '+label);
       const fill=document.createElementNS('http://www.w3.org/2000/svg','path');
       fill.setAttribute('class','spark-fill');
       const stroke=document.createElementNS('http://www.w3.org/2000/svg','path');
       stroke.setAttribute('class','spark-stroke');
-      svg.append(fill,stroke);
+      const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dot.setAttribute('class','kvn-spark-head');
+      dot.setAttribute('r','3.1');
+      svg.append(fill,stroke,dot);
       const info=card.querySelector('.metric-info');
-      if(info)info.after(svg);else card.querySelector('.card-content')?.append(svg);
+      if(info)info.after(svg);
+      else card.querySelector('.card-content')?.append(svg);
     }
-    svg.children[0]?.setAttribute('d',d+' L190 44 L0 44 Z');
-    svg.children[1]?.setAttribute('d',d);
+    const line=svg.querySelector('.spark-stroke');
+    const fill=svg.querySelector('.spark-fill');
+    let dot=svg.querySelector('.kvn-spark-head');
+    if(!dot){
+      dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dot.setAttribute('class','kvn-spark-head');
+      dot.setAttribute('r','3.1');
+      svg.append(dot);
+    }
+    const prior=Number(svg.dataset.latestSample||0);
+    const newest=points[points.length-1];
+    const finalPoint=coords[coords.length-1];
+    fill?.setAttribute('d',d+' L190 44 L0 44 Z');
+    line?.setAttribute('d',d);
+    dot.setAttribute('cx',String(finalPoint.x));
+    dot.setAttribute('cy',String(finalPoint.y));
+    svg.dataset.latestSample=String(newest.t);
+    // Animate only after a genuinely NEW, timestamped measured sample.
+    // The path is still made exclusively of the real verified data.
+    if(prior>0&&newest.t>prior&&!reduce.matches){
+      svg.classList.remove('kvn-spark-new-point');
+      void svg.getBoundingClientRect();
+      svg.classList.add('kvn-spark-new-point');
+      if(line?.animate){
+        line.animate([
+          {clipPath:'inset(0 16% 0 0)',opacity:.75},
+          {clipPath:'inset(0 0 0 0)',opacity:1}
+        ],{duration:640,easing:'cubic-bezier(.22,1,.36,1)'});
+      }
+    }
   }
 }
 

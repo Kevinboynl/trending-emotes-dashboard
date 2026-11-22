@@ -343,7 +343,9 @@ if(chart && frame && curve){
   const mark=throttle(e=>{
     const rect=chart.getBoundingClientRect();
     const fraction=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
-    cross.style.transform='translateX('+(fraction*rect.width)+'px)';
+    const pts=typeof chartPoints!=='undefined'&&Array.isArray(chartPoints)?chartPoints:[];
+    const nearest=pts.length?pts.reduce((best,p)=>Math.abs(p.x-fraction*860)<Math.abs(best.x-fraction*860)?p:best,pts[0]):null;
+    cross.style.transform='translateX('+(nearest?nearest.x/860*rect.width:fraction*rect.width)+'px)';
     frame.classList.add('hovering');
   });
   chart.addEventListener('pointermove',mark,{passive:true});

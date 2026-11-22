@@ -59,6 +59,21 @@ export const liveIntelligenceCSS = String.raw`
  .kvn-ccu-card[data-motion] .kvn-ccu-flash{animation:none!important}
  .kvn-ccu-card[data-motion="up"]{box-shadow:inset 0 1px rgba(194,234,255,.1)!important}
 }
+/* Real D1 comparisons; never show placeholders as measured changes. */
+.kvn-compare{border-top:1px solid rgba(102,165,255,.19);margin-top:20px;padding:19px 4px 0;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px 18px}
+.kvn-compare-left{display:flex;flex-direction:column;gap:7px;min-width:0;flex:1}
+.kvn-compare-title{color:#91c6ff;font:800 10px 'Inter','DM Sans',sans-serif;letter-spacing:1.3px}
+.kvn-compare-description{color:#9db2d2;font:500 11px/1.65 'Inter','DM Sans',sans-serif;max-width:46ch}
+.kvn-compare-value{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:160px;font-variant-numeric:tabular-nums}
+.kvn-compare-value strong{color:#ecf8ff;font:800 clamp(17px,1.6vw,24px) 'Space Grotesk','Inter',sans-serif;letter-spacing:-.7px}
+.kvn-compare-value small{color:#9db8d8;font:600 10px 'Inter','DM Sans',sans-serif}
+.kvn-compare[data-trend="up"] .kvn-compare-value strong{color:#80d5ff}
+.kvn-compare[data-trend="down"] .kvn-compare-value strong{color:#b3c5df}
+@media(max-width:690px){
+ .kvn-compare{padding:15px 0 0;margin-top:18px}
+ .kvn-compare-value{align-items:flex-start}
+}
+
 `;
 export const liveIntelligenceJS = String.raw`
 /* Event-driven CCU presentation: never alters or estimates Roblox data. */
@@ -152,5 +167,44 @@ window.addEventListener('kvn:stats-unavailable',event=>{
   delta.textContent=event.detail?.hasPrevious?'LAST VERIFIED SAMPLE':'RETRYING ROBLOX API';
   record.hidden=true;clearMovement();
 });
+const chartPanel=document.querySelector('.chart-panel');
+if(chartPanel){
+  const compare=document.createElement('section');compare.className='kvn-compare';
+  compare.setAttribute('aria-label','Historical CCU comparison');
+  const left=document.createElement('div');left.className='kvn-compare-left';
+  const heading=document.createElement('span');heading.className='kvn-compare-title';
+  heading.textContent='VERIFIED CCU · PERIOD COMPARISON';
+  const explainer=document.createElement('span');explainer.className='kvn-compare-description';
+  explainer.textContent='Connect Cloudflare D1 to compare complete measured periods.';
+  left.append(heading,explainer);
+  const right=document.createElement('div');right.className='kvn-compare-value';
+  const change=document.createElement('strong');change.textContent='—';
+  const previous=document.createElement('small');previous.textContent='REAL MEASUREMENTS ONLY';
+  right.append(change,previous);compare.append(left,right);
+  const foot=chartPanel.querySelector('.chart-foot');
+  if(foot)foot.after(compare);else chartPanel.append(compare);
+  window.addEventListener('kvn:history-loaded',event=>{
+    const data=event.detail||{},comparison=data.comparison||{},range=(data.range||'24h').toUpperCase();
+    compare.dataset.trend='none';
+    heading.textContent='AVERAGE SAMPLED CCU · '+range+' VS PREVIOUS '+range;
+    if(comparison.state==='ready'&&Number.isFinite(comparison.current)&&Number.isFinite(comparison.previous)){
+      const current=comparison.current,prior=comparison.previous,diff=current-prior;
+      const symbol=diff>0?'+':diff<0?'−':'';
+      const abs=Math.abs(diff).toLocaleString('en-US',{maximumFractionDigits:1});
+      change.textContent=symbol+abs+' PLAYERS';
+      compare.dataset.trend=diff>0?'up':diff<0?'down':'flat';
+      previous.textContent='PREVIOUS '+range+': '+prior.toLocaleString('en-US',{maximumFractionDigits:1})+' AVG CCU';
+      explainer.textContent='Current average: '+current.toLocaleString('en-US',{maximumFractionDigits:1})+
+        ' concurrent players · verified 5-minute samples, not DAU.';
+    }else{
+      change.textContent='—';
+      previous.textContent='NO ESTIMATES';
+      explainer.textContent=data.error?'History is temporarily unavailable.':
+        (!data.cloud?'Connect Cloudflare D1 to compare full periods.':
+        'Waiting for sufficient real measurements across both full periods.');
+    }
+  });
+}
+
 })();
 `;

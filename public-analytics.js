@@ -124,7 +124,7 @@ export async function publicAnalyticsResponse(env, fetcher = fetch, now = Date.n
     return output({ state:'unavailable', metrics:[], note:'Geautoriseerde statistieken tijdelijk niet beschikbaar.' }, 503);
   }
 }
-export const publicAnalyticsStyles = String.raw\`
+export const publicAnalyticsStyles = String.raw`
 #officialMetrics{scroll-margin-top:100px}
 .official-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .official-card{min-width:0;background:linear-gradient(152deg,#112b5b,#091a38 75%);border:1px solid #285085;border-radius:19px;padding:24px;box-shadow:inset 0 1px #a6d9ff10;transition:transform .25s,border-color .25s}
@@ -143,8 +143,8 @@ export const publicAnalyticsStyles = String.raw\`
 @media(max-width:950px){.official-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:680px){.official-grid{grid-template-columns:1fr}.official-head{display:block}.official-card{padding:20px}}
 @media(prefers-reduced-motion:reduce){.official-placeholder{animation:none}.official-card{transition:none}}
-\`;
-export const publicAnalyticsMarkup = String.raw\`
+`;
+export const publicAnalyticsMarkup = String.raw`
 <section class="wrap" id="officialMetrics" aria-label="Geselecteerde officiële Roblox statistieken">
  <div class="bar reveal"><div><div class="sec-label">04 / AUTHORIZED ANALYTICS</div>
  <h2>OFFICIAL <span style="color:#74c6ff">INSIGHTS.</span></h2>
@@ -154,8 +154,8 @@ export const publicAnalyticsMarkup = String.raw\`
    <div class="official-card"><div class="official-placeholder"></div><p>Geselecteerde metingen laden...</p></div>
    <div class="official-card"><div class="official-placeholder"></div><p>Alleen geautoriseerde publicaties</p></div>
  </div></div>
-</section>\`;
-export const publicAnalyticsClient = String.raw\`
+</section>`;
+export const publicAnalyticsClient = String.raw`
 (()=>{
  const root=document.getElementById('publicMetricsContent');
  if(!root)return;
@@ -198,4 +198,4 @@ export const publicAnalyticsClient = String.raw\`
  fetchPublished();
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchPublished()});
 })();
-\`;
+`;

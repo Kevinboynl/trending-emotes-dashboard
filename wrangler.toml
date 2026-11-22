@@ -12,4 +12,4 @@ crons = ["*/5 * * * *"]
 # Only explicitly selected aggregated analytics are shown publicly.
 # The Roblox API key must remain a Cloudflare Secret named ROBLOX_ANALYTICS_API_KEY.
 [vars]
-PUBLIC_ANALYTICS_METRICS = "DailyActiveUsers,AverageSessionLengthMinutes"
+PUBLIC_ANALYTICS_METRICS = "DailyActiveUsers,Visits,AverageSessionLengthMinutes,AveragePlayTimeMinutesPerDAU,ForwardD1Retention,ForwardD7Retention,ForwardD30Retention,UniqueUsersWithImpressions,ImpressionCVR,ClientFpsAvg,ClientCrashRate15m,PayingUsersCVR"

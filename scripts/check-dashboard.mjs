@@ -112,8 +112,26 @@ assert.ok(liveClient.indexOf("window.dispatchEvent(new CustomEvent('kvn:verified
   liveClient.indexOf('void loadHistory().catch('),'Live effects should update before history refresh');
 assert.ok(embeddedScript.includes('function getVerifiedHistory()'),'Live CCU history merge missing');
 assert.ok(embeddedScript.includes("function revealChip(diff)"),'Verified CCU change badge is missing');
-assert.ok(embeddedScript.includes("changeChipTimer=setTimeout(hideChip,5200)"),'CCU change badge should remain visible for five seconds');
+assert.ok(embeddedScript.includes("changeChipTimer=setTimeout(hideChip,2200)"),'CCU change badge should fade out after 2.2 seconds');
 assert.ok(embeddedScript.includes("revealChip(diff);"),'CCU change event is not connected to badge');
+
+assert.ok(embeddedScript.includes("const numberRow=document.createElement('div')"),'CCU badge must use responsive in-flow layout');
+assert.ok(embeddedScript.includes("numberRow.append(player,changeChip)"),'CCU badge must stay next to the player count');
+assert.ok(embeddedScript.includes("movementTimer=setTimeout(clearMovement,1600)"),'CCU glow must settle after 1.6 seconds');
+assert.ok(embeddedScript.includes("record.textContent='✦ NEW PEAK · 24H'"),'Measured peak status missing');
+assert.ok(embeddedScript.includes("d.playing>priorValue"),'Peak must only trigger on a verified increase');
+assert.ok(embeddedScript.includes("previous&&!previous.stale"),'Do not animate stale prior values');
+assert.ok(embeddedScript.includes("if(id==='playing')"),'Selective CCU digit rolling missing');
+assert.ok(embeddedScript.includes("verifiedCcuChange"),'CCU number rolling must be verified-only');
+assert.ok(embeddedScript.includes("if(!verifiedCcuChange"),'CCU must not roll on cached or initial samples');
+assert.ok(embeddedScript.includes("newest.t>prior"),'Sparkline reveal requires a newly timestamped real measurement');
+assert.ok(embeddedStyle.includes("@keyframes kvnEdgeLap"),'Traveling border light missing');
+assert.ok(embeddedStyle.includes("@keyframes kvnWaveUp"),'Reactive blue light wave missing');
+assert.ok(embeddedStyle.includes("@keyframes kvnChipFloat"),'Floating 2.2s CCU badge missing');
+assert.ok(embeddedStyle.includes("@keyframes kvnDigitUp"),'Odometer-style digit up motion missing');
+assert.ok(embeddedStyle.includes("@keyframes kvnDigitDown"),'Odometer-style digit down motion missing');
+assert.ok(embeddedStyle.includes("@keyframes kvnPeakRing"),'Twin-wave new measured peak effect missing');
+
 assert.ok(embeddedStyle.includes(".kvn-ccu-card[data-motion=\"up\"]"),'CCU rising blue pulse missing');
 assert.ok(embeddedStyle.includes(".kvn-ccu-card[data-motion=\"down\"]"),'CCU falling slate-blue pulse missing');
 assert.ok(html.includes('CHECKS EVERY 20 SEC'),'CCU refresh interval label out of date');

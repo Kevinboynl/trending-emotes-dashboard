@@ -145,52 +145,82 @@ async function loadOperation(metric, universeId, key, now, fetcher) {
     points,latest:points.length?points[points.length-1]:null
   };
 }
+/* Concurrent dashboard visits share the same expensive analytics refresh. */
+const pendingAnalytics = new Map();
 export async function publicAnalyticsResponse(env,fetcher=fetch,now=Date.now()){
-  const selected=selectedMetrics(env||{});
+  const runtime=env||{};
+  const selected=selectedMetrics(runtime);
   if (!selected.length) return output({
     state:'disabled',metrics:[],note:'No aggregated statistics have been selected for public display.'
   });
-  if (!env.ROBLOX_ANALYTICS_API_KEY) return output({
+  if (!runtime.ROBLOX_ANALYTICS_API_KEY) return output({
     state:'not_configured',metrics:[],
     note:'Cloudflare Secret is missing. No private statistics are published.'
   });
-  // In-memory cache avoids querying Roblox on every visitor's page load.
-  const cachedKey=selected.join('|')+'|'+String(env.ROBLOX_UNIVERSE_ID||'');
+  const cachedKey=selected.join('|')+'|'+String(runtime.ROBLOX_UNIVERSE_ID||'');
   const hit=cache.get(cachedKey);
-  if(hit&&hit.until>now) return output(hit.body);
-  try{
-    const universeId=await getUniverse(env,fetcher);
-    const results=await Promise.allSettled(selected.map(
-      metric=>loadOperation(metric,universeId,env.ROBLOX_ANALYTICS_API_KEY,now,fetcher)
-    ));
-    const metrics=selected.map((id,i)=>{
-      const info=ANALYTICS_CATALOG[id];
-      if(results[i].status==='fulfilled')return {id,...info,...results[i].value};
-      const reason=failureReason(results[i].reason);
-      return {id,...info,state:'unavailable',reason,points:[],latest:null};
+  if(hit && hit.until>now) return output(hit.body);
+
+  // A single isolate must never create duplicate requests for every website
+  // visitor. The Promise resolves to plain JSON, NOT a shared Response stream.
+  let running=pendingAnalytics.get(cachedKey);
+  if(!running){
+    running=(async()=>{
+      try{
+        const universeId=await getUniverse(runtime,fetcher);
+        // Limit outgoing analytics concurrency. A dashboard with 18 public
+        // metrics must not blast the Roblox API with 18 requests at once.
+        const results=new Array(selected.length);
+        let next=0;
+        async function worker(){
+          while(next<selected.length){
+            const i=next++;
+            try{
+              results[i]={status:'fulfilled',value:await loadOperation(
+                selected[i],universeId,runtime.ROBLOX_ANALYTICS_API_KEY,now,fetcher
+              )};
+            }catch(reason){
+              results[i]={status:'rejected',reason};
+            }
+          }
+        }
+        await Promise.all(Array.from({length:Math.min(6,selected.length)},()=>worker()));
+        const metrics=selected.map((id,i)=>{
+          const info=ANALYTICS_CATALOG[id];
+          if(results[i]?.status==='fulfilled')return {id,...info,...results[i].value};
+          const reason=failureReason(results[i]?.reason);
+          return {id,...info,state:'unavailable',reason,points:[],latest:null};
+        });
+        const ready=metrics.filter(m=>m.state==='ready').length;
+        const pending=metrics.filter(m=>m.state==='pending').length;
+        const state=ready===selected.length?'ready':
+          ready?'partial':pending?'pending':'unavailable';
+        const reasons=[...new Set(metrics.filter(m=>m.state!=='ready').map(m=>m.reason).filter(Boolean))];
+        const body={
+          state,metrics,publishedAt:new Date(now).toISOString(),
+          source:'Roblox Open Cloud Analytics Query API',
+          window:'Last 31 complete UTC days (latest yesterday)',
+          ...(reasons.length?{reason:reasons.length===1?reasons[0]:'mixed',
+            note:publicReasonMessage(reasons[0])}:{})
+        };
+        // Cache only this explicitly approved aggregate result.
+        cache.set(cachedKey,{body,until:Date.now()+(ready?TTL:45000)});
+        return {body,status:200};
+      }catch(err){
+        const reason=failureReason(err);
+        return {
+          status:503,
+          body:{state:'unavailable',reason,metrics:[],note:publicReasonMessage(reason)}
+        };
+      }
+    })();
+    pendingAnalytics.set(cachedKey,running);
+    running.finally(()=>{
+      if(pendingAnalytics.get(cachedKey)===running)pendingAnalytics.delete(cachedKey);
     });
-    const ready=metrics.filter(m=>m.state==='ready').length;
-    const pending=metrics.filter(m=>m.state==='pending').length;
-    const state=ready===selected.length?'ready':
-      ready?'partial':pending?'pending':'unavailable';
-    const reasons=[...new Set(metrics.filter(m=>m.state!=='ready').map(m=>m.reason).filter(Boolean))];
-    const body={
-      state,metrics,publishedAt:new Date(now).toISOString(),
-      source:'Roblox Open Cloud Analytics Query API',
-      window:'Last 31 complete UTC days (latest yesterday)',
-      // Safe diagnostics: no API key, universe ID, account data, or raw error messages.
-      ...(reasons.length?{reason:reasons.length===1?reasons[0]:'mixed',
-        note:publicReasonMessage(reasons[0])}: {})
-    };
-    cache.set(cachedKey,{body,until:now+(ready?TTL:45000)});
-    return output(body);
-  }catch(err){
-    const reason=failureReason(err);
-    return output({
-      state:'unavailable',reason,metrics:[],
-      note:publicReasonMessage(reason)
-    },503);
   }
+  const result=await running;
+  return output(result.body,result.status);
 }
 export const publicAnalyticsStyles = String.raw`
 #officialMetrics{scroll-margin-top:100px}

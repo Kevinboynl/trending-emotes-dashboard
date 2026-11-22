@@ -440,7 +440,8 @@ async function stats(){
         // The visitor did not see this result. Never change lastVisibleCCU.
         return;
       }
-      if(isAuthoritative && lastVisibleCCU && d.timestamp<lastVisibleCCU.timestamp){
+      if(isAuthoritative && lastVisibleCCU && (d.timestamp<lastVisibleCCU.timestamp ||
+        (d.timestamp===lastVisibleCCU.timestamp&&d.playing!==lastVisibleCCU.playing))){
         state('WAITING FOR A NEWER VERIFIED ROBLOX MEASUREMENT',true);
         return;
       }

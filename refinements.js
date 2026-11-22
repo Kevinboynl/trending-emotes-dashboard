@@ -228,7 +228,7 @@ const fine=window.matchMedia('(hover:hover) and (pointer:fine)');
 const root=document.documentElement;
 const throttle=(fn)=>{let task=0,latest;return(...args)=>{latest=args;if(task)return;task=requestAnimationFrame(()=>{task=0;fn(...latest)})}};
 const metricMap={playing:['ccu','Players online'],visits:['visits','Visits'],favorites:['favorites','Favorites']};
-const format=n=>Number.isFinite(n)?Intl.NumberFormat('nl-NL',{maximumFractionDigits:0}).format(n):'—';
+const format=n=>Number.isFinite(n)?Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(n):'—';
 const $id=id=>document.getElementById(id);
 const safeArray=(arr)=>Array.isArray(arr)?arr:[];
 
@@ -337,7 +337,7 @@ if(chart && frame && curve){
   for(let i=0;i<4;i++)rows.append(document.createElement('span'));
   frame.prepend(rows);
   const foot=document.createElement('div');foot.className='chart-key';
-  foot.innerHTML='<div class="key-left"><i class="key-mark" aria-hidden="true"></i><span class="key-name">Live activity</span></div><span class="key-source">Gemeten Roblox-data • geen schattingen</span>';
+  foot.innerHTML='<div class="key-left"><i class="key-mark" aria-hidden="true"></i><span class="key-name">Live activity</span></div><span class="key-source">Measured Roblox data • no estimates</span>';
   const chartAxis=document.querySelector('.chart-axis');
   if(chartAxis) chartAxis.before(foot);
   const mark=throttle(e=>{
@@ -397,7 +397,7 @@ function renderSparks(){
       svg.setAttribute('viewBox','0 0 190 44');
       svg.setAttribute('preserveAspectRatio','none');
       svg.setAttribute('role','img');
-      svg.setAttribute('aria-label','Gemeten trend voor '+label);
+      svg.setAttribute('aria-label','Measured trend for '+label);
       const fill=document.createElementNS('http://www.w3.org/2000/svg','path');
       fill.setAttribute('class','spark-fill');
       const stroke=document.createElementNS('http://www.w3.org/2000/svg','path');

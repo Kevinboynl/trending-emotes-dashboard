@@ -12,6 +12,9 @@ const GAME_URL = 'https://www.roblox.com/games/' + PLACE_ID + '/';
 let cachedUniverse = null;
 let lastLiveStats = null;
 let pendingStats = null;
+let liveCacheUntil = 0;
+// The public Roblox APIs are rate limited; reuse measured responses briefly per isolate.
+const LIVE_CACHE_MS = 30000;
 const API_HEADERS = { 'Accept': 'application/json' };
 async function getJSON(url) {
   const ctrl = new AbortController();
@@ -41,6 +44,15 @@ async function fetchStats(env = {}) {
   ];
   const result = await Promise.allSettled(endpoints.map(getJSON));
   const data = n => result[n].status === 'fulfilled' ? result[n].value : {};
+  // The game details endpoint is essential. Retry it once when a transient
+  // Roblox/Cloudflare failure occurs; the other endpoints are optional.
+  if (result[0].status === 'rejected') {
+    const error = String(result[0].reason?.message || '');
+    if (!/Roblox API HTTP 4(?!29)\d\d/.test(error)) {
+      try { result[0] = {status:'fulfilled',value:await getJSON(endpoints[0])}; }
+      catch { /* Let the normal diagnostics / last verified sample handle it. */ }
+    }
+  }
   const g = data(0).data?.[0];
   if (!g) {
     // Keep an explicit upstream reason for diagnostics instead of silently
@@ -171,6 +183,37 @@ const $=id=>document.getElementById(id);
 const fmt=n=>Number.isFinite(n)?Math.round(n).toLocaleString('en-US'):'—';
 const compact=n=>Number.isFinite(n)?Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(n):'—';
 const TIMEKEY='kvn-trending-emotes-history-v2';
+const LAST_GOOD_STATS_KEY='kvn-trending-emotes-last-real-stats-v1';
+function storeVerifiedStats(value) {
+  if (!value || value.stale || !Number.isFinite(value.playing)) return;
+  try {
+    localStorage.setItem(LAST_GOOD_STATS_KEY,JSON.stringify({
+      playing:value.playing,visits:value.visits,favorites:value.favorites,
+      likes:value.likes,dislikes:value.dislikes,rating:value.rating,
+      name:value.name,icon:value.icon,thumbnail:value.thumbnail,
+      timestamp:value.timestamp
+    }));
+  } catch {}
+}
+function restoreVerifiedStats() {
+  try {
+    const d=JSON.parse(localStorage.getItem(LAST_GOOD_STATS_KEY)||'null');
+    // Only a real previously-verified sample, not a fabricated estimate.
+    if(!d || !Number.isFinite(d.playing) || !Number.isFinite(d.timestamp) || d.timestamp>Date.now())return false;
+    for(const [id,key] of [['playing','playing'],['heroCCU','playing'],['visits','visits'],['favorites','favorites'],['likes','likes'],['dislikes','dislikes']]){
+      if(Number.isFinite(d[key]))animateNumber(id,d[key]);
+    }
+    if(Number.isFinite(d.rating)){
+      $('rating').textContent=d.rating.toFixed(1)+'%';
+      $('engagementRating').textContent=$('rating').textContent;
+      $('ratingFill').style.width=d.rating+'%';
+    }
+    if(d.name)$('gameTitle').textContent=d.name;
+    loadImage(d.icon,'poster',true);loadImage(d.thumbnail,'cover',true);loadImage(d.icon,'gameIcon',false);
+    $('lastUpdate').textContent='Last verified Roblox sample: '+new Date(d.timestamp).toLocaleString('en-US')+' (cached)';
+    return true;
+  }catch{return false;}
+}
 let browserHistory=[];try{browserHistory=JSON.parse(localStorage.getItem(TIMEKEY)||'[]').filter(x=>Number.isFinite(x.t)&&Number.isFinite(x.ccu));}catch{}
 let currentRange='24h',currentMetric='ccu',currentStats=null,cloudHistory=[],usingCloud=false,chartPoints=[];
 const spans={'1h':3600000,'24h':86400000,'7d':7*86400000,'30d':30*86400000};
@@ -179,7 +222,15 @@ const dateTime=t=>new Date(t).toLocaleTimeString('en-US',{hour:'2-digit',minute:
 function animateNumber(id,num,extra){const el=$(id);if(!el||!Number.isFinite(num)){if(el)el.textContent='—';return;}const old=Number(el.dataset.value);el.dataset.value=num;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;if(!Number.isFinite(old)||reduced){el.textContent=fmt(num)+(extra||'');return;}const start=performance.now();function step(now){const k=Math.min(1,(now-start)/680),e=1-Math.pow(1-k,3);el.textContent=fmt(old+(num-old)*e)+(extra||'');if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step)}
 function state(msg,err){$('status').textContent=msg;$('pulse').style.background=err?'var(--danger)':'var(--green)';$('lastUpdate').textContent=err?msg:'Updated '+dateTime(Date.now())}
 function loadImage(url,target,parent){if(typeof url!=='string'||!url.startsWith('https://'))return;const box=$(target);if(!box)return;if(parent){const existing=box.querySelector('img');if(existing&&existing.src===url)return;const el=document.createElement('img');el.src=url;el.alt='TRENDING EMOTES! Roblox artwork';el.decoding='async';box.replaceChildren(el);}else{if(box.src!==url)box.src=url;box.alt='TRENDING EMOTES! Roblox artwork';box.style.visibility='visible'}}
-async function stats(){try{const r=await fetch('/api/stats',{cache:'no-store'});const d=await r.json();if(!r.ok||d.error)throw Error(d.error||'Roblox unavailable');currentStats=d;animateNumber('playing',d.playing);animateNumber('heroCCU',d.playing);animateNumber('visits',d.visits);animateNumber('favorites',d.favorites);animateNumber('likes',d.likes);animateNumber('dislikes',d.dislikes);$('rating').textContent=Number.isFinite(d.rating)?d.rating.toFixed(1)+'%':'—';$('engagementRating').textContent=$('rating').textContent;$('ratingFill').style.width=(d.rating||0)+'%';if(d.name)$('gameTitle').textContent=d.name;loadImage(d.icon,'poster',true);loadImage(d.thumbnail,'cover',true);loadImage(d.icon,'gameIcon',false);state(d.stale?'CACHED • ROBLOX UNAVAILABLE':'LIVE • CONNECTED',Boolean(d.stale));if(d.stale){$('lastUpdate').textContent='Last confirmed Roblox measurement: '+new Date(d.timestamp).toLocaleString('en-GB');}if(!d.stale&&Number.isFinite(d.playing)){browserHistory.push({t:Date.now(),ccu:d.playing,visits:d.visits,favorites:d.favorites,likes:d.likes});browserHistory=browserHistory.filter(x=>x.t>Date.now()-30*86400000).slice(-2500);try{localStorage.setItem(TIMEKEY,JSON.stringify(browserHistory));}catch{}}await loadHistory();}catch(err){state('DATA UNAVAILABLE',true);$('lastUpdate').textContent='Roblox public stats temporarily unavailable. Check /api/stats for a safe diagnostic code.';console.warn(err)}}
+async function stats(){try{const r=await fetch('/api/stats',{cache:'no-store'});const d=await r.json();if(!r.ok||d.error)throw Error(d.error||'Roblox unavailable');currentStats=d;storeVerifiedStats(d);animateNumber('playing',d.playing);animateNumber('heroCCU',d.playing);animateNumber('visits',d.visits);animateNumber('favorites',d.favorites);animateNumber('likes',d.likes);animateNumber('dislikes',d.dislikes);$('rating').textContent=Number.isFinite(d.rating)?d.rating.toFixed(1)+'%':'—';$('engagementRating').textContent=$('rating').textContent;$('ratingFill').style.width=(d.rating||0)+'%';if(d.name)$('gameTitle').textContent=d.name;loadImage(d.icon,'poster',true);loadImage(d.thumbnail,'cover',true);loadImage(d.icon,'gameIcon',false);state(d.stale?'CACHED • ROBLOX UNAVAILABLE':'LIVE • CONNECTED',Boolean(d.stale));if(d.stale){$('lastUpdate').textContent='Last confirmed Roblox measurement: '+new Date(d.timestamp).toLocaleString('en-GB');}if(!d.stale&&Number.isFinite(d.playing)){browserHistory.push({t:Date.now(),ccu:d.playing,visits:d.visits,favorites:d.favorites,likes:d.likes});browserHistory=browserHistory.filter(x=>x.t>Date.now()-30*86400000).slice(-2500);try{localStorage.setItem(TIMEKEY,JSON.stringify(browserHistory));}catch{}}await loadHistory();}catch(err){
+  state('ROBLOX TEMPORARILY UNAVAILABLE',true);
+  if(currentStats && Number.isFinite(currentStats.playing)){
+    $('lastUpdate').textContent='Showing previous verified sample: '+new Date(currentStats.timestamp).toLocaleString('en-US');
+  }else if(!restoreVerifiedStats()){
+    $('lastUpdate').textContent='Roblox is not responding. Retrying automatically; /api/stats shows a safe diagnostic.';
+  }
+  console.warn(err);
+}}
 function getPoints(){const since=Date.now()-spans[currentRange];const base=usingCloud?cloudHistory:browserHistory;return base.filter(x=>x.t>=since&&Number.isFinite(x[currentMetric]));}
 async function loadHistory(){try{const r=await fetch('/api/history?range='+currentRange,{cache:'no-store'});const data=await r.json();if(data.storage==='cloud'){usingCloud=true;cloudHistory=Array.isArray(data.points)?data.points:[];$('storageInfo').textContent='Historical measurements are stored in Cloudflare D1.';}else{usingCloud=false;$('storageInfo').textContent='Local history is available only in this browser. Add Cloudflare D1 for 24/7 collection.';}}catch{usingCloud=false;}draw();await acquisition();}
 async function acquisition(){
@@ -275,13 +326,18 @@ export default {
     if (url.pathname === '/api/stats') {
       try {
         // Deduplicate concurrent page loads within the same Worker isolate.
-        if (!pendingStats) {
-          pendingStats = fetchStats(env).then(data => {
-            lastLiveStats = data;
-            return data;
-          }).finally(() => { pendingStats = null; });
+        const now = Date.now();
+        if (!lastLiveStats || now >= liveCacheUntil) {
+          if (!pendingStats) {
+            pendingStats = fetchStats(env).then(data => {
+              lastLiveStats = data;
+              liveCacheUntil = Date.now() + LIVE_CACHE_MS;
+              return data;
+            }).finally(() => { pendingStats = null; });
+          }
+          await pendingStats;
         }
-        const stats = await pendingStats;
+        const stats = lastLiveStats;
         try { await record(env.DB, stats); } catch (e) { console.log('D1 write unavailable:', e.message); }
         return Response.json(stats, { headers:{'Cache-Control':'public, max-age=30'} });
       } catch (err) {
@@ -305,6 +361,6 @@ export default {
     return new Response(THEMED_HTML, {headers:{'Content-Type':'text/html; charset=utf-8','X-Content-Type-Options':'nosniff'}});
   },
   async scheduled(event, env, ctx) {
-    if (env.DB) ctx.waitUntil(fetchStats().then(s=>record(env.DB,s)));
+    if (env.DB) ctx.waitUntil(fetchStats(env).then(s=>record(env.DB,s)));
   }
 };

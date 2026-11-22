@@ -63,6 +63,31 @@ export const liveIntelligenceCSS = String.raw`
  .chart-panel .metric-switch button:hover{transform:none}
 }
 
+/* Chart label-safe region: no graph segment may touch the floating metric
+   text or filter controls. The SVG reserves its first 105/300 units for labels;
+   the tooltip occupies only that reserved lane, on every viewport. */
+.chart-panel .metric-switch{margin-bottom:24px}
+.chart-panel .chart-wrap{isolation:isolate;min-width:0}
+.chart-panel .chart-wrap #tooltip{
+ position:absolute;top:12px!important;z-index:8;
+ transform:translate(-50%,0)!important;
+ width:max-content;max-width:calc(100% - 20px);white-space:normal;
+ overflow-wrap:break-word;overflow:visible;
+ text-align:center;font-variant-numeric:tabular-nums;
+ line-height:1.35;pointer-events:none
+}
+.chart-panel .chart-wrap.hovering #tooltip{
+ transform:translate(-50%,0)!important
+}
+.chart-panel .chart-crosshair{top:34%!important;bottom:0}
+@media(max-width:690px){
+ .chart-panel .metric-switch{margin-bottom:22px}
+ .chart-panel .chart-wrap #tooltip{
+  top:9px!important;padding:8px 10px;font-size:10px;
+  max-width:calc(100% - 18px)
+ }
+}
+
 /* Real D1 comparisons; never show placeholders as measured changes. */
 .kvn-compare{border-top:1px solid rgba(102,165,255,.19);margin-top:20px;padding:19px 4px 0;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px 18px}
 .kvn-compare-left{display:flex;flex-direction:column;gap:7px;min-width:0;flex:1}

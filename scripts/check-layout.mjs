@@ -91,7 +91,8 @@ try{
   for(const width of sizes){
     fixtureCCU=48;fixtureStale=false;fixtureStamp=Date.now();
     fixtureDelayMs=0;fixtureFailure=false;
-    const page=await browser.newPage({viewport:{width,height:900},deviceScaleFactor:1});
+    const context=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:1});
+    const page=await context.newPage();
     const errors=[];
     page.on('pageerror',e=>errors.push(e.message));
     const response=await page.goto(localURL,{waitUntil:'domcontentloaded',timeout:30000});
@@ -339,6 +340,7 @@ try{
     }
     console.log('PASS viewport '+width+'px; plot gap '+rect.chartGap.toFixed(1)+'px; no horizontal overflow, tabs and chart work.');
     await page.close();
+    await context.close();
   }
   console.log('PASS: Responsive layout, chart controls, metric switching, filters, tabs and script execution.');
 } finally {

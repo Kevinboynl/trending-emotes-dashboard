@@ -255,12 +255,17 @@ export const publicAnalyticsClient = String.raw`
  const valueText=(metric)=>{
    if(!metric?.latest || !Number.isFinite(metric.latest.value))return '—';
    const v=metric.latest.value;
+   // Roblox's raw client memory metric can arrive as a very large value.
+   // For values in the byte scale, show a readable approximate decimal GB
+   // while keeping the unmodified raw API value accessible on hover.
+   if(metric.id==='ClientMemoryUsageAvg' && v>=1000000)return '≈'+fmt(v/1000000000,2)+' GB';
    // Retention is a fractional cohort return ratio (e.g. 0.144 => 14.4%).
    if(isFractionalRate(metric.id) && v>=0 && v<=1)return fmt(v*100,2)+'%';
    return fmt(v,metric.dp||0)+(metric.unit==='min'?' min':metric.unit==='fps'?' FPS':metric.unit==='Robux'?' R$':'');
  };
  const statusText=(metric)=>{
    if(!metric?.latest)return '';
+   if(metric.id==='ClientMemoryUsageAvg' && metric.latest.value>=1000000)return 'Verified Roblox data · '+metric.latest.date+' · GB display assumes raw bytes';
    if(isRetention(metric.id))return 'New-player cohort: '+metric.latest.date+' · '+metric.short+' · Roblox API';
    if(metric.id==='PayingUsersCVR')return 'Last complete UTC day: '+metric.latest.date+' · not today’s live conversion rate';
    if(isConversion(metric.id))return 'Last complete UTC day: '+metric.latest.date+' · Roblox API';
@@ -378,7 +383,7 @@ export const publicAnalyticsClient = String.raw`
      for(const metric of data.metrics||[]){
        const card=document.createElement('article');card.className='official-card';
        const heading=document.createElement('small');heading.textContent=metric.label;
-       const amount=document.createElement('strong');amount.textContent=valueText(metric);amount.title=metric.latest?'Verified aggregated Roblox data':'No verified value available yet';
+       const amount=document.createElement('strong');amount.textContent=valueText(metric);amount.title=metric.latest?(metric.id==='ClientMemoryUsageAvg'?'Approximate GB display (assuming bytes). Raw Roblox API value: '+fmt(metric.latest.value,2):'Verified aggregated Roblox data'):'No verified value available yet';
        const note=document.createElement('p');note.textContent=metric.state==='ready'?statusText(metric):detailMessage(metric);
        card.append(heading,amount,note);
        if(Array.isArray(metric.points) && metric.points.length>1){

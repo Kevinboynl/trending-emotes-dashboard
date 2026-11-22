@@ -23,3 +23,27 @@ jobs:
         run: node scripts/check-dashboard.mjs
       - name: Compile Cloudflare Worker without deploying
         run: npx --yes wrangler@4 deploy --dry-run --outdir /tmp/dashboard-worker-build
+
+  browser-layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependency
+        run: npm install --no-save playwright
+      - name: Install headless Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test responsive layout and interactions
+        run: node scripts/check-layout.mjs
+      - name: Upload browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: responsive-dashboard-screenshots
+          path: test-artifacts/*.png
+          if-no-files-found: ignore

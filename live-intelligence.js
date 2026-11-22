@@ -59,6 +59,40 @@ export const liveIntelligenceCSS = String.raw`
  .kvn-ccu-card[data-motion] .kvn-ccu-flash{animation:none!important}
  .kvn-ccu-card[data-motion="up"]{box-shadow:inset 0 1px rgba(194,234,255,.1)!important}
 }
+/* Chart geometry safety: metric selectors must never collide with the plot edge.
+   Keep this after older theme layers so all responsive breakpoints agree. */
+.workspace,.workspace>*{min-width:0}
+.chart-panel{min-width:0;overflow:visible;contain:layout style}
+.chart-panel .panel-head{position:relative;z-index:3;min-width:0}
+.chart-panel .metric-switch{
+ position:relative;z-index:3;display:flex;align-items:center;align-content:center;
+ flex-wrap:wrap;gap:8px;max-width:100%;min-width:0;
+ margin:18px 0 18px;padding:2px 2px 3px;overflow:visible;
+}
+.chart-panel .metric-switch button{
+ position:relative;flex:0 0 auto;white-space:nowrap;min-height:40px;
+ line-height:1.35;margin:0;vertical-align:middle;
+}
+.chart-panel .chart-wrap{position:relative;z-index:1;min-width:0;width:100%;margin-top:0;overflow:hidden}
+.chart-panel #chart{display:block;width:100%;height:100%;max-width:100%;overflow:hidden}
+.chart-panel #curve,.chart-panel #shade{pointer-events:none}
+.chart-panel .chart-axis,.chart-panel .chart-foot{min-width:0}
+.chart-panel .chart-foot .big{overflow-wrap:anywhere}
+@media(max-width:690px){
+ .chart-panel .metric-switch{
+  flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain;
+  -webkit-overflow-scrolling:touch;scrollbar-width:thin;gap:7px;
+  margin:15px 0 14px;padding:3px 2px 7px;
+ }
+ .chart-panel .metric-switch button{min-height:42px;padding:10px 12px}
+ .chart-panel .panel-head{gap:12px}
+ .chart-panel .switches{max-width:100%;min-width:0}
+ .chart-panel .switches button{min-width:0}
+}
+@media(prefers-reduced-motion:reduce){
+ .chart-panel .metric-switch button:hover{transform:none}
+}
+
 /* Real D1 comparisons; never show placeholders as measured changes. */
 .kvn-compare{border-top:1px solid rgba(102,165,255,.19);margin-top:20px;padding:19px 4px 0;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px 18px}
 .kvn-compare-left{display:flex;flex-direction:column;gap:7px;min-width:0;flex:1}

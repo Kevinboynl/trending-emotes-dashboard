@@ -58,16 +58,16 @@ function failureReason(error) {
 }
 function publicReasonMessage(reason){
   const labels={
-    key_or_scope:'Roblox geeft HTTP 401 terug. Controleer of de Cloudflare Secret geldig is en deze Universe de juiste universe.analytics:read-bevoegdheid heeft.',
-    creator_access:'Roblox geeft HTTP 403 terug. Controleer of de sleutel voor deze experience de permission universe.analytics:read in het systeem universe-analytics heeft, en of de sleuteleigenaar analytics mag bekijken.',
-    authorization:'Roblox weigert toegang tot analytics. Controleer sleutel, Universe en groepsrechten.',
-    request_invalid:'Roblox heeft de analytics-query afgewezen. Controleer of de experience en metric beschikbaar zijn.',
-    universe_lookup:'De juiste Universe ID kon niet worden opgehaald. Controleer de Universe ID in Roblox Creator Dashboard.',
-    rate_limited:'Roblox heeft tijdelijk een aanvraaglimiet bereikt. De cijfers worden later opnieuw geprobeerd.',
-    upstream:'De Roblox Analytics API is tijdelijk niet bereikbaar.',
-    invalid_response:'Roblox leverde een onverwacht analytics-antwoord.',
-    no_data:'Roblox heeft nog geen definitieve gegevens voor de geselecteerde periode.',
-    pending:'Roblox verwerkt deze query nog.'
+    key_or_scope:'Roblox returned HTTP 401. Verify that your Cloudflare Secret is valid and the Universe has universe.analytics:read permission.',
+    creator_access:'Roblox returned HTTP 403. Check the universe.analytics:read scope for this experience and ensure that the API key owner has permission to view analytics.',
+    authorization:'Roblox denied analytics access. Verify the API key, Universe and group permissions.',
+    request_invalid:'Roblox rejected the analytics request. Check whether this experience and metric are available.',
+    universe_lookup:'The correct Universe ID could not be retrieved. Check the Universe ID in Roblox Creator Dashboard.',
+    rate_limited:'Roblox temporarily rate-limited this request. Please try again later.',
+    upstream:'The Roblox Analytics API is temporarily unavailable.',
+    invalid_response:'Roblox returned an unexpected analytics response.',
+    no_data:'Roblox has no finalized data for the selected period yet.',
+    pending:'Roblox is still processing this query.'
   };
   return labels[reason]||labels.upstream;
 }
@@ -194,21 +194,21 @@ export const publicAnalyticsStyles = String.raw`
 @media(prefers-reduced-motion:reduce){.official-placeholder{animation:none}.official-card{transition:none}}
 `;
 export const publicAnalyticsMarkup = String.raw`
-<section class="wrap" id="officialMetrics" aria-label="Geselecteerde officiële Roblox statistieken">
+<section class="wrap" id="officialMetrics" aria-label="Selected official Roblox analytics">
  <div class="bar reveal"><div><div class="sec-label">04 / AUTHORIZED ANALYTICS</div>
  <h2>OFFICIAL <span style="color:#74c6ff">INSIGHTS.</span></h2>
- <p class="official-sub">Alleen expliciet door KVN CLOTHING geselecteerde, geaggregeerde Roblox Creator Analytics. Geen spelergegevens, inkomsten of onbetrouwbare schattingen.</p></div>
+ <p class="official-sub">Only explicitly selected, aggregated Roblox Creator Analytics are published by KVN CLOTHING. No individual player information, revenue or unreliable estimates.</p></div>
  <span class="livepill">OPEN CLOUD • READ ONLY</span></div>
  <div id="publicMetricsContent" aria-live="polite"><div class="official-grid" aria-hidden="true">
-   <div class="official-card"><div class="official-placeholder"></div><p>Geselecteerde metingen laden...</p></div>
-   <div class="official-card"><div class="official-placeholder"></div><p>Alleen geautoriseerde publicaties</p></div>
+   <div class="official-card"><div class="official-placeholder"></div><p>Loading selected metrics...</p></div>
+   <div class="official-card"><div class="official-placeholder"></div><p>Authorized data only</p></div>
  </div></div>
 </section>`;
 export const publicAnalyticsClient = String.raw`
 (()=>{
  const root=document.getElementById('publicMetricsContent');
  if(!root)return;
- const fmt=(n,dp=0)=>Number(n).toLocaleString('nl-NL',{maximumFractionDigits:dp});
+ const fmt=(n,dp=0)=>Number(n).toLocaleString('en-US',{maximumFractionDigits:dp});
  const svgPoints=arr=>{
    if(arr.length<2)return '';
    const min=Math.min(...arr),max=Math.max(...arr);
@@ -220,19 +220,19 @@ export const publicAnalyticsClient = String.raw`
      const r=await fetch('/api/public-analytics',{cache:'no-store'});
      const data=await r.json();
      if(!Array.isArray(data.metrics) || !data.metrics.length){
-       const msg=data.state==='disabled'?'Er zijn nog geen privé-analytics geselecteerd voor openbare weergave.':data.state==='not_configured'?'De Open Cloud-koppeling is voorbereid. Alleen de eigenaar kan hem met een Cloudflare Secret activeren.':data.note||'De geselecteerde analytics zijn momenteel niet beschikbaar.';
+       const msg=data.state==='disabled'?'No private analytics have been selected for public display.':data.state==='not_configured'?'The Open Cloud integration is prepared. Only the owner can activate it using a Cloudflare Secret.':data.note||'The selected analytics are currently unavailable.';
        message(msg);return;
      }
      root.replaceChildren();const grid=document.createElement('div');grid.className='official-grid';
      for(const metric of data.metrics||[]){
        const card=document.createElement('article');card.className='official-card';
        const heading=document.createElement('small');heading.textContent=metric.label;
-       const amount=document.createElement('strong');amount.textContent=metric.latest?fmt(metric.latest.value,metric.dp)+(metric.unit==='min'?' min':''): '—';amount.title=metric.latest?'Geautoriseerde, geaggregeerde Roblox-data':'Nog geen geverifieerde waarde beschikbaar';
-       const note=document.createElement('p');const problem={key_or_scope:'API-key ongeldig of deze Universe heeft geen analytics:read-toestemming (401).',creator_access:'Analytics-toestemming ontbreekt of de sleuteleigenaar heeft geen toegang (403).',authorization:'Geen toestemming vanuit Roblox voor deze game.',request_invalid:'Roblox heeft de aanvraag geweigerd.',universe_lookup:'Universe ID kan niet worden opgehaald.',rate_limited:'Roblox vraagt om later opnieuw te proberen.',no_data:'Nog geen definitieve meetgegevens.',pending:'Roblox verwerkt deze statistiek nog.',upstream:'Roblox Analytics tijdelijk niet bereikbaar.',invalid_response:'Onverwacht Roblox-antwoord.'};note.textContent=metric.state==='ready'?'Laatste afgeronde dag ('+metric.latest.date+') · '+metric.unit+(metric.unit==='API value'?' (ongeconverteerd)':''):problem[metric.reason]||'Geen betrouwbare, afgeronde meting beschikbaar';
+       const amount=document.createElement('strong');amount.textContent=metric.latest?fmt(metric.latest.value,metric.dp)+(metric.unit==='min'?' min':''): '—';amount.title=metric.latest?'Authorized, aggregated Roblox data':'No verified value is available yet';
+       const note=document.createElement('p');const problem={key_or_scope:'Invalid API key or missing analytics:read scope for this Universe (401).',creator_access:'Missing analytics permission or API key owner access (403).',authorization:'Roblox has not granted analytics access to this experience.',request_invalid:'Roblox rejected the request.',universe_lookup:'Universe ID could not be retrieved.',rate_limited:'Roblox is rate limiting requests. Try again later.',no_data:'No finalized data is available yet.',pending:'Roblox is still processing this metric.',upstream:'Roblox Analytics is temporarily unavailable.',invalid_response:'Unexpected response from Roblox.'};note.textContent=metric.state==='ready'?'Latest completed day ('+metric.latest.date+') · '+metric.unit+(metric.unit==='API value'?' (unconverted)':''):problem[metric.reason]||'No verified finalized measurement is available';
        card.append(heading,amount,note);
        if(Array.isArray(metric.points) && metric.points.length>1){
           const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-          svg.setAttribute('viewBox','0 0 300 75');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('role','img');svg.setAttribute('aria-label','Dagelijkse historische waarden van '+metric.label);
+          svg.setAttribute('viewBox','0 0 300 75');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('role','img');svg.setAttribute('aria-label','Daily historical values for '+metric.label);
           const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');
           line.setAttribute('points',svgPoints(metric.points.map(p=>p.value)));
           line.setAttribute('stroke','#68bdff');line.setAttribute('stroke-width','2.5');line.setAttribute('fill','none');line.setAttribute('vector-effect','non-scaling-stroke');
@@ -240,9 +240,9 @@ export const publicAnalyticsClient = String.raw`
        }
        grid.append(card);
      }
-     if(!grid.children.length){message('Geen geselecteerde statistieken beschikbaar.');return}
+     if(!grid.children.length){message('No selected metrics available.');return}
      root.append(grid);
-   }catch{message('Geselecteerde Creator Analytics zijn tijdelijk niet bereikbaar.')}
+   }catch{message('Selected Creator Analytics are temporarily unavailable.')}
  }
  fetchPublished();
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchPublished()});

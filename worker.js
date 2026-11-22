@@ -236,13 +236,22 @@ function restoreVerifiedStats() {
 }
 let browserHistory=[];try{browserHistory=JSON.parse(localStorage.getItem(TIMEKEY)||'[]').filter(x=>Number.isFinite(x.t)&&Number.isFinite(x.ccu));}catch{}
 let currentRange='24h',currentMetric='ccu',currentStats=null,cloudHistory=[],usingCloud=false,chartPoints=[];
+let historyRequestId=0,acquisitionRequestId=0,statsInFlight=null;
 const spans={'1h':3600000,'24h':86400000,'7d':7*86400000,'30d':30*86400000};
 const valueFields={ccu:'Players',visits:'Visits',favorites:'Favorites',likes:'Likes'};
 const dateTime=t=>new Date(t).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
 function animateNumber(id,num,extra){const el=$(id);if(!el||!Number.isFinite(num)){if(el)el.textContent='—';return;}const old=Number(el.dataset.value);el.dataset.value=num;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;if(!Number.isFinite(old)||reduced){el.textContent=fmt(num)+(extra||'');return;}const start=performance.now();function step(now){const k=Math.min(1,(now-start)/680),e=1-Math.pow(1-k,3);el.textContent=fmt(old+(num-old)*e)+(extra||'');if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step)}
 function state(msg,err){$('status').textContent=msg;$('pulse').style.background=err?'var(--danger)':'var(--green)';$('lastUpdate').textContent=err?msg:'Updated '+dateTime(Date.now())}
 function loadImage(url,target,parent){if(typeof url!=='string'||!url.startsWith('https://'))return;const box=$(target);if(!box)return;if(parent){const existing=box.querySelector('img');if(existing&&existing.src===url)return;const el=document.createElement('img');el.src=url;el.alt='TRENDING EMOTES! Roblox artwork';el.decoding='async';box.replaceChildren(el);}else{if(box.src!==url)box.src=url;box.alt='TRENDING EMOTES! Roblox artwork';box.style.visibility='visible'}}
-async function stats(){try{const r=await fetch('/api/stats',{cache:'no-store'});const d=await r.json();if(!r.ok||d.error)throw Error(d.error||'Roblox unavailable');const priorStats=currentStats;currentStats=d;storeVerifiedStats(d);animateNumber('playing',d.playing);animateNumber('heroCCU',d.playing);animateNumber('visits',d.visits);animateNumber('favorites',d.favorites);animateNumber('likes',d.likes);animateNumber('dislikes',d.dislikes);$('rating').textContent=Number.isFinite(d.rating)?d.rating.toFixed(1)+'%':'—';$('engagementRating').textContent=$('rating').textContent;$('ratingFill').style.width=(d.rating||0)+'%';if(d.name)$('gameTitle').textContent=d.name;loadImage(d.icon,'poster',true);loadImage(d.thumbnail,'cover',true);loadImage(d.icon,'gameIcon',false);state(d.stale?'CACHED • ROBLOX UNAVAILABLE':'LIVE • CONNECTED',Boolean(d.stale));if(Number.isFinite(d.timestamp)){$('lastUpdate').textContent=(d.stale?'Last verified sample (cached): ':'Last verified sample: ')+new Date(d.timestamp).toLocaleString('en-GB');}if(!d.stale&&Number.isFinite(d.playing)){browserHistory.push({t:Date.now(),ccu:d.playing,visits:d.visits,favorites:d.favorites,likes:d.likes});browserHistory=browserHistory.filter(x=>x.t>Date.now()-30*86400000).slice(-2500);try{localStorage.setItem(TIMEKEY,JSON.stringify(browserHistory));}catch{}}await loadHistory();window.dispatchEvent(new CustomEvent('kvn:verified-stats',{detail:{stats:d,previous:priorStats,range:currentRange,history:(usingCloud?cloudHistory:browserHistory).filter(x=>x&&Number.isFinite(x.t)&&Number.isFinite(x.ccu)&&x.t>=Date.now()-86400000),cloud:usingCloud}}));}catch(err){
+// One refresh in flight: manual refresh and automatic polling must not race.
+function stats(){
+  if(statsInFlight)return statsInFlight;
+  statsInFlight=refreshStats().finally(()=>{statsInFlight=null;});
+  return statsInFlight;
+}
+async function refreshStats(){try{const r=await fetch('/api/stats',{cache:'no-store'});const d=await r.json();if(!r.ok||d.error)throw Error(d.error||'Roblox unavailable');const priorStats=currentStats;currentStats=d;storeVerifiedStats(d);animateNumber('playing',d.playing);animateNumber('heroCCU',d.playing);animateNumber('visits',d.visits);animateNumber('favorites',d.favorites);animateNumber('likes',d.likes);animateNumber('dislikes',d.dislikes);$('rating').textContent=Number.isFinite(d.rating)?d.rating.toFixed(1)+'%':'—';$('engagementRating').textContent=$('rating').textContent;$('ratingFill').style.width=(d.rating||0)+'%';if(d.name)$('gameTitle').textContent=d.name;loadImage(d.icon,'poster',true);loadImage(d.thumbnail,'cover',true);loadImage(d.icon,'gameIcon',false);state(d.stale?'CACHED • ROBLOX UNAVAILABLE':'LIVE • CONNECTED',Boolean(d.stale));if(Number.isFinite(d.timestamp)){$('lastUpdate').textContent=(d.stale?'Last verified sample (cached): ':'Last verified sample: ')+new Date(d.timestamp).toLocaleString('en-GB');}if(!d.stale&&Number.isFinite(d.playing)){// Use Roblox's actual sample timestamp; cached responses must not become false new measurements.
+if(Number.isFinite(d.timestamp)&&!browserHistory.some(p=>p.t===d.timestamp))
+  browserHistory.push({t:d.timestamp,ccu:d.playing,visits:d.visits,favorites:d.favorites,likes:d.likes});browserHistory=browserHistory.filter(x=>x.t>Date.now()-30*86400000).slice(-2500);try{localStorage.setItem(TIMEKEY,JSON.stringify(browserHistory));}catch{}}await loadHistory();window.dispatchEvent(new CustomEvent('kvn:verified-stats',{detail:{stats:d,previous:priorStats,range:currentRange,history:(usingCloud?cloudHistory:browserHistory).filter(x=>x&&Number.isFinite(x.t)&&Number.isFinite(x.ccu)&&x.t>=Date.now()-86400000),cloud:usingCloud}}));}catch(err){
   state('ROBLOX TEMPORARILY UNAVAILABLE',true);
   if(currentStats && Number.isFinite(currentStats.playing)){
     $('lastUpdate').textContent='Live refresh failed · last verified sample: '+new Date(currentStats.timestamp).toLocaleString('en-GB');
@@ -256,12 +265,15 @@ async function stats(){try{const r=await fetch('/api/stats',{cache:'no-store'});
 }}
 function getPoints(){const since=Date.now()-spans[currentRange];const base=usingCloud?cloudHistory:browserHistory;return base.filter(x=>x.t>=since&&Number.isFinite(x[currentMetric]));}
 async function loadHistory(){
+  // Discard old responses when someone changes range before a request completes.
+  const requestId=++historyRequestId,requestedRange=currentRange;
   let unavailable=false;
   let comparison={state:'unavailable'};
   try{
-    const r=await fetch('/api/history?range='+currentRange,{cache:'no-store'});
+    const r=await fetch('/api/history?range='+requestedRange,{cache:'no-store'});
     if(!r.ok)throw Error('history unavailable');
     const data=await r.json();
+    if(requestId!==historyRequestId)return; // A newer range/refresh already won.
     comparison=data.comparison&&typeof data.comparison==='object'?data.comparison:{state:'unavailable'};
     if(data.storage==='cloud'){
       usingCloud=true;
@@ -272,10 +284,12 @@ async function loadHistory(){
       $('storageInfo').textContent='Browser-only history · 24/7 tracking needs a Cloudflare D1 database binding.';
     }
   }catch{
+    if(requestId!==historyRequestId)return;
     unavailable=true;
     usingCloud=false;
     $('storageInfo').textContent='History service unavailable · showing any locally saved measurements.';
   }
+  if(requestId!==historyRequestId)return;
   draw();
   const empty=$('noData');
   if(empty){
@@ -286,9 +300,12 @@ async function loadHistory(){
     }
   }
   await acquisition();
-  window.dispatchEvent(new CustomEvent('kvn:history-loaded',{detail:{range:currentRange,comparison,cloud:usingCloud,error:unavailable}}));
+  if(requestId!==historyRequestId)return;
+  window.dispatchEvent(new CustomEvent('kvn:history-loaded',{detail:{range:requestedRange,comparison,cloud:usingCloud,error:unavailable}}));
 }
 async function acquisition(){
+  // Official-analytics and history refreshes can overlap; only the latest may render.
+  const requestId=++acquisitionRequestId;
   let source=browserHistory;
   if(usingCloud){
     try{
@@ -297,6 +314,7 @@ async function acquisition(){
       if(d.storage==='cloud'&&Array.isArray(d.points))source=d.points;
     }catch{}
   }
+  if(requestId!==acquisitionRequestId)return;
   function delta(range){
     const windowMs=spans[range];
     const arr=source.filter(x=>x.t>=Date.now()-windowMs&&Number.isFinite(x.visits));

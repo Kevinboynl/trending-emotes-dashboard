@@ -117,7 +117,7 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;bo
 <div class="bar reveal" id="details"><div><div class="sec-label">03 / DEEP DIVE</div><h2>BEYOND THE BASICS<span style="color:var(--green)">.</span></h2><p class="desc">Zoals RoMonitor, maar op maat voor jouw experience.</p></div></div>
 <div class="tabs reveal" id="tabs"><button data-tab="engagement" class="active">Engagement</button><button data-tab="acquisition">Acquisition</button><button data-tab="retention">Retention</button><button data-tab="monetization">Monetization</button><button data-tab="performance">Performance</button></div>
 <div class="tabbody active" data-page="engagement"><div class="details"><div class="card detail"><div class="tag">PUBLIC ROBLOX METRIC</div><div class="value" id="likes">—</div><h3>Positive votes</h3><p>Hoeveel spelers jouw experience een duimpje omhoog gaven.</p></div><div class="card detail"><div class="tag">PUBLIC ROBLOX METRIC</div><div class="value" id="dislikes">—</div><h3>Negative votes</h3><p>Hoeveel negatieve stemmen jouw experience heeft ontvangen.</p></div><div class="card detail"><div class="tag">PLAYER SENTIMENT</div><div class="value" id="engagementRating">—</div><h3>Approval rating</h3><p>Positieve stemmen gedeeld door het totale aantal stemmen.</p><div class="rating-track"><span id="ratingFill"></span></div></div></div></div>
-<div class="tabbody" data-page="acquisition"><div class="details"><div class="card detail"><div class="tag">TRACKED CHANGE / 24H</div><div class="value" id="visits24">—</div><h3>New visits · 24H</h3><p>Verschil tussen eerste en laatste vastgelegde bezoekenteller binnen 24 uur, geen geschatte unieke gebruikers.</p></div><div class="card detail"><div class="tag">TRACKED CHANGE / 7D</div><div class="value" id="visits7d">—</div><h3>New visits · 7D</h3><p>Wordt beschikbaar na genoeg metingen met Cloudflare D1.</p></div><div class="card detail"><div class="tag locked">PRIVATE CREATOR DATA</div><div class="value">↗</div><h3>Impressions & CTR</h3><p>Zoekimpressies, discovery CTR en traffic sources zijn niet publiek via de standaard Roblox endpoints.</p></div></div></div>
+<div class="tabbody" data-page="acquisition"><div class="details"><div class="card detail"><div class="tag" id="acq24Tag">MEASURED VISITS / 24H</div><div class="value" id="visits24" aria-live="polite">—</div><h3 id="acq24Title">New visits · 24H</h3><p id="acq24Note">Laden van geverifieerde meetgegevens…</p></div><div class="card detail"><div class="tag" id="acq7Tag">MEASURED VISITS / 7D</div><div class="value" id="visits7d" aria-live="polite">—</div><h3 id="acq7Title">New visits · 7D</h3><p id="acq7Note">Laden van geverifieerde meetgegevens…</p></div><div class="card detail"><div class="tag locked">CREATOR ANALYTICS</div><div class="value" aria-hidden="true">↗</div><h3>Impressions & CTR</h3><p>Deze gegevens zijn niet geselecteerd voor je openbare dashboard. Bekijk je zoekimpressies en CTR in het <a href="https://create.roblox.com/dashboard/creations" target="_blank" rel="noopener">Roblox Creator Dashboard ↗</a>. Hier worden geen waarden verzonnen.</p></div></div></div>
 <div class="tabbody" data-page="retention"><div class="privacy"><span style="font-size:28px">◈</span><div><strong>Creator Analytics via Roblox Open Cloud.</strong><p>De website heeft al een koppeling voor geselecteerde geaggregeerde statistieken, zoals DAU en gemiddelde sessieduur. De actuele toegang en beschikbare waarden vind je bij <a href="#officialMetrics">Official Insights ↓</a>. Een melding over ontbrekende rechten betekent dat Roblox de API-aanvraag weigert; de website toont geen verzonnen cijfers.</p></div></div></div>
 <div class="tabbody" data-page="monetization"><div class="privacy"><span style="font-size:28px">◇</span><div><strong>Inkomsten worden niet openbaar gepubliceerd.</strong><p>KVN CLOTHING heeft alleen DAU en gemiddelde sessieduur geselecteerd voor openbare weergave. Roblox biedt ook geaggregeerde monetization-metrics via Creator Analytics, maar inkomsten zijn in deze website niet vrijgegeven. Controleer de geselecteerde gegevens bij <a href="#officialMetrics">Official Insights ↓</a> of gebruik je <a href="https://create.roblox.com/dashboard/creations" target="_blank" rel="noopener">Creator Dashboard ↗</a>.</p></div></div></div>
 <div class="tabbody" data-page="performance"><div class="privacy"><span style="font-size:28px">⚡</span><div><strong>Performance-metrics vereisen aparte toestemming en selectie.</strong><p>De Open Cloud Analytics API ondersteunt bepaalde technische metingen, zoals framerate en crash rate. Deze website publiceert ze momenteel niet. Bekijk eerst de toegang van de analytics-koppeling bij <a href="#officialMetrics">Official Insights ↓</a>; er worden hier geen onbetrouwbare prestatiecijfers weergegeven.</p></div></div></div>
@@ -149,12 +149,52 @@ async function acquisition(){
     }catch{}
   }
   function delta(range){
-    const arr=source.filter(x=>x.t>=Date.now()-spans[range]&&Number.isFinite(x.visits));
-    if(arr.length<2 || arr[arr.length-1].t-arr[0].t < spans[range]*.90)return null;
+    const windowMs=spans[range];
+    const arr=source.filter(x=>x.t>=Date.now()-windowMs&&Number.isFinite(x.visits));
+    if(arr.length<2 || arr[arr.length-1].t-arr[0].t<windowMs*.90)return null;
     return Math.max(0,arr[arr.length-1].visits-arr[0].visits);
   }
-  animateNumber('visits24',delta('24h'));
-  animateNumber('visits7d',delta('7d'));
+  const measured24=delta('24h'),measured7=delta('7d');
+  const metric=window.__kvnPublishedAnalytics?.metrics?.find(m=>
+    m && m.id==='DailyActiveUsers' && m.state==='ready' && Array.isArray(m.points));
+  const official=metric ? metric.points.filter(p=>
+    p && typeof p.date==='string' && /^\d{4}-\d{2}-\d{2}$/.test(p.date)
+    && Number.isFinite(p.value) && p.value>=0).sort((a,b)=>a.date.localeCompare(b.date)) : [];
+  const latest=official.length?official[official.length-1]:null;
+  // Compute an average of 7 distinct FULL calendar days. This is NOT a seven-day
+  // unique-player count and is never mislabeled as sessions/visits.
+  const week=official.slice(-7);
+  const consecutive=week.length===7&&week.every((p,i)=>
+    i===0||Date.parse(p.date+'T00:00:00Z')-Date.parse(week[i-1].date+'T00:00:00Z')===86400000);
+  const dailyAverage=consecutive?week.reduce((sum,p)=>sum+p.value,0)/7:null;
+  const setCard=(kind,value,tag,title,note)=>{
+    const id=kind==='24'?'visits24':'visits7d';
+    const suffix=kind==='24'?'24':'7';
+    $('acq'+suffix+'Tag').textContent=tag;
+    $('acq'+suffix+'Title').textContent=title;
+    $('acq'+suffix+'Note').textContent=note;
+    animateNumber(id,value);
+  };
+  if(measured24!==null){
+    setCard('24',measured24,'TRACKED CHANGE / 24H','New visits · 24H',
+      'Verschil in de gemeten Roblox-bezoekenteller over minimaal 90% van de afgelopen 24 uur. Geen unieke spelers.');
+  }else if(latest){
+    setCard('24',latest.value,'OFFICIAL DAU · '+latest.date,'Daily active users · '+latest.date,
+      'Echte unieke actieve spelers op deze volledige UTC-dag via Roblox Open Cloud; geen aantal bezoeken.');
+  }else{
+    setCard('24',null,'VERIFIED DATA ONLY','New visits · 24H',
+      'Nog geen volledige bezoekhistorie. DAU wordt hier zichtbaar zodra Roblox Official Insights werkt.');
+  }
+  if(measured7!==null){
+    setCard('7',measured7,'TRACKED CHANGE / 7D','New visits · 7D',
+      'Verschil in de gemeten Roblox-bezoekenteller over minimaal 90% van de afgelopen zeven dagen.');
+  }else if(dailyAverage!==null){
+    setCard('7',dailyAverage,'OFFICIAL DAU · 7 DAYS','Average daily active users · 7D',
+      'Gemiddeld aantal unieke actieve spelers per dag ('+week[0].date+' t/m '+week[6].date+'). Geen unieke spelers over de hele week en geen bezoeken.');
+  }else{
+    setCard('7',null,'VERIFIED DATA ONLY','New visits · 7D',
+      'Er zijn nog geen zeven opeenvolgende dagen officiële DAU of voldoende gemeten bezoeken beschikbaar.');
+  }
 }
 function getPointsForRange(range){const since=Date.now()-spans[range];return (usingCloud?cloudHistory:browserHistory).filter(x=>x.t>=since&&Number.isFinite(x.visits));}
 function draw(){const values=getPoints();const curve=$('curve'),shade=$('shade'),nodata=$('noData'),point=$('point');point.setAttribute('visibility','hidden');if(!values.length){chartPoints=[];curve.setAttribute('d','');shade.setAttribute('d','');nodata.style.display='flex';$('avgValue').textContent='—';$('maxValue').textContent='—';$('peak').textContent='—';$('axisStart').textContent='—';$('axisEnd').textContent='—';return;}const yVals=values.map(x=>x[currentMetric]);const lo=Math.min(...yVals),hi=Math.max(...yVals),gap=Math.max(1,hi-lo);const t0=values[0].t,t1=values[values.length-1].t;chartPoints=values.map((x,i)=>({x:18+(t1===t0?0:(x.t-t0)/(t1-t0))*824,y:270-((x[currentMetric]-lo)/gap)*235,raw:x}));let d=chartPoints.length?'M'+chartPoints[0].x.toFixed(2)+' '+chartPoints[0].y.toFixed(2):'';for(let i=1;i<chartPoints.length;i++){const p=chartPoints[i-1],q=chartPoints[i],dx=(q.x-p.x)*.36;d+=' C'+(p.x+dx).toFixed(2)+' '+p.y.toFixed(2)+' '+(q.x-dx).toFixed(2)+' '+q.y.toFixed(2)+' '+q.x.toFixed(2)+' '+q.y.toFixed(2);}if(chartPoints.length===1)d+=' L842 '+chartPoints[0].y.toFixed(2);curve.setAttribute('d',d);shade.setAttribute('d',d+' L842 300 L18 300 Z');nodata.style.display=values.length<2?'flex':'none';nodata.querySelector('strong').textContent='Nog één extra meting nodig';$('avgLabel').textContent='GEMIDDELDE '+valueFields[currentMetric].toUpperCase();$('maxLabel').textContent='HOOGSTE '+valueFields[currentMetric].toUpperCase();$('avgValue').textContent=fmt(yVals.reduce((a,b)=>a+b,0)/yVals.length);$('maxValue').textContent=fmt(hi);$('axisStart').textContent=new Date(t0).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});$('axisEnd').textContent=dateTime(t1);const ccuWindow=(usingCloud?cloudHistory:browserHistory).filter(x=>x.t>=Date.now()-spans[currentRange]&&Number.isFinite(x.ccu));$('peak').textContent=ccuWindow.length?fmt(Math.max(...ccuWindow.map(x=>x.ccu))):'—';if(matchMedia('(prefers-reduced-motion: reduce)').matches){curve.style.transition='none';curve.style.strokeDasharray='none';curve.style.strokeDashoffset='0';}else{const len=curve.getTotalLength();curve.style.transition='none';curve.style.strokeDasharray=len;curve.style.strokeDashoffset=len;requestAnimationFrame(()=>{curve.style.transition='stroke-dashoffset .95s cubic-bezier(.3,.7,.2,1)';curve.style.strokeDashoffset='0'});}}
@@ -166,6 +206,7 @@ $('chart').addEventListener('pointerleave',()=>{$('tooltip').style.display='none
 for(const card of document.querySelectorAll('.card'))card.addEventListener('pointermove',e=>{const r=card.getBoundingClientRect();card.style.setProperty('--mouse-x',(e.clientX-r.left)+'px');card.style.setProperty('--mouse-y',(e.clientY-r.top)+'px')});
 const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('show');observer.unobserve(entry.target)}},{threshold:.07});document.querySelectorAll('.reveal').forEach(x=>observer.observe(x));
 $('footerTime').textContent='© '+new Date().getFullYear()+' KVN STUDIOS';
+window.addEventListener('kvn:official-analytics',()=>{acquisition();});
 stats();setInterval(()=>{if(!document.hidden)stats();},60000);
 </script></body></html>`;
 

@@ -59,6 +59,61 @@ export const liveIntelligenceCSS = String.raw`
  .kvn-ccu-card[data-motion] .kvn-ccu-flash{animation:none!important}
  .kvn-ccu-card[data-motion="up"]{box-shadow:inset 0 1px rgba(194,234,255,.1)!important}
 }
+/* Clear CCU movement feedback — only after two distinct verified player counts. */
+.kvn-ccu-card{transition:box-shadow .65s ease,border-color .65s ease}
+.kvn-ccu-card[data-motion="up"]{
+ border-color:rgba(107,217,255,.83)!important;
+ box-shadow:0 0 0 1px rgba(94,208,255,.6),0 0 42px rgba(37,141,255,.26),inset 0 0 35px rgba(54,151,255,.11)!important
+}
+.kvn-ccu-card[data-motion="down"]{
+ border-color:rgba(139,173,221,.58)!important;
+ box-shadow:0 0 0 1px rgba(139,173,221,.27),0 0 28px rgba(73,110,170,.14)!important
+}
+.kvn-ccu-flash::after{
+ content:"";position:absolute;inset:0;border:2px solid rgba(117,222,255,.85);
+ border-radius:inherit;opacity:0;pointer-events:none
+}
+.kvn-ccu-card[data-motion="up"] .kvn-ccu-flash{animation:kvnCcuVisibleRise 2.8s ease-out both!important}
+.kvn-ccu-card[data-motion="down"] .kvn-ccu-flash{animation:kvnCcuVisibleFall 2.4s ease-out both!important}
+.kvn-ccu-card[data-motion="up"] .kvn-ccu-flash::after{animation:kvnCcuRing 2.8s ease-out both}
+.kvn-ccu-card[data-motion="down"] .kvn-ccu-flash::after{animation:kvnCcuRingDown 2.4s ease-out both;border-color:rgba(144,173,219,.54)}
+@keyframes kvnCcuVisibleRise{0%{opacity:0}15%{opacity:1}55%{opacity:.66}100%{opacity:0}}
+@keyframes kvnCcuVisibleFall{0%{opacity:0}20%{opacity:.72}55%{opacity:.40}100%{opacity:0}}
+@keyframes kvnCcuRing{0%{opacity:.05}18%{opacity:.92}60%{opacity:.4}100%{opacity:0}}
+@keyframes kvnCcuRingDown{0%{opacity:.05}18%{opacity:.65}55%{opacity:.28}100%{opacity:0}}
+.kvn-ccu-change{
+ position:absolute;z-index:6;top:101px;right:28px;display:flex;align-items:center;gap:9px;
+ max-width:48%;padding:10px 14px;border-radius:13px;
+ font:800 17px 'Space Grotesk','Inter',sans-serif;line-height:1;
+ letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+ background:rgba(19,69,132,.85);color:#d3f3ff;
+ border:1px solid rgba(110,212,255,.7);
+ box-shadow:0 12px 38px rgba(4,36,97,.4),0 0 26px rgba(33,165,255,.22);
+ opacity:0;transform:translateY(9px) scale(.96);pointer-events:none;
+ overflow-wrap:anywhere
+}
+.kvn-ccu-change[hidden]{display:none!important}
+.kvn-ccu-change[data-direction="down"]{
+ background:rgba(36,58,97,.92);color:#c5d6ed;border-color:rgba(161,188,226,.5);
+ box-shadow:0 12px 34px rgba(0,19,48,.3)
+}
+.kvn-ccu-change small{font:800 9px 'Inter','DM Sans',sans-serif;letter-spacing:1px;opacity:.82;white-space:nowrap}
+.kvn-ccu-change[data-visible="true"]{opacity:1;transform:translateY(0) scale(1);transition:opacity .28s ease,transform .45s cubic-bezier(.16,1,.3,1)}
+.kvn-ccu-card .kvn-ccu-delta[data-direction="up"]{color:#91e2ff;font-weight:900}
+.kvn-ccu-card .kvn-ccu-delta[data-direction="down"]{color:#bacbe4;font-weight:900}
+@media(max-width:690px){
+ .kvn-ccu-change{top:101px;right:16px;padding:8px 10px;border-radius:10px;font-size:14px;gap:5px}
+ .kvn-ccu-change small{font-size:8px;letter-spacing:.5px}
+}
+@media(max-width:390px){
+ .kvn-ccu-change{top:96px;right:14px;max-width:44%;font-size:13px}
+}
+@media(prefers-reduced-motion:reduce){
+ .kvn-ccu-card[data-motion] .kvn-ccu-flash,
+ .kvn-ccu-card[data-motion] .kvn-ccu-flash::after{animation:none!important}
+ .kvn-ccu-change[data-visible="true"]{opacity:1;transform:none;transition:none}
+ .kvn-ccu-card[data-motion="up"],.kvn-ccu-card[data-motion="down"]{box-shadow:none!important}
+}
 /* Chart geometry safety: metric selectors must never collide with the plot edge.
    Keep this after older theme layers so all responsive breakpoints agree. */
 .workspace,.workspace>*{min-width:0}
@@ -137,6 +192,32 @@ freshness.setAttribute('aria-live','off');freshness.textContent='Waiting for a v
 record.after(freshness);
 const flash=document.createElement('div');flash.className='kvn-ccu-flash';
 flash.setAttribute('aria-hidden','true');card.prepend(flash);
+const changeChip=document.createElement('span');
+changeChip.className='kvn-ccu-change';changeChip.hidden=true;
+changeChip.setAttribute('role','status');changeChip.setAttribute('aria-live','polite');
+changeChip.setAttribute('aria-label','Verified concurrent player count change');
+card.querySelector('.card-content')?.append(changeChip);
+let changeChipTimer=null;
+function hideChip(){
+  if(changeChipTimer){clearTimeout(changeChipTimer);changeChipTimer=null;}
+  changeChip.removeAttribute('data-visible');
+  changeChip.hidden=true;
+}
+function revealChip(diff){
+  if(!Number.isFinite(diff)||diff===0)return;
+  if(changeChipTimer){clearTimeout(changeChipTimer);changeChipTimer=null;}
+  const trend=diff>0?'up':'down';
+  changeChip.dataset.direction=trend;
+  changeChip.textContent=(diff>0?'+':'−')+Math.abs(diff).toLocaleString('en-US')+' ';
+  const small=document.createElement('small');small.textContent='CCU';
+  changeChip.append(small);
+  changeChip.hidden=false;
+  // Re-arm the actual CSS entrance on every new verified change.
+  changeChip.removeAttribute('data-visible');
+  void changeChip.offsetWidth;
+  changeChip.dataset.visible='true';
+  changeChipTimer=setTimeout(hideChip,5200);
+}
 let lastTimestamp=null;
 let lastTrustedCCU=null;
 function setState(name,text){status.dataset.state=name;wording.textContent=text;}
@@ -161,7 +242,7 @@ window.addEventListener('kvn:verified-stats',event=>{
     setState('unavailable','METRIC UNAVAILABLE');
     delta.textContent='NO VERIFIED PLAYER COUNT';
     delta.dataset.direction='none';record.hidden=true;
-    clearMovement();return;
+    clearMovement();hideChip();return;
   }
   const fresh=!d.stale&&Number.isFinite(d.timestamp);
   updateTime(d.timestamp,!fresh);
@@ -177,12 +258,18 @@ window.addEventListener('kvn:verified-stats',event=>{
     delta.dataset.direction=diff>0?'up':diff<0?'down':'flat';
     delta.textContent=(diff>0?'+':diff<0?'−':'')+
       Math.abs(diff).toLocaleString('en-US')+' SINCE PREVIOUS SAMPLE';
-    if(diff!==0)showMotion(diff>0?'up':'down');
-    else clearMovement();
+    if(diff!==0){
+      showMotion(diff>0?'up':'down');
+      revealChip(diff);
+    }else{
+      clearMovement();
+      hideChip();
+    }
   }else{
     delta.dataset.direction='none';
     delta.textContent=fresh?'AWAITING NEXT VERIFIED SAMPLE':'NO LIVE TREND';
     clearMovement();
+    hideChip();
   }
   if(fresh){lastTimestamp=d.timestamp;lastTrustedCCU=d.playing;}
   // A new high requires at least two earlier VERIFIED historical samples,
@@ -199,7 +286,7 @@ window.addEventListener('kvn:stats-unavailable',event=>{
   setState('unavailable','REFRESH DELAYED');
   delta.dataset.direction='none';
   delta.textContent=event.detail?.hasPrevious?'LAST VERIFIED SAMPLE':'RETRYING ROBLOX API';
-  record.hidden=true;clearMovement();
+  record.hidden=true;clearMovement();hideChip();
 });
 const chartPanel=document.querySelector('.chart-panel');
 if(chartPanel){

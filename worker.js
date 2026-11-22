@@ -279,7 +279,13 @@ async function stats(){
   lastLiveCheckAt=Date.now();
   liveStatsInFlight=(async()=>{
     try{
-      const response=await fetch('/api/stats',{cache:'no-store'});
+      // A stalled network request must not permanently block the poll loop.
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),12000);
+      let response;
+      try{
+        response=await fetch('/api/stats',{cache:'no-store',signal:controller.signal});
+      }finally{clearTimeout(timeout);}
       const d=await response.json();
       if(!response.ok||d.error)throw Error(d.error||'Roblox unavailable');
 
@@ -315,19 +321,20 @@ async function stats(){
           try{localStorage.setItem(TIMEKEY,JSON.stringify(browserHistory));}catch{}
         }
       }
-      if(!lastHistoryRefresh||Date.now()-lastHistoryRefresh>=HISTORY_POLL_MS){
-        lastHistoryRefresh=Date.now();
-        await loadHistory();
-      }else if(!usingCloud){
-        draw();
-      }
+      // Update charts and CCU effects immediately after the verified API
+      // response. D1 history can be slow; it must not block the next poll.
+      draw();
       window.dispatchEvent(new CustomEvent('kvn:verified-stats',{detail:{
         stats:d,previous,range:currentRange,
-        history:(usingCloud?cloudHistory:browserHistory).filter(
+        history:getVerifiedHistory().filter(
           x=>x&&Number.isFinite(x.t)&&Number.isFinite(x.ccu)&&x.t>=Date.now()-86400000
         ),
         cloud:usingCloud
       }}));
+      if(!lastHistoryRefresh||Date.now()-lastHistoryRefresh>=HISTORY_POLL_MS){
+        lastHistoryRefresh=Date.now();
+        void loadHistory().catch(err=>console.warn('History refresh delayed',err));
+      }
     }catch(err){
       state('ROBLOX TEMPORARILY UNAVAILABLE',true);
       if(currentStats&&Number.isFinite(currentStats.playing)){
@@ -338,7 +345,7 @@ async function stats(){
       document.querySelector('.metrics')?.classList.remove('is-loading');
       if(!lastHistoryRefresh||Date.now()-lastHistoryRefresh>=HISTORY_POLL_MS){
         lastHistoryRefresh=Date.now();
-        try{await loadHistory();}catch{}
+        void loadHistory().catch(()=>{});
       }
       window.dispatchEvent(new CustomEvent('kvn:stats-unavailable',{detail:{
         hasPrevious:Boolean(currentStats&&Number.isFinite(currentStats.playing))
@@ -349,7 +356,19 @@ async function stats(){
   try{return await liveStatsInFlight;}
   finally{liveStatsInFlight=null;}
 }
-function getPoints(){const since=Date.now()-spans[currentRange];const base=usingCloud?cloudHistory:browserHistory;return base.filter(x=>x.t>=since&&Number.isFinite(x[currentMetric]));}
+// Combine persisted D1 observations with new live API samples for a
+// responsive chart. All values are REAL measurements, never interpolated
+// fake datapoints. D1 remains the authoritative long-term history source.
+function getVerifiedHistory(){
+  if(!usingCloud)return browserHistory;
+  const lastCloud=cloudHistory.length?Math.max(...cloudHistory.map(x=>Number.isFinite(x.t)?x.t:0)):0;
+  const recentSince=Date.now()-10*60000;
+  const liveTail=browserHistory.filter(x=>
+    x&&Number.isFinite(x.t)&&x.t>lastCloud&&x.t>=recentSince
+  );
+  return cloudHistory.concat(liveTail).sort((a,b)=>a.t-b.t);
+}
+function getPoints(){const since=Date.now()-spans[currentRange];return getVerifiedHistory().filter(x=>x.t>=since&&Number.isFinite(x[currentMetric]));}
 async function loadHistory(){
   let unavailable=false;
   let comparison={state:'unavailable'};

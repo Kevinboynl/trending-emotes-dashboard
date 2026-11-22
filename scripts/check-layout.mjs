@@ -17,6 +17,9 @@ const artifactDir='test-artifacts';
 mkdirSync(artifactDir,{recursive:true});
 const timeRanges={ '1h':3600000,'24h':86400000,'7d':604800000,'30d':2592000000 };
 const fixtureNow=Date.now();
+let fixtureCCU=48;
+let fixtureStale=false;
+let fixtureStamp=fixtureNow;
 
 function json(res,body){
   res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
@@ -35,11 +38,20 @@ function fixtureHistory(range){
 const app=createServer(async(req,res)=>{
   try {
     const url=new URL(req.url,'http://localhost');
+    if(url.pathname==='/__test__/ccu'){
+      const value=Number(url.searchParams.get('value'));
+      assert(Number.isInteger(value)&&value>=0&&value<=100000,
+        'Invalid synthetic CCU test fixture');
+      fixtureCCU=value;
+      fixtureStale=url.searchParams.get('stale')==='true';
+      fixtureStamp+=20000; // Each local test response has a distinct timestamp.
+      return json(res,{ok:true});
+    }
     if(url.pathname==='/api/stats'){
       return json(res,{source:'Local browser test fixture',placeId:'134944031090971',
-        name:'TRENDING EMOTES!',playing:48,visits:12870,favorites:630,
+        name:'TRENDING EMOTES!',playing:fixtureCCU,visits:12870,favorites:630,
         likes:425,dislikes:16,rating:96.37,icon:null,thumbnail:null,
-        timestamp:fixtureNow,stale:false});
+        timestamp:fixtureStamp,stale:fixtureStale});
     }
     if(url.pathname==='/api/history')return json(res,fixtureHistory(url.searchParams.get('range')));
     if(url.pathname==='/api/public-analytics')return json(res,{state:'disabled',metrics:[]});
@@ -54,6 +66,7 @@ const sizes=[360,390,430,768,1024,1440,1920];
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{
   for(const width of sizes){
+    fixtureCCU=48;fixtureStale=false;fixtureStamp+=20000;
     const page=await browser.newPage({viewport:{width,height:900},deviceScaleFactor:1});
     const errors=[];
     page.on('pageerror',e=>errors.push(e.message));
@@ -90,6 +103,43 @@ try{
     assert.equal(await page.locator('.tabbody[data-page="retention"]').evaluate(el=>el.classList.contains('active')),true,
       'Retention tab did not activate at '+width);
     assert.deepEqual(errors,[],'Browser JS errors at '+width);
+    if(width===390){
+      const setTestCCU=async(value,stale=false)=>{
+        const resp=await page.request.get(localURL+'__test__/ccu?value='+value+'&stale='+stale);
+        assert.equal(resp.status(),200);
+        await page.evaluate(()=>stats()); // Real dashboard function; fixture is local-only.
+      };
+      assert.equal(await page.locator('#playing').getAttribute('data-value'),'48');
+      await setTestCCU(51);
+      const card=page.locator('.metrics .primary'),chip=page.locator('.kvn-ccu-change');
+      assert.equal(await card.getAttribute('data-motion'),'up','Missing CCU rise pulse');
+      assert.match(await chip.innerText(),/\+3\s*CCU/,'Incorrect rise badge');
+      assert.equal(await chip.getAttribute('data-visible'),'true','Rise badge did not enter');
+      const upDigits=page.locator('#playing .kvn-roll-slot');
+      assert.ok(await upDigits.count()>0,'New CCU digits did not roll');
+      assert.match(await upDigits.first().locator('.kvn-roll-track').evaluate(el=>getComputedStyle(el).animationName),
+        /kvnDigitUp/,'Upward digit animation missing');
+      assert.equal(await page.locator('.kvn-ccu-travel').count(),1,'Border traveling light is absent');
+      await page.waitForTimeout(300);
+      await page.screenshot({path:artifactDir+'/ccu-rise-390.png'});
+      await setTestCCU(49);
+      assert.equal(await card.getAttribute('data-motion'),'down','Missing CCU drop pulse');
+      assert.match(await chip.innerText(),/−2\s*CCU/,'Incorrect drop badge');
+      assert.match(await page.locator('#playing .kvn-roll-slot').first().locator('.kvn-roll-track').evaluate(el=>getComputedStyle(el).animationName),
+        /kvnDigitDown/,'Downward digit animation missing');
+      await page.waitForTimeout(300);
+      await page.screenshot({path:artifactDir+'/ccu-fall-390.png'});
+      await setTestCCU(49);
+      assert.equal(await card.getAttribute('data-motion'),null,'Unchanged CCU must not pulse');
+      assert.equal(await chip.isVisible(),false,'Unchanged CCU must hide the badge');
+      assert.equal(await page.locator('#playing .kvn-roll-slot').count(),0,'Unchanged CCU must not roll');
+      await setTestCCU(53,true);
+      assert.equal(await card.getAttribute('data-motion'),null,'Cached CCU must not pulse');
+      assert.equal(await chip.isVisible(),false,'Cached CCU must not show a new badge');
+      assert.equal(await page.locator('#playing .kvn-roll-slot').count(),0,'Cached CCU must not roll');
+      assert.deepEqual(errors,[],'Browser JS error during CCU change animation');
+      console.log('PASS: Verified CCU rise/drop, digit rolling, responsive badges, unchanged and stale-value guards.');
+    }
     if(width===390||width===1440||width===1920){
       await chart.screenshot({path:artifactDir+'/chart-'+width+'.png',animations:'disabled'});
       await page.screenshot({path:artifactDir+'/dashboard-'+width+'.png',fullPage:true,animations:'disabled'});

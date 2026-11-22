@@ -14,7 +14,7 @@ const root = resolve(fileURLToPath(new URL('../', import.meta.url)));
 const file = name => readFileSync(resolve(root,name),'utf8');
 const moduleNames = [
   'public-analytics.js','premium-theme.js','premium-interactions.js',
-  'refinements.js','studio-upgrade.js','cinematic-v2.js','security.js'
+  'refinements.js','studio-upgrade.js','cinematic-v2.js','live-intelligence.js','security.js'
 ];
 const nativeContext = {
   Response, Request, Headers, URL, fetch: async()=>{throw Error('Unexpected remote request in smoke test');},
@@ -49,7 +49,7 @@ assert.match(html,/<html lang="en">/);
 for(const range of ['1h','24h','7d','30d'])assert.ok(html.includes('data-range="'+range+'"'));
 for(const page of ['engagement','acquisition','retention','monetization','performance'])
   assert.ok(html.includes('data-tab="'+page+'"'));
-for(const marker of ['kvn-pointer-core','kvn-sidefx','kvnCinemaReveal','kvn-refresh-data'])
+for(const marker of ['kvn-pointer-core','kvn-sidefx','kvnCinemaReveal','kvn-refresh-data','kvn-ccu-status-line','kvn:verified-stats'])
   assert.ok(html.includes(marker),'Missing cinematic UI element '+marker);
 assert.ok(embeddedStyle.includes('--cyan:#38bdf8'),'Blue color palette changed');
 assert.ok(embeddedStyle.includes('prefers-reduced-motion:reduce'),'Missing reduced-motion support');

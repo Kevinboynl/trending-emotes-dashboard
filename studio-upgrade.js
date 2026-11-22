@@ -99,6 +99,26 @@ footer{border-top-color:rgba(89,157,255,.25)}
 @media(max-width:380px){.hero .hero-copy h1{font-size:clamp(50px,13vw,65px)}.hero .eyebrow{letter-spacing:.8px}.hero .hero-actions{flex-wrap:wrap}.hero .visual{height:255px}}
 @media(hover:none),(pointer:coarse){.kvn-cursor-glow{display:none}.metric-switch button:hover,.switches button:hover,.tabs button:hover{transform:none}.hero .hero-poster:hover img{transform:none}}
 @media(prefers-reduced-motion:reduce){.kvn-stars,.kvn-cursor-glow{display:none}.hero .hero-poster,.hero .orbit,.hero .halo,.kvn-empty-signal i{animation:none!important}.hero .hero-poster{transform:none}.playbtn::after{display:none}.kvn-back-top{transition:none}}
+/* Ambient blue telemetry on wide desktop gutters only. */
+.kvn-sidefx{position:fixed;inset:0 auto 0 0;width:calc((100vw - 1500px)/2);z-index:0;pointer-events:none;overflow:hidden;opacity:.82}
+.kvn-sidefx--right{left:auto;right:0;transform:scaleX(-1)}
+.kvn-sidefx:before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 100% 38% at 0 30%,rgba(43,116,255,.18),transparent 76%)}
+.kvn-sidefx__track{position:absolute;left:33%;top:0;bottom:0;width:1px;background:linear-gradient(transparent,rgba(88,159,255,.28) 20%,rgba(76,163,255,.35) 55%,transparent);box-shadow:0 0 20px rgba(40,131,255,.2)}
+.kvn-sidefx__track:before{content:"";position:absolute;top:0;left:-2px;width:5px;height:78px;border-radius:50px;background:linear-gradient(transparent,#77ceff,transparent);filter:blur(2px);animation:sideSweep 15s linear infinite}
+.kvn-sidefx__track:after{content:"";position:absolute;left:-3px;top:var(--pointer-y,50%);width:7px;height:7px;border-radius:50%;background:#8bd9ff;box-shadow:0 0 14px #398bff,0 0 32px #3686ff;transition:top .25s ease-out}
+.kvn-sidefx__ring{position:absolute;left:33%;top:29%;width:clamp(100px,11vw,190px);aspect-ratio:1;border:1px solid rgba(76,147,255,.2);border-radius:50%;transform:translate(-50%,-50%);box-shadow:inset 0 0 40px rgba(44,110,244,.06),0 0 50px rgba(44,110,244,.05);animation:sideBreath 10s ease-in-out infinite}
+.kvn-sidefx__ring:after{content:"";position:absolute;inset:20%;border:1px dashed rgba(85,168,255,.3);border-radius:50%;animation:sideRotate 27s linear infinite}
+.kvn-sidefx__ticks{position:absolute;left:33%;top:51%;display:grid;gap:14px;transform:translate(-50%,-50%);opacity:.55}
+.kvn-sidefx__ticks i{display:block;height:1px;width:25px;background:linear-gradient(90deg,transparent,#56aaff,transparent)}
+.kvn-sidefx__ticks i:nth-child(3n){width:39px;margin-left:-7px}
+.kvn-sidefx__caption{position:absolute;left:calc(33% + 17px);top:73%;font:700 9px 'DM Sans',system-ui,sans-serif;letter-spacing:3px;white-space:nowrap;color:rgba(119,179,255,.42);writing-mode:vertical-rl}
+.kvn-sidefx--right .kvn-sidefx__caption{transform:scaleX(-1)}
+@keyframes sideSweep{0%{transform:translateY(-20vh);opacity:0}15%,85%{opacity:1}100%{transform:translateY(120vh);opacity:0}}
+@keyframes sideBreath{50%{opacity:.55;filter:brightness(1.5)}}
+@keyframes sideRotate{to{transform:rotate(360deg)}}
+@media(max-width:1699px){.kvn-sidefx{display:none}}
+@media(prefers-reduced-motion:reduce){.kvn-sidefx__track:before,.kvn-sidefx__ring,.kvn-sidefx__ring:after{animation:none}.kvn-sidefx__track:after{transition:none}}
+
 `;
 export const studioUpgradeJS = String.raw`
 /* Visual-only enhancements. Does not change the analytics API, chart data or events. */
@@ -190,5 +210,30 @@ export const studioUpgradeJS = String.raw`
     document.documentElement.addEventListener('pointerleave',()=>{glow.style.opacity='0';},{passive:true});
     window.addEventListener('blur',()=>{glow.style.opacity='0';});
   }
+  // Decorative wide-screen rails. They never interfere with analytics or clicks.
+  const sideRails=[];
+  for(const side of ['left','right']){
+    const rail=document.createElement('div');
+    rail.className='kvn-sidefx kvn-sidefx--'+side;rail.setAttribute('aria-hidden','true');
+    const track=document.createElement('div');track.className='kvn-sidefx__track';
+    const ring=document.createElement('div');ring.className='kvn-sidefx__ring';
+    const ticks=document.createElement('div');ticks.className='kvn-sidefx__ticks';
+    for(let i=0;i<11;i++)ticks.append(document.createElement('i'));
+    const label=document.createElement('span');label.className='kvn-sidefx__caption';
+    label.textContent=side==='left'?'LIVE SIGNAL / KVN':'VERIFIED DATA / ROBLOX';
+    rail.append(track,ring,ticks,label);document.body.append(rail);sideRails.push(rail);
+  }
+  if(fine&&!reduced){
+    let animation=0,pointer=50;
+    window.addEventListener('pointermove',e=>{
+      pointer=Math.max(5,Math.min(95,e.clientY/window.innerHeight*100));
+      if(animation)return;
+      animation=requestAnimationFrame(()=>{
+        animation=0;
+        for(const rail of sideRails)rail.style.setProperty('--pointer-y',pointer+'%');
+      });
+    },{passive:true});
+  }
+
 })();
 `;

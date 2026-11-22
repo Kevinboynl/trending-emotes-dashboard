@@ -4,7 +4,7 @@ export const premiumCSS = String.raw`
 :root{color-scheme:dark;--bg:#050b1e;--surface:#0a1633;--surface2:#102346;--line:rgba(91,142,233,.22);--green:#63b8ff;--soft:#f1f7ff;--muted:#91a5c7;--white:#f8faff;--danger:#ff8f9b;--blue:#2563ff;--cyan:#38bdf8;--blueGlow:rgba(37,99,255,.24)}
 html{scroll-padding-top:115px}
 body{background:#050b1e;color:var(--white);font-family:'DM Sans',Inter,system-ui,sans-serif;font-size:14px;isolation:isolate}
-body:before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(ellipse 62% 36% at 77% 8%,rgba(32,91,215,.24),transparent 76%),radial-gradient(ellipse 45% 60% at 0% 48%,rgba(15,54,147,.13),transparent 80%),linear-gradient(180deg,#050b1e 0%,#080e23 56%,#050a17 100%)}
+body:before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(ellipse 62% 36% at var(--fog-x,77%) var(--fog-y,8%),rgba(32,91,215,.24),transparent 76%),radial-gradient(ellipse 45% 60% at 0% 48%,rgba(15,54,147,.13),transparent 80%),linear-gradient(180deg,#050b1e 0%,#080e23 56%,#050a17 100%)}
 body:after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(93,147,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(93,147,255,.025) 1px,transparent 1px);background-size:60px 60px;mask-image:linear-gradient(to bottom,black,transparent 77%)}
 ::selection{background:#2563ff;color:white}
 :focus-visible{outline:2px solid #70d1ff!important;outline-offset:4px}

@@ -68,6 +68,11 @@ assert.ok(match&&await basic.text().then(x=>x.includes('<script nonce="'+match[1
 assert.equal((await worker.fetch(request('/?test=1','POST'),{})).status,405);
 assert.equal((await worker.fetch(request('/api/stats?metric=secret'),{})).status,400);
 assert.equal((await worker.fetch(request('/api/history?range=not-a-range'),{})).status,400);
+assert.equal((await worker.fetch(request('/api/history?range=24h&utm_source=chatgpt.com'),{})).status,200);
+assert.equal((await worker.fetch(request('/api/history?utm_source=chatgpt.com&range=7d&utm_medium=share'),{})).status,200);
+assert.equal((await worker.fetch(request('/api/history?range=24h&range=7d'),{})).status,400);
+assert.equal((await worker.fetch(request('/api/history?range=24h&metric=private'),{})).status,400);
+assert.equal((await worker.fetch(request('/api/history?range=invalid&utm_source=chatgpt.com'),{})).status,400);
 const history=await worker.fetch(request('/api/history?range=24h'),{});
 assert.equal(history.status,200);
 const browserHistory=await history.json();

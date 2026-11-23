@@ -77,7 +77,7 @@ h1 span{background:linear-gradient(105deg,#f5fbff 0%,#91cfff 33%,#438bff 69%,#86
 .metric-label{font-size:10px;letter-spacing:1.4px;color:#aec2e5}
 .corner{color:#74caff;font-size:21px}
 .number{color:#f5faff;font-size:clamp(32px,3.5vw,54px);font-variant-numeric:tabular-nums;letter-spacing:-2.4px;margin-top:38px}
-.primary .number{color:#e2f6ff;background:linear-gradient(100deg,#fff,#7dcaff 65%,#337eff);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:clamp(92px,10vw,151px);line-height:.96;letter-spacing:-8px;margin:53px 0 16px;text-shadow:none}
+.primary .number{font-family:'Oxanium','Space Grotesk',sans-serif;font-weight:800;color:#e2f6ff;background:linear-gradient(100deg,#fff,#7dcaff 65%,#337eff);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:clamp(92px,10vw,151px);line-height:.96;letter-spacing:-8px;margin:53px 0 16px;text-shadow:none}
 .metric-info{font-size:12px;color:#8faad4}
 .metric-bottom{border-top-color:#3e66ab70;color:#9fc0eb;z-index:2}
 .positive{color:#60c7ff}.dim{color:#93a8c8}

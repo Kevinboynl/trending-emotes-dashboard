@@ -233,7 +233,7 @@ const HTML = String.raw`<!doctype html>
 <meta name="theme-color" content="#080e1c"><meta name="description" content="Live Roblox analytics for TRENDING EMOTES! by KVN STUDIOS.">
 <title>TRENDING EMOTES! — KVN STUDIOS / Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=Oxanium:wght@700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#080a08;--surface:#101410;--surface2:#131914;--line:#263127;--green:#b6ff69;--soft:#d9ecce;--muted:#8a9b8b;--white:#f4f9f0;--danger:#ffad83}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--white);font:14px 'DM Sans',system-ui,sans-serif;overflow-x:hidden}a{color:inherit;text-decoration:none}button{font:inherit;cursor:pointer}h1,h2,h3,p{margin:0}h1,h2,h3,.number,.wordmark{font-family:'Space Grotesk',sans-serif}

@@ -179,6 +179,7 @@ export const growthFocusJS = String.raw`
       const bars=byId('kvnPulseBars');
       bars.className='kvn-growth-focus__empty';
       bars.textContent='No verified measurements in the selected time range.';
+      byId('kvnPulseCoverage').textContent='NO VERIFIED DATA · MISSING MEASUREMENTS ARE NOT ZERO PLAYERS';
       byId('kvnPulseStart').textContent='—';
       byId('kvnPulseEnd').textContent='—';
       insightText.textContent='Choose 24H or check back after new verified Roblox measurements.';

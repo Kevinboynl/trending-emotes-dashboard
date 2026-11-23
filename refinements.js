@@ -254,25 +254,8 @@ navUpdate();
 
 // 2. Entrance choreography and palette-preserving cursor light.
 document.querySelectorAll('.metrics .card').forEach((card,i)=>card.style.setProperty('--stagger',String(i)));
-const hero=document.querySelector('.hero');
-if(hero&&!reduce.matches&&fine.matches){
-  const light=document.createElement('i');
-  light.className='hero-sheen';
-  light.setAttribute('aria-hidden','true');
-  hero.append(light);
-  const positionLight=throttle((x,y)=>{
-    // Translate by half the light's ACTUAL width/height: stays centered at every breakpoint.
-    light.style.transform='translate3d('+x+'px,'+y+'px,0) translate(-50%,-50%)';
-  });
-  hero.addEventListener('pointermove',e=>{
-    const r=hero.getBoundingClientRect();
-    positionLight(e.clientX-r.left,e.clientY-r.top);
-    light.style.opacity='1';
-  },{passive:true});
-  hero.addEventListener('pointerleave',()=>{
-    light.style.opacity='0';
-  },{passive:true});
-}
+// The global cinematic pointer glow covers the hero too; no second local
+// pointer-following glow or blur/filter animation is needed.
 // Cards use a single transform-only hover style; no per-frame 3D tilt listeners.
 
 // 3. Loading skeletons use DOM state, not guesses. Unavailable Roblox data remains unavailable.

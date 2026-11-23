@@ -264,8 +264,12 @@ function restoreVerifiedStats() {
 // Inactive tabs may finish a request after the visitor has left. Never use
 // that unseen result as a return-visit comparison baseline.
 const LAST_VISIBLE_CCU_KEY='kvn-trending-emotes-visible-ccu-v1';
+const VISIBLE_CCU_GAME_ID='134944031090971';
 const VISIBLE_SNAPSHOT_TTL=48*60*60*1000;
 const validVisibleSnapshot=(x,now=Date.now())=>Boolean(x&&
+  // Pre-existing snapshots lacked gameId: accept only when no conflicting ID
+  // is supplied, then migrate them on the next fresh visible measurement.
+  (x.gameId==null||String(x.gameId)===VISIBLE_CCU_GAME_ID)&&
   Number.isSafeInteger(x.playing)&&x.playing>=0&&x.playing<=1e9&&
   Number.isFinite(x.timestamp)&&Number.isFinite(x.shownAt)&&
   x.timestamp>0&&x.timestamp<=now+30000&&
@@ -298,11 +302,13 @@ function displaySavedVisibleCCU(){
     new Date(lastVisibleCCU.timestamp).toLocaleString('en-GB')+' · checking for updates';
 }
 function rememberVisibleCCU(sample){
-  if(!sample||sample.stale||!validVisibleSnapshot({
+  if(!sample||sample.stale||
+    (sample.placeId&&String(sample.placeId)!==VISIBLE_CCU_GAME_ID)||
+    !validVisibleSnapshot({
     playing:sample.playing,timestamp:sample.timestamp,shownAt:Date.now()
   }))return;
   const visible={playing:sample.playing,timestamp:sample.timestamp,
-    shownAt:Date.now(),fresh:true};
+    shownAt:Date.now(),fresh:true,gameId:VISIBLE_CCU_GAME_ID};
   lastVisibleCCU=visible;
   try{localStorage.setItem(LAST_VISIBLE_CCU_KEY,JSON.stringify(visible));}catch{}
 }
@@ -431,7 +437,9 @@ async function stats(){
       const d=await response.json();
       if(!response.ok||d.error)throw Error(d.error||'Roblox unavailable');
       lastFetchedCCU=d;
-      const isAuthoritative=!d.stale&&Number.isSafeInteger(d.playing)&&d.playing>=0
+      const isAuthoritative=!d.stale&&
+        (!d.placeId||String(d.placeId)===VISIBLE_CCU_GAME_ID)&&
+        Number.isSafeInteger(d.playing)&&d.playing>=0
         &&d.playing<=1e9&&Number.isFinite(d.timestamp)&&d.timestamp>0
         &&d.timestamp<=Date.now()+30000&&Date.now()-d.timestamp<=VISIBLE_SNAPSHOT_TTL;
       if(isAuthoritative&&(!latestVerifiedCCU||d.timestamp>latestVerifiedCCU.timestamp)){

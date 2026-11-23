@@ -1,5 +1,5 @@
 /* Focus panel: measured peak hours, never inferred player counts. */
-export const peakHoursMarkup = String.raw\`
+export const peakHoursMarkup = String.raw`
 <section class="kvn-peak-hours" id="peak-hours" aria-labelledby="kvn-peak-title">
   <div class="kvn-peak-heading">
     <div><p class="kvn-peak-eyebrow">PLAYER ACTIVITY / TIME INTELLIGENCE</p>
@@ -15,8 +15,8 @@ export const peakHoursMarkup = String.raw\`
   </div>
   <div id="kvn-peak-bars" class="kvn-peak-bars" role="img" aria-label="Hourly concurrent player measurements"></div>
   <p class="kvn-peak-footnote" id="kvn-peak-note">A measured pattern will appear when enough verified samples are available. Empty hours are not treated as zero players.</p>
-</section>\`;
-export const peakHoursCSS = String.raw\`
+</section>`;
+export const peakHoursCSS = String.raw`
 .kvn-peak-hours{position:relative;overflow:hidden;margin:28px 0 38px;padding:clamp(19px,3vw,34px);border:1px solid rgba(111,167,255,.22);border-radius:24px;background:linear-gradient(130deg,rgba(12,28,61,.96),rgba(8,17,39,.95));color:#eaf3ff;box-shadow:0 20px 65px rgba(0,0,0,.15)}
 .kvn-peak-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
 .kvn-peak-heading h2{font:800 clamp(20px,3.2vw,34px)/1.14 'Space Grotesk','Inter',system-ui,sans-serif;letter-spacing:-.04em;margin:7px 0 10px}
@@ -35,8 +35,8 @@ export const peakHoursCSS = String.raw\`
 .kvn-peak-footnote{font-size:11px;color:#91a8c8;line-height:1.6;margin-top:14px}
 @media(max-width:650px){.kvn-peak-summary{grid-template-columns:1fr 1fr}.kvn-peak-summary>div:first-child{grid-column:span 2}.kvn-peak-bars{gap:3px;height:90px}}
 @media(prefers-reduced-motion:no-preference){.kvn-peak-bar>span{transition:height .5s ease}}
-\`;
-export const peakHoursJS = String.raw\`
+`;
+export const peakHoursJS = String.raw`
 (function(){
   const root=document.getElementById('peak-hours');
   if(!root)return;
@@ -112,4 +112,4 @@ export const peakHoursJS = String.raw\`
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
   render();
 })();
-\`;
+`;

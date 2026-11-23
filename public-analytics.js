@@ -402,6 +402,9 @@ export const publicAnalyticsClient = String.raw`
    if(isConversion(metric.id))return 'Last complete UTC day: '+metric.latest.date+' · Roblox API';
    return 'Verified Roblox data · '+metric.latest.date+(metric.unit==='API value'?' · raw API value':'');
  };
+ const statusWithAge=metric=>statusText(metric)+(
+   metric?.previouslyVerified?' · previously verified, awaiting a newer Roblox response':''
+ );
  const svgPoints=arr=>{
    if(arr.length<2)return '';
    const min=Math.min(...arr),max=Math.max(...arr);
@@ -454,7 +457,7 @@ export const publicAnalyticsClient = String.raw`
    const value=document.createElement('div');value.className='k-value';
    value.textContent=ready?valueText(metric):'—';
    const status=document.createElement('p');status.className='k-status';
-   status.textContent=ready?statusText(metric):detailMessage(metric);
+   status.textContent=ready?statusWithAge(metric):detailMessage(metric);
    const meta=document.createElement('span');meta.className='k-meta';
    meta.textContent=metric?'ROBLOX OPEN CLOUD':'NOT ENABLED · '+id;
    card.append(header,value,status,meta);
@@ -524,6 +527,17 @@ export const publicAnalyticsClient = String.raw`
  const OFFICIAL_REFRESH_MS=15*60*1000;
  let lastOfficialRefresh=0;
  let officialRequest=null;
+ let consecutiveFailures=0;
+ let recoveryTimer=null;
+ const cancelRecovery=()=>{if(recoveryTimer)clearTimeout(recoveryTimer);recoveryTimer=null;};
+ const queueRecovery=()=>{
+   cancelRecovery();
+   const retryDelay=[15000,45000,120000,300000][Math.min(consecutiveFailures-1,3)];
+   recoveryTimer=setTimeout(()=>{
+     recoveryTimer=null;
+     if(!document.hidden)void fetchPublished();
+   },retryDelay);
+ };
  async function fetchPublished(){
    if(officialRequest)return officialRequest;
    lastOfficialRefresh=Date.now();
@@ -536,20 +550,27 @@ export const publicAnalyticsClient = String.raw`
      finally{clearTimeout(timeout);}
      const data=await r.json();
      renderPanels(data);
+     if(r.ok && ['ready','partial'].includes(data?.state)){
+       consecutiveFailures=0;
+       cancelRecovery();
+     }
      // Reuse ONLY already approved public metrics for the Acquisition cards.
      // This does not expose new private data and does not perform a second API call.
      window.__kvnPublishedAnalytics=(r.ok && ['ready','partial'].includes(data?.state))?data:null;
      window.dispatchEvent(new Event('kvn:official-analytics'));
      if(!Array.isArray(data.metrics) || !data.metrics.length){
        const msg=data.state==='disabled'?'No owner-approved metrics have been selected for public display.':data.state==='not_configured'?'Open Cloud is ready. The owner must configure a Cloudflare Secret to enable the connection.':data.note||'The selected analytics are currently unavailable.';
-       message(msg,data.state!=='disabled'&&data.state!=='not_configured');return;
+       const retry=data.state!=='disabled'&&data.state!=='not_configured';
+       message(msg,retry);
+       if(retry){consecutiveFailures++;queueRecovery();}
+       return;
      }
      root.replaceChildren();const grid=document.createElement('div');grid.className='official-grid';
      for(const metric of data.metrics||[]){
        const card=document.createElement('article');card.className='official-card';
        const heading=document.createElement('small');heading.textContent=metric.label;
        const amount=document.createElement('strong');amount.textContent=valueText(metric);amount.title=metric.latest?(metric.id==='ClientMemoryUsageAvg'?'Approximate GB display (assuming bytes). Raw Roblox API value: '+fmt(metric.latest.value,2):'Verified aggregated Roblox data'):'No verified value available yet';
-       const note=document.createElement('p');note.textContent=metric.state==='ready'?statusText(metric):detailMessage(metric);
+       const note=document.createElement('p');note.textContent=metric.state==='ready'?statusWithAge(metric):detailMessage(metric);
        card.append(heading,amount,note);
        if(Array.isArray(metric.points) && metric.points.length>1){
           const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -563,7 +584,18 @@ export const publicAnalyticsClient = String.raw`
      }
      if(!grid.children.length){message('No selected metrics available.');return}
      root.append(grid);
-   }catch{renderPanels(window.__kvnPublishedAnalytics||null);message('Roblox Analytics is taking longer than expected. Try again or check back shortly.',true);}
+     if(data.previouslyVerified){
+       const time=data.lastVerifiedAt?new Date(data.lastVerifiedAt).toLocaleString('en-GB'):'an earlier successful request';
+       message('Showing previously verified Roblox Analytics from '+time+'. A fresh update is being requested; these values are not live.',false);
+     }else if(data.metrics.some(m=>m?.previouslyVerified)){
+       message('Some cards show earlier verified Roblox measurements while newer data is unavailable.',false);
+     }
+   }catch(err){
+     console.warn('Creator Analytics refresh failed:',err?.name||'network');
+     renderPanels(window.__kvnPublishedAnalytics||null);
+     message('Roblox Analytics could not be refreshed. Showing available verified data, if any.',true);
+     consecutiveFailures++;queueRecovery();
+   }
    })();
    try{return await officialRequest;}
    finally{officialRequest=null;}
@@ -573,7 +605,11 @@ export const publicAnalyticsClient = String.raw`
  // Only recheck on a slow schedule to respect Roblox Open Cloud limits.
  setInterval(()=>{if(!document.hidden)fetchPublished();},OFFICIAL_REFRESH_MS);
  document.addEventListener('visibilitychange',()=>{
-   if(!document.hidden&&Date.now()-lastOfficialRefresh>=OFFICIAL_REFRESH_MS)fetchPublished();
+   if(!document.hidden&&Date.now()-lastOfficialRefresh>=
+     (consecutiveFailures?15000:OFFICIAL_REFRESH_MS))void fetchPublished();
+ });
+ window.addEventListener('online',()=>{
+   if(!document.hidden&&Date.now()-lastOfficialRefresh>=15000)void fetchPublished();
  });
 })();
 `;

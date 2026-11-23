@@ -377,6 +377,51 @@ h1,h2,h3,.number,.wordmark,.bar h2,.detail .value,
   background:#ffb7c6;box-shadow:0 0 0 3px rgba(255,183,198,.10)}
 @media(max-width:690px){.kvn-history-health{font-size:9px;margin-bottom:10px}}
 
+
+/* CCU-focused quick view: real verified observations only. */
+.kvn-live-pulse{position:relative;overflow:hidden;margin:16px 0 44px;padding:24px 28px 21px;
+  border-radius:22px;border:1px solid rgba(107,184,255,.32);
+  background:radial-gradient(ellipse at 95% 0%,rgba(45,122,239,.16),transparent 58%),
+  linear-gradient(145deg,rgba(16,43,88,.96),rgba(7,21,48,.98));
+  box-shadow:0 20px 50px rgba(0,12,37,.2),inset 0 1px rgba(225,242,255,.065)}
+.kvn-live-pulse__head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.kvn-live-pulse__eyebrow{display:block;font:800 10px 'Inter',system-ui,sans-serif;letter-spacing:.15em;color:#80b5eb;margin-bottom:7px}
+.kvn-live-pulse__title{margin:0;font:750 clamp(21px,2.35vw,28px)/1.15 'Space Grotesk','Inter',system-ui,sans-serif;color:#eef7ff;letter-spacing:-.035em}
+.kvn-live-pulse__state{display:inline-flex;align-items:center;gap:9px;padding:8px 12px;border-radius:999px;
+  border:1px solid rgba(101,182,254,.28);background:rgba(42,107,186,.11);
+  font:800 10px 'Inter',system-ui,sans-serif;letter-spacing:.08em;color:#9fccfc}
+.kvn-live-pulse__state:before{content:'';width:7px;height:7px;border-radius:50%;background:#8cb8e3}
+.kvn-live-pulse__state[data-mode="live"]{color:#a9e4ff;border-color:rgba(90,202,255,.4)}
+.kvn-live-pulse__state[data-mode="live"]:before{background:#5bd0ff;box-shadow:0 0 0 4px rgba(91,208,255,.12)}
+.kvn-live-pulse__state[data-mode="delayed"]:before,.kvn-live-pulse__state[data-mode="cached"]:before{background:#a3aebe}
+.kvn-live-pulse__grid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,.9fr) minmax(0,.9fr) minmax(180px,1.35fr);gap:12px}
+.kvn-live-pulse__metric,.kvn-live-pulse__trace{min-width:0;padding:17px 18px;border-radius:15px;
+  border:1px solid rgba(101,166,238,.17);background:rgba(7,24,55,.54)}
+.kvn-live-pulse__metric small,.kvn-live-pulse__trace small{display:block;color:#88b2e1;font:750 10px 'Inter',system-ui,sans-serif;letter-spacing:.095em}
+.kvn-live-pulse__metric strong{display:block;margin:13px 0 7px;color:#f0f8ff;
+  font:760 clamp(25px,2.65vw,39px)/1 'Space Grotesk','Inter',system-ui,sans-serif;
+  letter-spacing:-.055em;font-variant-numeric:tabular-nums}
+.kvn-live-pulse__metric strong[data-trend="up"]{color:#86dfff}
+.kvn-live-pulse__metric strong[data-trend="down"]{color:#b2c7e5}
+.kvn-live-pulse__metric em{font:500 10px/1.45 'Inter',system-ui,sans-serif;font-style:normal;color:#849fbd}
+.kvn-live-pulse__trace{display:flex;flex-direction:column;justify-content:space-between}
+.kvn-live-pulse__trace svg{display:block;overflow:visible;width:100%;height:60px;margin-top:8px}
+.kvn-live-pulse__trace path{fill:none;stroke:#67c7ff;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round;filter:drop-shadow(0 0 5px rgba(87,194,255,.3))}
+.kvn-live-pulse__trace circle{fill:#b4e9ff;stroke:#153f7a;stroke-width:2}
+.kvn-live-pulse__trace-note{margin-top:5px;font:500 10px 'Inter',system-ui,sans-serif;color:#829dbb}
+.kvn-live-pulse__foot{display:flex;justify-content:space-between;gap:8px 18px;flex-wrap:wrap;
+  padding-top:17px;margin-top:16px;border-top:1px solid rgba(107,175,236,.15);
+  font:550 11px/1.5 'Inter',system-ui,sans-serif;color:#91afd2}
+@media(max-width:950px){.kvn-live-pulse__grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.kvn-live-pulse__trace{grid-column:1/-1}.kvn-live-pulse__trace svg{height:75px}}
+@media(max-width:590px){.kvn-live-pulse{margin:12px 0 35px;padding:20px 15px;border-radius:18px}
+.kvn-live-pulse__head{margin-bottom:16px}.kvn-live-pulse__grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.kvn-live-pulse__metric,.kvn-live-pulse__trace{padding:13px;border-radius:12px}
+.kvn-live-pulse__metric:first-child{grid-column:1/-1}
+.kvn-live-pulse__metric strong{font-size:30px}
+.kvn-live-pulse__foot{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.kvn-live-pulse__trace path{filter:none}}
+
 `;
 export const liveIntelligenceJS = String.raw`
 /* Event-driven CCU presentation: never alters or estimates Roblox data. */
@@ -646,6 +691,145 @@ if(chartPanel){
         'Waiting for sufficient real measurements across both full periods.');
     }
   });
+}
+
+
+// LIVE PLAYER PULSE: a small at-a-glance CCU control room.
+// All values and graph points come from verified Roblox samples already loaded
+// by the existing dashboard. No new network calls and no simulated data.
+const pulseGridAnchor=document.querySelector('#dashboard .metrics');
+if(pulseGridAnchor){
+  const pulsePanel=document.createElement('section');
+  pulsePanel.className='kvn-live-pulse';
+  pulsePanel.setAttribute('aria-label','Live Player Pulse');
+  pulsePanel.innerHTML=
+    '<div class="kvn-live-pulse__head"><div><span class="kvn-live-pulse__eyebrow">PLAYER ACTIVITY / LIVE MONITOR</span><h3 class="kvn-live-pulse__title">Live Player Pulse</h3></div><span class="kvn-live-pulse__state" data-mode="loading" id="kvnPulseState" role="status">WAITING FOR ROBLOX</span></div>'+
+    '<div class="kvn-live-pulse__grid">'+
+      '<div class="kvn-live-pulse__metric"><small>LAST VERIFIED CCU</small><strong id="kvnPulseNow">—</strong><em>Concurrent players, not daily users</em></div>'+
+      '<div class="kvn-live-pulse__metric"><small>~15M NET CHANGE</small><strong id="kvnPulseChange">—</strong><em id="kvnPulseChangeNote">Awaiting measured history</em></div>'+
+      '<div class="kvn-live-pulse__metric"><small>1H MEASURED PEAK</small><strong id="kvnPulsePeak">—</strong><em id="kvnPulsePeakNote">Awaiting 45m of coverage</em></div>'+
+      '<div class="kvn-live-pulse__trace"><small>LAST 60 MINUTES / VERIFIED TRACE</small><svg viewBox="0 0 320 70" preserveAspectRatio="none" aria-hidden="true"><path id="kvnPulsePath"></path><circle id="kvnPulsePoint" r="4" visibility="hidden"></circle></svg><span id="kvnPulseTraceNote" class="kvn-live-pulse__trace-note">Collecting real measurements</span></div>'+
+    '</div><div class="kvn-live-pulse__foot"><span id="kvnPulseFreshness">No verified sample yet</span><span>Automatic check every 20 seconds · Roblox public API</span></div>';
+  pulseGridAnchor.after(pulsePanel);
+
+  const pulseState=document.getElementById('kvnPulseState');
+  const pulseNow=document.getElementById('kvnPulseNow');
+  const pulseChange=document.getElementById('kvnPulseChange');
+  const pulseChangeNote=document.getElementById('kvnPulseChangeNote');
+  const pulsePeak=document.getElementById('kvnPulsePeak');
+  const pulsePeakNote=document.getElementById('kvnPulsePeakNote');
+  const pulsePath=document.getElementById('kvnPulsePath');
+  const pulsePoint=document.getElementById('kvnPulsePoint');
+  const pulseTraceNote=document.getElementById('kvnPulseTraceNote');
+  const pulseFreshness=document.getElementById('kvnPulseFreshness');
+  const pulseFmt=n=>n.toLocaleString('en-US');
+  let pulseSample=null;
+  let pulseRows=[];
+  let pulseDelayed=false;
+  const hourMs=60*60000;
+
+  function pulseRender(){
+    if(!pulseSample)return;
+    const now=Date.now();
+    const age=Math.max(0,now-pulseSample.timestamp);
+    const isLive=!pulseDelayed&&!pulseSample.stale&&age<=90000
+      &&pulseSample.timestamp<=now+30000;
+    const mode=isLive?'live':pulseDelayed?'delayed':'cached';
+    pulseState.dataset.mode=mode;
+    pulseState.textContent=isLive?'LIVE · VERIFIED':pulseDelayed?'REFRESH DELAYED':'LAST VERIFIED · NOT LIVE';
+    pulseNow.textContent=pulseFmt(pulseSample.playing);
+    const seconds=Math.floor(age/1000);
+    const ageText=seconds<60?seconds+'s ago':Math.floor(seconds/60)+'m ago';
+    pulseFreshness.textContent='Last verified Roblox sample: '+ageText+
+      ' · '+new Date(pulseSample.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+    // Deduplicate on timestamp; plotting never introduces interpolated samples.
+    const rows=pulseRows.filter(p=>p.t>=now-hourMs && p.t<=now+30000);
+    const values=[];
+    for(const p of rows){
+      if(values.length&&values[values.length-1].t===p.t)values[values.length-1]=p;
+      else values.push(p);
+    }
+    const cutoff=now-15*60000;
+    const previous=values.filter(p=>p.t>=cutoff-5*60000 && p.t<=cutoff+3*60000)
+      .sort((a,b)=>Math.abs(a.t-cutoff)-Math.abs(b.t-cutoff))[0];
+    if(isLive&&previous&&pulseSample.timestamp>previous.t+10*60000){
+      const diff=pulseSample.playing-previous.ccu;
+      pulseChange.textContent=(diff>0?'+':'')+pulseFmt(diff);
+      pulseChange.dataset.trend=diff>0?'up':diff<0?'down':'flat';
+      pulseChangeNote.textContent='Compared with verified sample ~15m ago';
+    }else{
+      pulseChange.textContent='—';
+      pulseChange.dataset.trend='none';
+      pulseChangeNote.textContent=isLive?'Awaiting measured 15m history':'Live comparison paused';
+    }
+
+    if(values.length>=2 && values[0].t<=now-45*60000){
+      pulsePeak.textContent=pulseFmt(Math.max(...values.map(p=>p.ccu)));
+      pulsePeakNote.textContent='Highest measured count in this hour';
+    }else{
+      pulsePeak.textContent='—';
+      pulsePeakNote.textContent='Awaiting 45m of coverage';
+    }
+
+    if(values.length<2){
+      pulsePath.setAttribute('d','');
+      pulsePoint.setAttribute('visibility','hidden');
+      pulseTraceNote.textContent='At least two verified samples needed';
+      return;
+    }
+    const nums=values.map(p=>p.ccu);
+    const min=Math.min(...nums),max=Math.max(...nums);
+    const spread=Math.max(1,max-min);
+    const coords=values.map(p=>({
+      x:6+308*(p.t-(now-hourMs))/hourMs,
+      y:60-48*(p.ccu-min)/spread
+    }));
+    let path='';
+    for(let i=0;i<coords.length;i++){
+      const p=coords[i];
+      // Break the trace when the real measurement stream has a large gap.
+      const separate=i===0||values[i].t-values[i-1].t>10*60000;
+      path+=(separate?'M':'L')+p.x.toFixed(2)+' '+p.y.toFixed(2)+' ';
+    }
+    pulsePath.setAttribute('d',path.trim());
+    const end=coords[coords.length-1];
+    pulsePoint.setAttribute('cx',end.x.toFixed(2));
+    pulsePoint.setAttribute('cy',end.y.toFixed(2));
+    pulsePoint.setAttribute('visibility','visible');
+    pulseTraceNote.textContent=values.length+' measured points · missing intervals left blank';
+  }
+
+  window.addEventListener('kvn:verified-stats',event=>{
+    const detail=event.detail||{},d=detail.stats;
+    if(!d||!Number.isSafeInteger(d.playing)||d.playing<0||
+      !Number.isFinite(d.timestamp)||d.timestamp<=0||
+      d.timestamp>Date.now()+30000)return;
+    pulseSample={playing:d.playing,timestamp:d.timestamp,stale:Boolean(d.stale)};
+    pulseDelayed=false;
+    const rows=Array.isArray(detail.history)?detail.history:[];
+    pulseRows=rows.filter(p=>p&&Number.isFinite(p.t)&&Number.isSafeInteger(p.ccu)
+      &&p.ccu>=0&&p.t>0&&p.t<=Date.now()+30000)
+      .map(p=>({t:p.t,ccu:p.ccu}));
+    // A stale API fallback must not become a fresh trend point.
+    if(!d.stale)pulseRows.push({t:d.timestamp,ccu:d.playing});
+    pulseRows.sort((a,b)=>a.t-b.t);
+    pulseRender();
+  });
+  window.addEventListener('kvn:stats-unavailable',()=>{
+    pulseDelayed=true;
+    if(pulseSample)pulseRender();
+    else{
+      pulseState.dataset.mode='delayed';
+      pulseState.textContent='ROBLOX TEMPORARILY UNAVAILABLE';
+      pulseFreshness.textContent='Automatic retry continues · no figures estimated';
+    }
+  });
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)pulseRender();
+  });
+  // Update the freshness label, not the API. Background tabs do no work.
+  setInterval(()=>{if(!document.hidden)pulseRender();},15000);
 }
 
 })();

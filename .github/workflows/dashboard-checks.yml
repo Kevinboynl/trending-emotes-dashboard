@@ -62,3 +62,5 @@ jobs:
           node-version: '22'
       - name: Inspect live HTML and public CCU endpoints (read-only)
         run: node scripts/diagnose-live.mjs
+      - name: Extract KVN Studios public design tokens (read-only)
+        run: node scripts/inspect-studios-reference.mjs

@@ -132,6 +132,44 @@ try{
     });
     assert(rect.documentWidth<=width+2,'Page horizontally overflows at '+width+': '+JSON.stringify(rect));
 
+    // KVN Studios typography & brand: Archivo display + Outfit body,
+    // and the terminal ! on EMOTES! must be fully visible at every width.
+    await page.evaluate(()=>document.fonts.ready);
+    const typeCheck=await page.evaluate(()=>{
+      const heading=document.querySelector('.hero h1');
+      const headline=document.querySelector('.hero .kvn-line-two');
+      const text=headline?.firstChild;
+      const last=text?.textContent?.lastIndexOf('!')??-1;
+      const copy=heading?.closest('.hero-copy')?.getBoundingClientRect();
+      const frame=headline?.getBoundingClientRect();
+      let punctuation=null;
+      if(text&&last>=0){
+        const range=document.createRange();
+        range.setStart(text,last);range.setEnd(text,last+1);
+        const r=range.getBoundingClientRect();
+        punctuation={left:r.left,right:r.right,top:r.top,bottom:r.bottom};
+      }
+      return {
+        headingFont:getComputedStyle(heading).fontFamily,
+        bodyFont:getComputedStyle(document.body).fontFamily,
+        background:getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(),
+        accent:getComputedStyle(document.documentElement).getPropertyValue('--green').trim(),
+        headline:headline?.textContent,frame:frame?.toJSON(),copy:copy?.toJSON(),
+        punctuation,overflow:headline?.scrollWidth-headline?.clientWidth
+      };
+    });
+    assert.match(typeCheck.headingFont,/Archivo/,'KVN Studios headline font missing at '+width);
+    assert.match(typeCheck.bodyFont,/Outfit/,'KVN Studios body font missing at '+width);
+    assert.equal(typeCheck.background,'#080e1c','Incorrect KVN Studios background at '+width);
+    assert.equal(typeCheck.accent,'#31aaff','Incorrect KVN Studios blue at '+width);
+    assert(typeCheck.punctuation && typeCheck.copy &&
+      typeCheck.punctuation.left>=typeCheck.copy.left-2 &&
+      typeCheck.punctuation.right<=typeCheck.copy.right-3,
+      'EMOTES! exclamation is clipped at '+width+': '+JSON.stringify(typeCheck));
+    assert(typeCheck.overflow<=3,'EMOTES! line overflows its own box at '+width+
+      ': '+JSON.stringify(typeCheck));
+
+
     // The live CCU must dominate the desktop overview, while staying
     // full-width above compact metric cards on mobile and tablets.
     const overview=await page.evaluate(()=>{

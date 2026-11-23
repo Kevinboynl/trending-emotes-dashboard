@@ -6,7 +6,7 @@ html{scroll-behavior:smooth}
 body{overflow-x:clip}
 body::before{background:radial-gradient(ellipse 62% 39% at 82% 10%,rgba(32,91,215,.25),transparent 76%),radial-gradient(ellipse 42% 44% at 0% 46%,rgba(15,54,147,.14),transparent 80%),linear-gradient(180deg,#050b1e 0%,#080e23 56%,#050a17 100%)}
 body>main,body>.ticker,body>footer{position:relative;z-index:1}
-.kvn-cursor-glow{position:fixed;left:0;top:0;width:min(570px,55vw);height:min(570px,55vw);border-radius:50%;z-index:0;pointer-events:none;opacity:0;background:radial-gradient(circle,rgba(48,129,255,.22) 0%,rgba(38,105,249,.12) 28%,rgba(24,78,198,.045) 47%,transparent 73%);filter:blur(18px);transform:translate3d(-1000px,-1000px,0) translate(-50%,-50%);transition:opacity .4s ease;will-change:transform,opacity;mix-blend-mode:screen}
+
 .kvn-scroll-progress{position:fixed;inset:0 0 auto;height:2px;z-index:300;pointer-events:none;background:linear-gradient(90deg,var(--blue),var(--cyan),#a8e3ff);transform:scaleX(0);transform-origin:left center;box-shadow:0 0 14px var(--cyan);will-change:transform}
 .kvn-back-top{position:fixed;z-index:120;right:25px;bottom:25px;display:grid;place-items:center;width:46px;height:46px;border:1px solid color-mix(in srgb,var(--cyan) 40%,transparent);border-radius:15px;background:rgba(10,29,67,.83);color:var(--white);box-shadow:0 14px 40px rgba(0,0,0,.38);backdrop-filter:blur(16px);font:700 21px system-ui;cursor:pointer;opacity:0;visibility:hidden;transform:translateY(15px);transition:opacity .3s,transform .4s var(--studio-ease),visibility .3s,background .3s}
 .kvn-back-top.visible{opacity:1;visibility:visible;transform:translateY(0)}
@@ -97,8 +97,8 @@ footer{border-top-color:rgba(89,157,255,.25)}
 @media(max-width:890px){.nav{height:auto}.hero{min-height:0;padding-top:48px;padding-bottom:42px}.hero .visual{height:300px}.hero .hero-copy h1{font-size:clamp(56px,8vw,84px)}.kvn-hero-rail{display:none}}
 @media(max-width:690px){.wrap{padding-left:18px;padding-right:18px}.nav{height:auto}.hero{padding-top:34px;padding-bottom:30px;overflow:hidden}.hero .eyebrow{font-size:9px;letter-spacing:1.5px;padding:9px 12px}.hero .hero-copy h1{font-size:clamp(54px,13vw,83px);letter-spacing:-.072em;margin:23px 0 18px}.hero .lead{font-size:13px;line-height:1.75}.hero .visual{height:270px}.hero .hero-poster{width:190px;border-radius:29px}.hero .floatbadge{top:12%;right:0}.kvn-stars{opacity:.55}.bar[data-studio-index]::after{font-size:76px;top:4px}.bar h2{font-size:clamp(31px,7.5vw,44px)}.metrics{gap:10px}.metrics .card .metric-label{letter-spacing:.75px}.metrics .card:not(.primary) .number{font-size:clamp(24px,7vw,37px)}.signal-strip{gap:10px}.kvn-back-top{right:15px;bottom:15px;width:42px;height:42px;border-radius:13px}.hero .hero-poster img:hover{transform:none}}
 @media(max-width:380px){.hero .hero-copy h1{font-size:clamp(50px,13vw,65px)}.hero .eyebrow{letter-spacing:.8px}.hero .hero-actions{flex-wrap:wrap}.hero .visual{height:255px}}
-@media(hover:none),(pointer:coarse){.kvn-cursor-glow{display:none}.metric-switch button:hover,.switches button:hover,.tabs button:hover{transform:none}.hero .hero-poster:hover img{transform:none}}
-@media(prefers-reduced-motion:reduce){.kvn-stars,.kvn-cursor-glow{display:none}.hero .hero-poster,.hero .orbit,.hero .halo,.kvn-empty-signal i{animation:none!important}.hero .hero-poster{transform:none}.playbtn::after{display:none}.kvn-back-top{transition:none}}
+@media(hover:none),(pointer:coarse){.metric-switch button:hover,.switches button:hover,.tabs button:hover{transform:none}.hero .hero-poster:hover img{transform:none}}
+@media(prefers-reduced-motion:reduce){.kvn-stars,.hero .hero-poster,.hero .orbit,.hero .halo,.kvn-empty-signal i{animation:none!important}.hero .hero-poster{transform:none}.playbtn::after{display:none}.kvn-back-top{transition:none}}
 /* V2: cinematic blue side ambience, visible in real desktop gutters. */
 .kvn-sidefx{
   position:fixed;left:0;top:65px;bottom:0;

@@ -263,6 +263,8 @@ try{
         await page.evaluate(()=>stats()); // Real dashboard function; fixture is local-only.
       };
       assert.equal(await page.locator('#playing').getAttribute('data-value'),'48');
+      assert.equal(await page.locator('#heroBadgeStatus').innerText(),'LIVE CCU',
+        'Hero must show LIVE only after a verified Roblox response');
       await setTestCCU(51);
       const card=page.locator('.metrics .primary'),chip=page.locator('.kvn-ccu-change');
       assert.equal(await card.getAttribute('data-motion'),'up','Missing CCU rise pulse');
@@ -301,6 +303,8 @@ try{
       await page.reload({waitUntil:'domcontentloaded'});
       assert.equal(await page.locator('#playing').getAttribute('data-value'),'49',
         'Reload must initially display last actually visible CCU, not latest fetched');
+      assert.equal(await page.locator('#heroBadgeStatus').innerText(),'CACHED CCU',
+        'Saved CCU must not say LIVE while a new response is pending');
       assert.equal(await page.locator('.kvn-ccu-change').isVisible(),false,
         'Return animation must wait for a newer verified response');
       await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='62',{},{timeout:6000});
@@ -311,6 +315,8 @@ try{
       assert.equal(await page.locator('.metrics .primary').getAttribute('data-motion'),'up');
       await page.screenshot({path:artifactDir+'/return-ccu-up-390.png'});
       assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).playing,visibleKey),62);
+      assert.equal(await page.locator('#heroBadgeStatus').innerText(),'LIVE CCU',
+        'A verified new Roblox sample must restore live status');
       await page.request.get(localURL+'__test__/settings?delay=0');
 
       // A different authoritative timestamp but unchanged CCU must never
@@ -355,6 +361,8 @@ try{
       await page.evaluate(()=>resumeLiveStats());
       await page.waitForFunction(()=>document.querySelector('#status')?.textContent?.includes('CACHED'),null,{timeout:3000});
       assert.equal(await page.locator('#playing').getAttribute('data-value'),'48');
+      assert.equal(await page.locator('#heroBadgeStatus').innerText(),'CACHED CCU',
+        'Stale Roblox data must not be marked LIVE in hero');
       assert.equal(await page.locator('.kvn-ccu-change').isVisible(),false);
       assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).playing,visibleKey),48);
       await page.request.get(localURL+'__test__/ccu?value=55');

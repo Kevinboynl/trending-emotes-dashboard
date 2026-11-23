@@ -148,33 +148,81 @@ async function loadOperation(metric, universeId, key, now, fetcher) {
   };
 }
 /* Concurrent dashboard visits share the same expensive analytics refresh. */
+// A public, explicitly approved aggregate cache. D1 persists the last REAL
+// Roblox Analytics result across Worker isolates and deployment restarts.
+// The key includes the full authorized metric selection. Deleting a metric
+// from PUBLIC_ANALYTICS_METRICS immediately excludes old cached results.
+const SHARED_ANALYTICS_FRESH_MS=15*60*1000;
+const SHARED_ANALYTICS_MAX_AGE_MS=72*60*60*1000;
+async function readSharedAnalytics(db,key,approved,now){
+  if(!db)return null;
+  try{
+    const row=await db.prepare(
+      'SELECT updated_at,payload FROM public_analytics_cache WHERE cache_key=?'
+    ).bind(key).first();
+    if(!row||!Number.isFinite(row.updated_at)||
+      row.updated_at>now+30000||now-row.updated_at>SHARED_ANALYTICS_MAX_AGE_MS)return null;
+    const body=JSON.parse(row.payload);
+    if(!body||!['ready','partial'].includes(body.state)||
+      !Array.isArray(body.metrics)||body.metrics.length!==approved.length||
+      !body.metrics.every((m,i)=>m&&m.id===approved[i]))return null;
+    if(!body.metrics.some(m=>m.state==='ready'&&Number.isFinite(m.latest?.value)))return null;
+    return {body,updatedAt:row.updated_at};
+  }catch{return null;}
+}
+async function saveSharedAnalytics(db,key,body,updatedAt){
+  if(!db)return;
+  try{
+    await db.prepare(
+      'CREATE TABLE IF NOT EXISTS public_analytics_cache ('+
+      'cache_key TEXT PRIMARY KEY,updated_at INTEGER NOT NULL,payload TEXT NOT NULL)'
+    ).run();
+    await db.prepare(
+      'INSERT INTO public_analytics_cache (cache_key,updated_at,payload) VALUES (?,?,?)'+
+      ' ON CONFLICT(cache_key) DO UPDATE SET updated_at=excluded.updated_at,'+
+      'payload=excluded.payload WHERE excluded.updated_at>=public_analytics_cache.updated_at'
+    ).bind(key,updatedAt,JSON.stringify(body)).run();
+  }catch{
+    // D1 caching must never prevent normal live public analytics responses.
+  }
+}
+function sharedAnalyticsResponse(saved,fresh){
+  return {...saved.body,cacheState:fresh?'shared_verified':'previously_verified',
+    lastVerifiedAt:new Date(saved.updatedAt).toISOString(),
+    previouslyVerified:!fresh,refreshing:!fresh};
+}
+
 const pendingAnalytics = new Map();
-export async function publicAnalyticsResponse(env,fetcher=fetch,now=Date.now()){
+export async function publicAnalyticsResponse(env,fetcher=fetch,now=Date.now(),ctx=null){
   const runtime=env||{};
   const selected=selectedMetrics(runtime);
-  if (!selected.length) return output({
+  if(!selected.length)return output({
     state:'disabled',metrics:[],note:'No aggregated statistics have been selected for public display.'
   });
-  if (!runtime.ROBLOX_ANALYTICS_API_KEY) return output({
-    state:'not_configured',metrics:[],
-    note:'Cloudflare Secret is missing. No private statistics are published.'
+  if(!runtime.ROBLOX_ANALYTICS_API_KEY)return output({
+    state:'not_configured',metrics:[],note:'Cloudflare Secret is missing. No private statistics are published.'
   });
   const cachedKey=selected.join('|')+'|'+String(runtime.ROBLOX_UNIVERSE_ID||'');
   const hit=cache.get(cachedKey);
-  if(hit && hit.until>now) return output(hit.body);
+  if(hit&&hit.until>now)return output(hit.body);
 
-  // A single isolate must never create duplicate requests for every website
-  // visitor. The Promise resolves to plain JSON, NOT a shared Response stream.
+  // Read a single shared aggregate, rather than starting twenty-plus
+  // Open Cloud operations on each new cold Worker instance.
+  const saved=await readSharedAnalytics(runtime.DB,cachedKey,selected,now);
+  const savedAge=saved?now-saved.updatedAt:Infinity;
+  if(saved&&savedAge<=SHARED_ANALYTICS_FRESH_MS){
+    const body=sharedAnalyticsResponse(saved,true);
+    cache.set(cachedKey,{body,until:Date.now()+60000});
+    return output(body);
+  }
+
   let running=pendingAnalytics.get(cachedKey);
   if(!running){
     running=(async()=>{
       try{
         const universeId=await getUniverse(runtime,fetcher);
-        // Limit outgoing analytics concurrency. A dashboard with 18 public
-        // metrics must not blast the Roblox API with 18 requests at once.
         const results=new Array(selected.length);
-        let next=0;
-        let expired=false;
+        let next=0,expired=false;
         async function worker(){
           while(!expired&&next<selected.length){
             const i=next++;
@@ -182,49 +230,74 @@ export async function publicAnalyticsResponse(env,fetcher=fetch,now=Date.now()){
               results[i]={status:'fulfilled',value:await loadOperation(
                 selected[i],universeId,runtime.ROBLOX_ANALYTICS_API_KEY,now,fetcher
               )};
-            }catch(reason){
-              results[i]={status:'rejected',reason};
-            }
+            }catch(reason){results[i]={status:'rejected',reason};}
           }
         }
-        // A slow Roblox operation must not keep the whole website spinning.
         let deadlineTimer;
         try{
           await Promise.race([
             Promise.all(Array.from({length:Math.min(6,selected.length)},()=>worker())),
             new Promise(resolve=>{deadlineTimer=setTimeout(()=>{
-              expired=true;
-              resolve();
+              expired=true;resolve();
             },14000);})
           ]);
         }finally{clearTimeout(deadlineTimer);}
+
+        const oldById=new Map((saved?.body?.metrics||[]).map(m=>[m.id,m]));
         const metrics=selected.map((id,i)=>{
           const info=ANALYTICS_CATALOG[id];
+          if(results[i]?.status==='fulfilled'&&results[i].value?.state==='ready')
+            return {id,...info,...results[i].value};
+          const earlier=oldById.get(id);
+          if(earlier?.state==='ready'&&Number.isFinite(earlier.latest?.value)){
+            return {...earlier,previouslyVerified:true,
+              previouslyVerifiedAt:earlier.previouslyVerifiedAt||
+                new Date(saved.updatedAt).toISOString()};
+          }
           if(results[i]?.status==='fulfilled')return {id,...info,...results[i].value};
           const reason=results[i]?failureReason(results[i].reason):'timeout';
           return {id,...info,state:'unavailable',reason,points:[],latest:null};
         });
         const ready=metrics.filter(m=>m.state==='ready').length;
+        const freshlyReady=metrics.filter(m=>m.state==='ready'&&!m.previouslyVerified).length;
         const pending=metrics.filter(m=>m.state==='pending').length;
-        const state=ready===selected.length?'ready':
+        const previous=metrics.some(m=>m.previouslyVerified);
+        const state=ready===selected.length&&!previous?'ready':
           ready?'partial':pending?'pending':'unavailable';
-        const reasons=[...new Set(metrics.filter(m=>m.state!=='ready').map(m=>m.reason).filter(Boolean))];
+        const reasons=[...new Set(metrics.filter(m=>m.state!=='ready')
+          .map(m=>m.reason).filter(Boolean))];
         const body={
           state,metrics,publishedAt:new Date(now).toISOString(),
           source:'Roblox Open Cloud Analytics Query API',
           window:'Last 31 complete UTC days (latest yesterday)',
+          ...(previous?{previouslyVerified:true,
+            note:'Some metrics are earlier verified Roblox results, not new measurements.'}:{}),
           ...(reasons.length?{reason:reasons.length===1?reasons[0]:'mixed',
-            note:publicReasonMessage(reasons[0])}:{})
+            note:previous?
+              'Some metrics use previously verified Roblox data; unavailable metrics will be retried.':
+              publicReasonMessage(reasons[0])}:{})
         };
-        // Cache only this explicitly approved aggregate result.
-        cache.set(cachedKey,{body,until:Date.now()+(ready===selected.length?TTL:ready?120000:45000)});
+        // Never replace a saved verified aggregate with a temporary all-failed
+        // API result; that produced the empty Official Insights screenshot.
+        if(saved&&!freshlyReady){
+          const fallback=sharedAnalyticsResponse(saved,false);
+          cache.set(cachedKey,{body:fallback,until:Date.now()+60000});
+          return {body:fallback,status:200};
+        }
+        cache.set(cachedKey,{body,until:Date.now()+
+          (ready===selected.length?TTL:ready?120000:45000)});
+        if(freshlyReady&&runtime.DB){
+          const write=saveSharedAnalytics(runtime.DB,cachedKey,body,Date.now());
+          if(ctx&&typeof ctx.waitUntil==='function')ctx.waitUntil(write);
+          else await write;
+        }
         return {body,status:200};
       }catch(err){
+        if(saved)return {status:200,body:sharedAnalyticsResponse(saved,false)};
         const reason=failureReason(err);
-        return {
-          status:503,
-          body:{state:'unavailable',reason,metrics:[],note:publicReasonMessage(reason)}
-        };
+        return {status:503,body:{
+          state:'unavailable',reason,metrics:[],note:publicReasonMessage(reason)
+        }};
       }
     })();
     pendingAnalytics.set(cachedKey,running);
@@ -232,9 +305,19 @@ export async function publicAnalyticsResponse(env,fetcher=fetch,now=Date.now()){
       if(pendingAnalytics.get(cachedKey)===running)pendingAnalytics.delete(cachedKey);
     });
   }
+  // Stale-but-verified D1 data displays immediately while the latest Open
+  // Cloud queries refresh in the background, never as newly measured data.
+  if(saved){
+    if(ctx&&typeof ctx.waitUntil==='function')ctx.waitUntil(running.then(()=>{}));
+    else void running.then(()=>{});
+    const body=sharedAnalyticsResponse(saved,false);
+    cache.set(cachedKey,{body,until:Date.now()+45000});
+    return output(body);
+  }
   const result=await running;
   return output(result.body,result.status);
 }
+
 export const publicAnalyticsStyles = String.raw`
 #officialMetrics{scroll-margin-top:100px}
 .official-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}

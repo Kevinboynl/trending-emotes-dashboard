@@ -204,7 +204,7 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;bo
 </style></head><body>
 <div class="noise"></div>
 <header class="top"><div class="wrap nav"><a href="#top" class="wordmark">KVN <b>STUDIOS</b><span class="slash">/</span><small>INTELLIGENCE</small></a><div class="navlinks"><a href="#dashboard">OVERVIEW</a><a href="#analytics">ANALYTICS</a><a href="#details">DEEP DIVE</a></div><div class="nav-right"><span class="livepill"><span class="pulse" id="pulse"></span><span id="status">CONNECTING</span></span><a class="playbtn" href="https://www.roblox.com/games/134944031090971/" target="_blank" rel="noopener">PLAY GAME ↗</a></div></div></header>
-<main id="top"><section class="hero wrap"><div><div class="eyebrow">THE KVN ANALYTICS LAB</div><h1>TRENDING<br><span>EMOTES!</span></h1><p class="lead">Real-time insights into your Roblox experience. Live players, growth, engagement, and historical trends — all in one place.</p><div class="kvn-hero-inline-live"><span class="kvn-hero-live-dot" aria-hidden="true"></span><span>LIVE PLAYERS</span><strong id="heroInlineCCU" aria-live="off">—</strong><small>Verified Roblox CCU</small></div><div class="hero-actions"><a class="playbtn" href="#dashboard">EXPLORE DASHBOARD ↓</a><a class="outlinebtn" href="https://www.roblox.com/communities/15819510" target="_blank" rel="noopener noreferrer">KVN STUDIOS ↗</a><span class="tiny">PLACE ID: 134944031090971</span></div></div><div class="visual"><div class="orbit"></div><div class="orbit"></div><div class="halo"></div><div class="hero-poster" id="poster"><span class="fallback">✳</span></div><div class="floatbadge">● LIVE CCU <strong id="heroCCU">—</strong><span class="small">PLAYERS RIGHT NOW</span></div><div class="spark sp1">✦</div><div class="spark sp2">✳</div></div></section>
+<main id="top"><section class="hero wrap"><div><div class="eyebrow">THE KVN ANALYTICS LAB</div><h1>TRENDING<br><span>EMOTES!</span></h1><p class="lead">Real-time insights into your Roblox experience. Live players, growth, engagement, and historical trends — all in one place.</p><div class="kvn-hero-inline-live"><span class="kvn-hero-live-dot" aria-hidden="true"></span><span id="heroInlineStatus">CHECKING CCU</span><strong id="heroInlineCCU" aria-live="off">—</strong><small>Verified Roblox CCU</small></div><div class="hero-actions"><a class="playbtn" href="#dashboard">EXPLORE DASHBOARD ↓</a><a class="outlinebtn" href="https://www.roblox.com/communities/15819510" target="_blank" rel="noopener noreferrer">KVN STUDIOS ↗</a><span class="tiny">PLACE ID: 134944031090971</span></div></div><div class="visual"><div class="orbit"></div><div class="orbit"></div><div class="halo"></div><div class="hero-poster" id="poster"><span class="fallback">✳</span></div><div class="floatbadge">● <span id="heroBadgeStatus">CHECKING CCU</span> <strong id="heroCCU">—</strong><span class="small">PLAYERS RIGHT NOW</span></div><div class="spark sp1">✦</div><div class="spark sp2">✳</div></div></section>
 <div class="ticker" aria-hidden="true"><div class="ticker-inner">ROBLOX ANALYTICS <strong>✳</strong> PLAYERS IN REAL TIME <strong>✳</strong> POWERED BY KVN STUDIOS <strong>✳</strong> TRENDING EMOTES! <strong>✳</strong> ROBLOX ANALYTICS <strong>✳</strong> PLAYERS IN REAL TIME <strong>✳</strong> POWERED BY KVN STUDIOS <strong>✳</strong> TRENDING EMOTES! <strong>✳</strong></div></div>
 <section class="wrap" id="dashboard"><div class="bar reveal"><div><div class="sec-label">01 / EXPERIENCE OVERVIEW</div><h2>THE NUMBERS<span style="color:var(--green)">.</span></h2><p class="desc">Verified Roblox statistics, checked automatically every 20 seconds.</p></div><div class="updated"><span class="pulse"></span><span id="lastUpdate">Waiting for Roblox...</span></div></div>
 <div class="metrics reveal"><div class="card primary"><div class="card-content"><div class="label-row"><span class="metric-label">CONCURRENT PLAYERS</span><span class="corner">↗</span></div><div class="number" id="playing">—</div><div class="metric-info">Players enjoying TRENDING EMOTES! right now.</div></div><div class="metric-bottom"><span><span class="pulse"></span>LIVE ROBLOX API</span><span>CHECKS EVERY 20 SEC</span></div></div>
@@ -241,6 +241,17 @@ function storeVerifiedStats(value) {
     }));
   } catch {}
 }
+function setHeroCCUState(mode){
+  const label=mode==='live'?'LIVE CCU':mode==='cached'?'CACHED CCU':
+    mode==='unavailable'?'CCU UNAVAILABLE':'CHECKING CCU';
+  const inline=mode==='live'?'LIVE PLAYERS':mode==='cached'?'LAST VERIFIED PLAYERS':
+    mode==='unavailable'?'PLAYERS UNAVAILABLE':'CHECKING PLAYERS';
+  const badge=$('heroBadgeStatus'),summary=$('heroInlineStatus');
+  if(badge)badge.textContent=label;
+  if(summary)summary.textContent=inline;
+  const hero=document.querySelector('.hero');
+  if(hero)hero.dataset.ccuFreshness=mode;
+}
 function restoreVerifiedStats() {
   try {
     const d=JSON.parse(localStorage.getItem(LAST_GOOD_STATS_KEY)||'null');
@@ -256,6 +267,7 @@ function restoreVerifiedStats() {
     }
     if(d.name)$('gameTitle').textContent=d.name;
     loadImage(d.icon,'poster',true);loadImage(d.thumbnail,'cover',true);loadImage(d.icon,'gameIcon',false);
+    setHeroCCUState('cached');
     $('lastUpdate').textContent='Last verified Roblox sample: '+new Date(d.timestamp).toLocaleString('en-US')+' (cached)';
     return true;
   }catch{return false;}
@@ -298,6 +310,7 @@ function displaySavedVisibleCCU(){
   animateNumber('playing',lastVisibleCCU.playing);
   animateNumber('heroCCU',lastVisibleCCU.playing);
   animateNumber('heroInlineCCU',lastVisibleCCU.playing);
+  setHeroCCUState('cached');
   $('lastUpdate').textContent='Previous verified CCU: '+
     new Date(lastVisibleCCU.timestamp).toLocaleString('en-GB')+' · checking for updates';
 }
@@ -486,6 +499,7 @@ async function stats(){
       loadImage(d.thumbnail,'cover',true);
       loadImage(d.icon,'gameIcon',false);
       state(!isAuthoritative?'CACHED • WAITING FOR ROBLOX':'LIVE • CONNECTED',!isAuthoritative);
+      setHeroCCUState(isAuthoritative?'live':'cached');
       if(Number.isFinite(d.timestamp)){
         $('lastUpdate').textContent=(!isAuthoritative?'Last verified (cached): ':'Last verified sample: ')+
           new Date(d.timestamp).toLocaleString('en-GB');
@@ -522,6 +536,7 @@ async function stats(){
     }catch(err){
       if(document.hidden||visitorAway||requestVisibilityEpoch!==visibilityEpoch)return;
       state('ROBLOX TEMPORARILY UNAVAILABLE',true);
+      setHeroCCUState(lastVisibleCCU||currentStats?'cached':'unavailable');
       if(lastVisibleCCU&&validVisibleSnapshot(lastVisibleCCU)){
         $('lastUpdate').textContent='Refresh delayed · last visible verified sample: '+
           new Date(lastVisibleCCU.timestamp).toLocaleString('en-GB');
@@ -746,6 +761,7 @@ setInterval(()=>{if(!document.hidden&&!visitorAway)stats();},LIVE_POLL_MS);
 function markVisitorAway(){
   if(visitorAway)return;
   visitorAway=true;
+  setHeroCCUState(lastVisibleCCU?'cached':'checking');
   visibilityEpoch++;
   returnComparisonPending=Boolean(lastVisibleCCU&&validVisibleSnapshot(lastVisibleCCU));
 }

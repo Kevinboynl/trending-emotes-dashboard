@@ -5,12 +5,7 @@ import { premiumJS } from './premium-interactions.js';
 import { studioUpgradeCSS, studioUpgradeJS } from './studio-upgrade.js';
 import { cinematicCSS, cinematicJS } from './cinematic-v2.js';
 import { liveIntelligenceCSS, liveIntelligenceJS } from './live-intelligence.js';
-import { gamePulseCSS, gamePulseJS } from './game-pulse.js';
 import { pulseMarkup, pulseCSS, pulseJS } from './emote-pulse.js';
-import { pulseStationCSS, pulseStationJS } from './pulse-station.js';
-import { playerFocusCSS, playerFocusJS } from './player-focus.js';
-import { growthFocusCSS, growthFocusJS } from './growth-focus.js';
-import { controlCenterCSS, controlCenterMarkup, controlCenterJS } from './control-center.js';
 import { playerGoalCSS, playerGoalMarkup, playerGoalJS } from './player-goals.js';
 import { allowPublicApi, protectResponse, safeError, newPageNonce } from './security.js';
 /* TRENDING EMOTES — one-file Cloudflare Worker. Optional D1 binding: DB.
@@ -255,8 +250,8 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;bo
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.reveal{opacity:1;transform:none}}
 </style></head><body>
 <div class="noise"></div>
-<header class="top"><div class="wrap nav"><a href="#top" class="wordmark">KVN <b>STUDIOS</b><span class="slash">/</span><small>INTELLIGENCE</small></a><div class="navlinks"><a href="#pulse">EMOTE PULSE</a><a href="#dashboard">OVERVIEW</a><a href="#analytics">ANALYTICS</a><a href="#details">DEEP DIVE</a></div><div class="nav-right"><span class="livepill"><span class="pulse" id="pulse"></span><span id="status">CONNECTING</span></span><a class="playbtn" href="https://www.roblox.com/games/134944031090971/" target="_blank" rel="noopener">PLAY GAME ↗</a></div></div></header>
-<main id="top"><section class="hero wrap"><div><div class="eyebrow">THE LIVE EMOTE EXPERIENCE</div><h1>TRENDING<br><span>EMOTES!</span></h1><p class="lead">Feel the energy of TRENDING EMOTES! Follow live player activity, discover growth patterns, and explore verified Roblox stats in one place.</p><div class="kvn-hero-inline-live"><span class="kvn-hero-live-dot" aria-hidden="true"></span><span id="heroInlineStatus">CHECKING CCU</span><strong id="heroInlineCCU" aria-live="off">—</strong><small>Verified Roblox CCU</small></div><div class="hero-actions"><a class="playbtn" href="#pulse">EXPLORE THE PULSE ↓</a><a class="outlinebtn" href="https://www.roblox.com/communities/15819510" target="_blank" rel="noopener noreferrer">KVN STUDIOS ↗</a><span class="tiny">PLACE ID: 134944031090971</span></div></div><div class="visual"><div class="orbit"></div><div class="orbit"></div><div class="halo"></div><div class="hero-poster" id="poster"><span class="fallback">✳</span></div><div class="floatbadge">● <span id="heroBadgeStatus">CHECKING CCU</span> <strong id="heroCCU">—</strong><span class="small">PLAYERS RIGHT NOW</span></div><div class="spark sp1">✦</div><div class="spark sp2">✳</div></div></section>
+<header class="top"><div class="wrap nav"><a href="#top" class="wordmark">KVN <b>STUDIOS</b><span class="slash">/</span><small>INTELLIGENCE</small></a><div class="navlinks"><a href="#pulse">LIVE PULSE</a><a href="#dashboard">GAME STATS</a><a href="#analytics">PLAYER TRENDS</a><a href="#details">DEEP DIVE</a></div><div class="nav-right"><span class="livepill"><span class="pulse" id="statusDot"></span><span id="status">CONNECTING</span></span><a class="playbtn" href="https://www.roblox.com/games/134944031090971/" target="_blank" rel="noopener">PLAY GAME ↗</a></div></div></header>
+<main id="top"><section class="hero wrap"><div><div class="eyebrow">LIVE PLAYER INTELLIGENCE</div><h1>TRENDING<br><span>EMOTES!</span></h1><p class="lead">Your live player activity, in focus. See verified Roblox CCU, player momentum, peaks, and growth trends in one clear experience.</p><div class="kvn-hero-inline-live"><span class="kvn-hero-live-dot" aria-hidden="true"></span><span id="heroInlineStatus">CHECKING CCU</span><strong id="heroInlineCCU" aria-live="off">—</strong><small>Verified Roblox CCU</small></div><div class="hero-actions"><a class="playbtn" href="#pulse">EXPLORE THE PULSE ↓</a><a class="outlinebtn" href="https://www.roblox.com/communities/15819510" target="_blank" rel="noopener noreferrer">KVN STUDIOS ↗</a><span class="tiny">PLACE ID: 134944031090971</span></div></div><div class="visual"><div class="orbit"></div><div class="orbit"></div><div class="halo"></div><div class="hero-poster" id="poster"><span class="fallback">✳</span></div><div class="floatbadge">● <span id="heroBadgeStatus">CHECKING CCU</span> <strong id="heroCCU">—</strong><span class="small">PLAYERS RIGHT NOW</span></div><div class="spark sp1">✦</div><div class="spark sp2">✳</div></div></section>
 <div class="ticker" aria-hidden="true"><div class="ticker-inner">ROBLOX ANALYTICS <strong>✳</strong> PLAYERS IN REAL TIME <strong>✳</strong> POWERED BY KVN STUDIOS <strong>✳</strong> TRENDING EMOTES! <strong>✳</strong> ROBLOX ANALYTICS <strong>✳</strong> PLAYERS IN REAL TIME <strong>✳</strong> POWERED BY KVN STUDIOS <strong>✳</strong> TRENDING EMOTES! <strong>✳</strong></div></div>
 <section class="wrap" id="dashboard"><div class="bar reveal"><div><div class="sec-label">01 / EXPERIENCE OVERVIEW</div><h2>THE NUMBERS<span style="color:var(--green)">.</span></h2><p class="desc">Verified Roblox statistics, checked automatically every 20 seconds.</p></div><div class="updated"><span class="pulse"></span><span id="lastUpdate">Waiting for Roblox...</span></div></div>
 <div class="metrics reveal"><div class="card primary"><div class="card-content"><div class="label-row"><span class="metric-label">CONCURRENT PLAYERS</span><span class="corner">↗</span></div><div class="number" id="playing">—</div><div class="metric-info">Players enjoying TRENDING EMOTES! right now.</div></div><div class="metric-bottom"><span><span class="pulse"></span>LIVE ROBLOX API</span><span>CHECKS EVERY 20 SEC</span></div></div>
@@ -499,7 +494,7 @@ function animateNumber(id,num,extra,verifiedCcuChange=false){
   numberAnimations.set(el,state);
   state.frame=requestAnimationFrame(step);
 }
-function state(msg,err){$('status').textContent=msg;$('pulse').style.background=err?'var(--danger)':'var(--green)';$('lastUpdate').textContent=err?msg:'Updated '+dateTime(Date.now())}
+function state(msg,err){$('status').textContent=msg;$('statusDot').style.background=err?'var(--danger)':'var(--green)';$('lastUpdate').textContent=err?msg:'Updated '+dateTime(Date.now())}
 function loadImage(url,target,parent){if(typeof url!=='string'||!url.startsWith('https://'))return;const box=$(target);if(!box)return;if(parent){const existing=box.querySelector('img');if(existing&&existing.src===url)return;const el=document.createElement('img');el.src=url;el.alt='TRENDING EMOTES! Roblox artwork';el.decoding='async';box.replaceChildren(el);}else{if(box.src!==url)box.src=url;box.alt='TRENDING EMOTES! Roblox artwork';box.style.visibility='visible'}}
 // Fast public polls; slower D1 history requests avoid needless database work.
 async function dashboardFetchJSON(path,timeoutMs=7500){
@@ -941,12 +936,11 @@ const THEMED_HTML = HTML
   .replaceAll('<b>STUDIOS</b>', '<b>CLOTHING</b>')
   .replaceAll('#b6ff69', '#5daeff')
   .replaceAll('#aaff62', '#5daeff')
-  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + gamePulseCSS + '\n' + pulseCSS + '\n' + '\n' + '\n' + playerGoalCSS + '\n' + growthFocusCSS + '\n' + '\n</style>')
-  .replace('<section class="wrap" id="dashboard">', () => '<section class="wrap" id="dashboard">')
+  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + pulseCSS + '\n' + playerGoalCSS + '\n</style>')
   .replace('<section class="wrap" id="dashboard">', () => pulseMarkup + '\n<section class="wrap" id="dashboard">')
   .replace('</section></main><footer', () => '</section>' + publicAnalyticsMarkup + '</main><footer')
   .replace('<div class="workspace reveal">', () => playerGoalMarkup + '<div class="workspace reveal">')
-  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n' + gamePulseJS + '\n' + pulseJS + '\n' + '\n' + '\n' + playerGoalJS + '\n' + growthFocusJS + '\n' + '\n</script></body></html>');
+  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n' + pulseJS + '\n' + playerGoalJS + '\n</script></body></html>');
 export default {
   async fetch(request, env, ctx) {
     // Only safe, read-only methods are accepted, including on the HTML route.

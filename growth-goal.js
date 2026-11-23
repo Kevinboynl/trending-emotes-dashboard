@@ -124,7 +124,7 @@ export const growthGoalJS = String.raw`
   form.addEventListener('submit',event=>{
     event.preventDefault();
     const raw=input.value.trim();
-    if(!raw||!/^\\d+$/.test(raw)){
+    if(!raw||!/^[0-9]+$/.test(raw)){
       error.textContent='Enter a whole number between 1 and 1,000,000.';
       return;
     }

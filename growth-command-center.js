@@ -1,7 +1,7 @@
 /* Growth Command Center
    Decision-first homepage using only verified Roblox responses.
    No estimates are substituted for missing creator analytics. */
-export const growthCommandMarkup = String.raw\`
+export const growthCommandMarkup = String.raw`
 <section class="gc-shell wrap" id="growth" aria-labelledby="gc-title">
   <div class="gc-overline">
     <span class="gc-brandtag">KVN CLOTHING <span>/</span> GROWTH INTELLIGENCE</span>
@@ -56,9 +56,9 @@ export const growthCommandMarkup = String.raw\`
   </div>
   <p class="gc-disclaimer"><strong>READ THIS CORRECTLY.</strong> CCU is concurrent players, not unique players. 24-hour comparisons use only observed samples with sufficient coverage. Creator-only engagement and retention metrics stay blank until a verified, authorized Roblox response is available. Gaps are never filled with invented values.</p>
   <div class="gc-section-jump"><a href="#dashboard">LIVE GAME METRICS <span>↘</span></a><a href="#analytics">DETAILED TRENDS <span>↘</span></a><a href="#officialMetrics">OFFICIAL CREATOR DATA <span>↘</span></a></div>
-</section>\`;
+</section>`;
 
-export const growthCommandCSS = String.raw\`
+export const growthCommandCSS = String.raw`
 /* A focused, responsive first fold, intentionally separate from legacy cards. */
 html{scroll-padding-top:96px}
 body .hero,body .ticker{display:none!important}
@@ -135,9 +135,9 @@ body .hero,body .ticker{display:none!important}
 @media(max-width:760px){.gc-shell{padding-top:20px}.gc-overline{gap:10px}.gc-brandtag{font-size:9px;letter-spacing:.08em}.gc-status{font-size:9px;padding:7px 9px;letter-spacing:.01em}.gc-hero{grid-template-columns:1fr;padding:41px 0 28px;gap:29px}.gc-intro h1{font-size:clamp(43px,8vw,70px);letter-spacing:-.05em;margin:18px 0}.gc-intro p{font-size:13px}.gc-live-panel{padding:24px 21px 17px}.gc-live-number{font-size:clamp(80px,17vw,128px)}.gc-decision-layout{grid-template-columns:1fr}.gc-funnel-head{display:block;margin-top:38px}.gc-funnel-head a{display:inline-block;margin-top:16px}.gc-funnel{grid-template-columns:1fr}.gc-funnel article{min-height:0}.gc-funnel strong{font-size:34px}}
 @media(max-width:460px){.gc-overline{align-items:flex-start;flex-direction:column}.gc-hero{padding-top:28px}.gc-intro h1{font-size:clamp(37px,10.2vw,48px)}.gc-actions a{font-size:10px;padding:13px 14px}.gc-kpis{gap:9px}.gc-kpi{padding:17px 15px;min-height:154px}.gc-kpi-top{font-size:9px}.gc-kpi strong{font-size:clamp(24px,7vw,34px)}.gc-kpi-quality strong{font-size:21px}.gc-decision,.gc-priorities{padding:23px 20px}.gc-spark{height:100px}.gc-funnel-head h2{font-size:27px}.gc-funnel-head h2 span{margin:0 2px}}
 @media(prefers-reduced-motion:reduce){.gc-actions a{transition:none}}
-\`;
+`;
 
-export const growthCommandJS = String.raw\`
+export const growthCommandJS = String.raw`
 (function(){
  'use strict';
  const root=document.getElementById('growth');
@@ -308,4 +308,4 @@ export const growthCommandJS = String.raw\`
  document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshHistory();renderOfficial();}});
  setInterval(refreshHistory,120000);
  renderOfficial();refreshHistory();
-})();\`;
+})();`;

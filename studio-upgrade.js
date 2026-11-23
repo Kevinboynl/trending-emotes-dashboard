@@ -288,20 +288,7 @@ export const studioUpgradeJS = String.raw`
   window.addEventListener('scroll',scroll,{passive:true});
   window.addEventListener('resize',scroll,{passive:true});
   scroll();
-  if(fine && !reduced){
-    const glow=document.createElement('div');glow.className='kvn-cursor-glow';glow.setAttribute('aria-hidden','true');document.body.append(glow);
-    let x=-1000,y=-1000,frame=0;
-    window.addEventListener('pointermove',e=>{
-      if(e.pointerType && e.pointerType!=='mouse' && e.pointerType!=='pen')return;
-      x=e.clientX;y=e.clientY;glow.style.opacity='1';
-      if(frame)return;
-      frame=requestAnimationFrame(()=>{
-        frame=0;glow.style.transform='translate3d('+x+'px,'+y+'px,0) translate(-50%,-50%)';
-      });
-    },{passive:true});
-    document.documentElement.addEventListener('pointerleave',()=>{glow.style.opacity='0';},{passive:true});
-    window.addEventListener('blur',()=>{glow.style.opacity='0';});
-  }
+  // Cursor glow is managed only by cinematic-v2.js to avoid double blur layers.
   // Decorative wide-screen rails. They never interfere with analytics or clicks.
   const sideRails=[];
   for(const side of ['left','right']){

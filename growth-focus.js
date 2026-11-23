@@ -37,7 +37,7 @@ export const growthFocusCSS = String.raw`
 .kvn-growth-focus__timeline-head small{color:#7299bf;font-size:10px;letter-spacing:.06em}
 .kvn-growth-focus__bars{display:flex;align-items:flex-end;gap:7px;height:78px;position:relative;border-bottom:1px solid rgba(147,207,255,.11)}
 .kvn-growth-focus__bar{flex:1;min-width:3px;max-width:110px;height:var(--pulse-height,50%);border-radius:6px 6px 0 0;border:1px solid rgba(130,211,255,.5);border-bottom:none;background:linear-gradient(0deg,rgba(65,134,229,.17),rgba(74,166,255,.8));box-shadow:0 0 17px rgba(66,174,255,.1);transition:height .55s ease;position:relative}
-.kvn-growth-focus__bar:last-child{background:linear-gradient(0deg,rgba(90,191,255,.32),rgba(138,227,255,.98));box-shadow:0 0 20px rgba(90,194,255,.3)}
+.kvn-growth-focus__bar.is-latest{background:linear-gradient(0deg,rgba(90,191,255,.32),rgba(138,227,255,.98));box-shadow:0 0 20px rgba(90,194,255,.3)}
 .kvn-growth-focus__empty{display:flex;align-items:center;justify-content:center;height:78px;border:1px dashed rgba(132,186,247,.24);border-radius:9px;color:#9bbbd7;font-size:12px;text-align:center;padding:12px}
 .kvn-growth-focus__axis{display:flex;justify-content:space-between;gap:10px;margin-top:10px;color:#849fbf;font-size:10px}
 .kvn-growth-focus__bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:19px}
@@ -74,6 +74,13 @@ export const growthFocusCSS = String.raw`
 .kvn-growth-focus--history-only .kvn-growth-focus__grid{display:block}
 .kvn-growth-focus--history-only .kvn-growth-focus__timeline{width:100%}
 .kvn-growth-focus--history-only .kvn-growth-focus__timeline .kvn-growth-focus__bars{height:95px}
+
+/* Accurate time-aligned momentum: never smooth across missing Roblox data. */
+.kvn-growth-focus__coverage{margin:0 0 12px;color:#9bbbd7;font:700 10px/1.5 'Outfit',system-ui,sans-serif;letter-spacing:.06em}
+.kvn-growth-focus__bars{gap:clamp(2px,.4vw,7px)}
+.kvn-growth-focus__bar{flex:1;min-width:0}
+.kvn-growth-focus__bar.is-empty{height:20%!important;background:repeating-linear-gradient(135deg,rgba(99,145,202,.08) 0 4px,rgba(99,145,202,.2) 4px 8px);border:1px dashed rgba(126,172,222,.31);box-shadow:none;opacity:.72}
+.kvn-growth-focus__bar.is-empty.is-latest{box-shadow:none}
 `;
 export const growthFocusJS = String.raw`
 
@@ -103,7 +110,7 @@ export const growthFocusJS = String.raw`
           '<div class="kvn-growth-focus__tile"><span class="kvn-growth-focus__label">HIGHEST OBSERVED CCU · LAST 24H</span><strong class="kvn-growth-focus__tile-value" id="kvnPulsePeak">—</strong><p class="kvn-growth-focus__note" id="kvnPulsePeakNote">Waiting for measured history</p></div>'+
         '</div>'+
         '<div class="kvn-growth-focus__timeline"><div class="kvn-growth-focus__timeline-head"><div><span class="kvn-growth-focus__label">RECENT VERIFIED PLAYER MEASUREMENTS</span><small id="kvnPulseSamples">MEASUREMENTS PENDING</small></div><div class="kvn-growth-focus__range" role="group" aria-label="Player history time range"><button type="button" data-pulse-range="1h" aria-pressed="false">1H</button><button type="button" data-pulse-range="24h" aria-pressed="true">24H</button></div></div>'+
-          '<div id="kvnPulseBars" class="kvn-growth-focus__empty">Roblox history will appear when actual samples are available.</div>'+
+          '<p class="kvn-growth-focus__coverage" id="kvnPulseCoverage">Gaps are shown when there are no verified readings.</p><div id="kvnPulseBars" class="kvn-growth-focus__empty">Roblox history will appear when actual samples are available.</div>'+
           '<div class="kvn-growth-focus__axis"><span id="kvnPulseStart">—</span><span id="kvnPulseEnd">—</span></div>'+ 
       '<div class="kvn-growth-focus__insight" id="kvnPulseInsight" data-direction="none"><span class="kvn-growth-focus__insight-mark" id="kvnPulseInsightIcon" aria-hidden="true">•</span><span id="kvnPulseInsightText">Waiting for enough verified samples to calculate the measured trend.</span></div>'+
         '</div>'+
@@ -190,21 +197,49 @@ export const growthFocusJS = String.raw`
       insightText.textContent='Measured change: '+(delta>0?'+':'')+fmtCount(delta)+' players across '+coverage+' ('+fmtTime(first.t)+'–'+fmtTime(last.t)+'). This compares recorded samples, not a prediction.';
     }
 
+    // Chart bins follow real elapsed time; missing measurements stay visible as gaps.
+    // 1H = 12 five-minute bins, 24H = 24 one-hour bins.
+    const binsCount=selectedRange==='1h'?12:24;
+    const fromTime=now-period;
+    const bins=Array.from({length:binsCount},()=>({sum:0,count:0}));
+    for(const reading of selected){
+      if(reading.t>now+30000)continue;
+      const idx=Math.max(0,Math.min(binsCount-1,Math.floor((reading.t-fromTime)/period*binsCount)));
+      const bin=bins[idx];bin.sum+=reading.ccu;bin.count++;
+    }
+    const covered=bins.filter(bin=>bin.count>0).length;
+    byId('kvnPulseCoverage').textContent=covered+' / '+binsCount+
+      ' TIME INTERVALS MEASURED · '+(selectedRange==='1h'?'5-MINUTE':'HOURLY')+
+      ' AVERAGES · HATCHED BARS = NO DATA';
     const bars=byId('kvnPulseBars');
     bars.className='kvn-growth-focus__bars';
     bars.replaceChildren();
-    const lowest=Math.min(...tail.map(p=>p.ccu)),highest=Math.max(...tail.map(p=>p.ccu));
-    for(const p of tail){
+    const measured=bins.filter(bin=>bin.count).map(bin=>bin.sum/bin.count);
+    const lowest=Math.min(...measured),highest=Math.max(...measured);
+    const lastMeasured=bins.reduce((idx,bin,i)=>bin.count?i:idx,-1);
+    bins.forEach((bin,i)=>{
       const bar=document.createElement('span');
       bar.className='kvn-growth-focus__bar';
-      const height=highest===lowest?58:30+(p.ccu-lowest)/(highest-lowest)*65;
-      bar.style.setProperty('--pulse-height',height.toFixed(2)+'%');
-      bar.title=fmtTime(p.t)+' · '+fmtCount(p.ccu)+' verified concurrent players';
+      bar.setAttribute('role','img');
+      const intervalStart=fromTime+i*period/binsCount;
+      const intervalEnd=fromTime+(i+1)*period/binsCount;
+      const label=fmtTime(intervalStart)+'–'+fmtTime(intervalEnd);
+      if(!bin.count){
+        bar.classList.add('is-empty');
+        bar.title=label+' · No verified reading';
+      }else{
+        const average=bin.sum/bin.count;
+        const height=highest===lowest?58:27+(average-lowest)/(highest-lowest)*67;
+        bar.style.setProperty('--pulse-height',height.toFixed(1)+'%');
+        bar.title=label+' · Average '+average.toLocaleString('en-US',{maximumFractionDigits:1})+
+          ' CCU based on '+bin.count+' verified reading'+(bin.count===1?'':'s');
+      }
+      if(i===lastMeasured)bar.classList.add('is-latest');
       bar.setAttribute('aria-label',bar.title);
       bars.append(bar);
-    }
-    byId('kvnPulseStart').textContent=fmtTime(tail[0].t);
-    byId('kvnPulseEnd').textContent=fmtTime(tail[tail.length-1].t);
+    });
+    byId('kvnPulseStart').textContent=fmtTime(fromTime);
+    byId('kvnPulseEnd').textContent=fmtTime(now);
   }
   function showMotion(direction){
     if(flashTimer)clearTimeout(flashTimer);

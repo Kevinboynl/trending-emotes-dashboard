@@ -261,7 +261,7 @@ function render(){
  fresh.textContent=delayed||d.stale?'Delayed':minutes<1?'Just now':minutes+'m ago';
  freshNote.textContent=delayed||d.stale?'Showing last verified signal; retrying':'Last actual Roblox CCU measurement';
 }
-window.addEventListener('kvn:stats-updated',event=>{
+window.addEventListener('kvn:verified-stats',event=>{
  const detail=event.detail||{},d=detail.stats;
  if(!d||!Number.isSafeInteger(d.playing)||d.playing<0||!Number.isFinite(d.timestamp))return;
  last={stats:d,previous:detail.previous,history:Array.isArray(detail.history)?detail.history:[]};

@@ -273,23 +273,7 @@ if(hero&&!reduce.matches&&fine.matches){
     light.style.opacity='0';
   },{passive:true});
 }
-if(!reduce.matches&&fine.matches){
-  for(const card of document.querySelectorAll('.metrics .card')){
-    card.dataset.tilt='1';
-    const onMove=throttle(e=>{
-      const r=card.getBoundingClientRect();
-      const nx=Math.max(-1,Math.min(1,(e.clientX-r.left)/r.width*2-1));
-      const ny=Math.max(-1,Math.min(1,(e.clientY-r.top)/r.height*2-1));
-      card.style.setProperty('--tilt-x',(-ny*1.35).toFixed(2)+'deg');
-      card.style.setProperty('--tilt-y',(nx*1.5).toFixed(2)+'deg');
-    });
-    card.addEventListener('pointermove',onMove,{passive:true});
-    card.addEventListener('pointerleave',()=>{
-      card.style.setProperty('--tilt-x','0deg');
-      card.style.setProperty('--tilt-y','0deg');
-    });
-  }
-}
+// Cards use a single transform-only hover style; no per-frame 3D tilt listeners.
 
 // 3. Loading skeletons use DOM state, not guesses. Unavailable Roblox data remains unavailable.
 const grid=document.querySelector('.metrics');

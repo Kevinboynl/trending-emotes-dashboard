@@ -85,7 +85,7 @@ const app=createServer(async(req,res)=>{
 });
 await new Promise(resolve=>app.listen(0,'127.0.0.1',resolve));
 const localURL='http://127.0.0.1:'+app.address().port+'/';
-const sizes=[360,390,430,768,1024,1440,1920];
+const sizes=[320,360,375,390,430,768,1024,1280,1440,1920];
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{
   for(const width of sizes){
@@ -186,6 +186,58 @@ try{
       safeZone.tooltipRight<=safeZone.plotRight+2,
       'Chart tooltip overflows its width at '+width+': '+JSON.stringify(safeZone));
     await page.locator('#chart').evaluate(el=>el.dispatchEvent(new Event('pointerleave')));
+
+    // Keyboard should illuminate the SAME crosshair and tooltip, without
+    // relying on pointer hover or creating extra measurements.
+    await page.locator('#chart').focus();
+    await page.keyboard.press('End');
+    const keyboardSelection=await page.evaluate(()=>{
+      const frame=document.querySelector('.chart-wrap');
+      const bubble=document.getElementById('tooltip');
+      const cross=frame.querySelector('.chart-crosshair');
+      const last=chartPoints[chartPoints.length-1];
+      const chart=document.getElementById('chart').getBoundingClientRect();
+      const crossX=cross.getBoundingClientRect().left-chart.left;
+      return {active:frame.classList.contains('hovering'),
+        text:bubble.textContent,opacity:Number(getComputedStyle(bubble).opacity),
+        selectedX:crossX,expectedX:last.x/860*chart.width};
+    });
+    assert(keyboardSelection.active,'Keyboard chart selection should be visibly active at '+width);
+    assert(Math.abs(keyboardSelection.selectedX-keyboardSelection.expectedX)<4,
+      'Keyboard crosshair not aligned with final verified point at '+width+': '+JSON.stringify(keyboardSelection));
+    assert(keyboardSelection.text.includes('Visits'),'Keyboard tooltip used wrong selected metric at '+width);
+    await visits.focus();
+    assert(!await page.locator('.chart-wrap').evaluate(el=>el.classList.contains('hovering')),
+      'Chart selection must settle on blur at '+width);
+    if(width===390){
+      const plotRect=await page.locator('#chart').boundingBox();
+      await page.locator('#chart').dispatchEvent('pointerdown',{
+        pointerId:12,pointerType:'touch',isPrimary:true,
+        clientX:plotRect.x+plotRect.width*.58,clientY:plotRect.y+plotRect.height*.6
+      });
+      assert(await page.locator('.chart-wrap').evaluate(el=>el.classList.contains('hovering')),
+        'Touch selection did not reveal a verified point');
+      await page.evaluate(()=>clearChartHover());
+    }
+    if(width===1440){
+      await page.mouse.move(150,150);
+      await page.waitForTimeout(180);
+      const glow=page.locator('.kvn-pointer-core');
+      assert.equal(await glow.count(),1,'Expected exactly one global pointer glow');
+      const startGlow=await glow.evaluate(el=>({
+        transform:el.style.transform,opacity:parseFloat(getComputedStyle(el).opacity),
+        clicks:getComputedStyle(el).pointerEvents
+      }));
+      await page.mouse.move(450,220);
+      await page.waitForTimeout(380);
+      const endGlow=await glow.evaluate(el=>({
+        transform:el.style.transform,opacity:parseFloat(getComputedStyle(el).opacity)
+      }));
+      assert(startGlow.opacity>.15&&endGlow.opacity>.15,'Pointer glow remains invisible during movement');
+      assert(startGlow.transform!==endGlow.transform,'Pointer glow did not follow the mouse');
+      assert.equal(startGlow.clicks,'none','Pointer glow must never block clicking');
+    }
+
 
     await page.locator('#tabs [data-tab="retention"]').click();
     assert.equal(await page.locator('.tabbody[data-page="retention"]').evaluate(el=>el.classList.contains('active')),true,
@@ -361,6 +413,19 @@ try{
       await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='51');
       assert.equal(await page.locator('.kvn-ccu-change').isVisible(),false,
         'Missing baseline must not synthesize a prior CCU');
+      // A snapshot from another game is never an eligible baseline.
+      const wrongGame=Date.now()-60000;
+      await page.evaluate(({key,t})=>localStorage.setItem(key,JSON.stringify({
+        playing:999,timestamp:t-500,shownAt:t,fresh:true,gameId:'unrelated-place-id'
+      })),{key:visibleKey,t:wrongGame});
+      await page.request.get(localURL+'__test__/ccu?value=42');
+      await page.reload({waitUntil:'domcontentloaded'});
+      await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='42');
+      assert.equal(await page.locator('.kvn-ccu-change').isVisible(),false,
+        'Cross-game CCU baseline must not cause motion');
+      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).gameId,visibleKey),
+        '134944031090971','New baseline should include its actual Roblox game ID');
+
       assert.deepEqual(errors,[],'Browser JS error during returning visitor scenarios');
       console.log('PASS: Return up/down, reopen/reload, unseen fetch, rapid focus, stale/error, identical timestamp, 1h, expired and cleared storage.');
       // Closing a tab and opening another tab in the SAME browser context

@@ -190,6 +190,91 @@ export const liveIntelligenceCSS = String.raw`
 }
 @media(prefers-reduced-motion:reduce){.metrics .card:hover{transform:none!important}}
 
+/* Dashboard hierarchy & responsive glass polish — existing KVN blue tokens. */
+.metrics{min-width:0;align-items:stretch}
+.metrics>.card{
+ background:linear-gradient(151deg,rgba(24,52,101,.91) 0%,rgba(12,30,65,.94) 47%,rgba(8,19,44,.98) 100%);
+ border:1px solid rgba(117,169,238,.26);
+ border-radius:21px;
+ box-shadow:inset 0 1px 0 rgba(220,240,255,.065),0 15px 43px rgba(0,11,40,.23);
+ transition:transform .32s cubic-bezier(.22,1,.36,1),border-color .32s ease,box-shadow .32s ease
+}
+.metrics>.card:not(.primary):hover{
+ transform:translate3d(0,-2px,0)!important;
+ border-color:rgba(124,199,255,.47);
+ box-shadow:inset 0 1px 0 rgba(215,238,255,.09),0 20px 42px rgba(0,12,40,.32)
+}
+.metrics>.card>.card-content{min-width:0}
+.metrics>.card:not(.primary) .number{margin-top:21px;font-size:clamp(26px,2.7vw,44px);letter-spacing:-.055em;font-weight:750}
+.metrics>.card .metric-label{line-height:1.45;letter-spacing:.095em}
+.metrics>.card .metric-info{max-width:42ch;line-height:1.6}
+.metrics>.primary{
+ background:radial-gradient(ellipse at 76% 73%,rgba(38,115,239,.25),transparent 67%),linear-gradient(145deg,#143467,#0c2453 48%,#081a3b);
+ border-color:rgba(92,176,255,.41);
+ box-shadow:inset 0 1px 0 rgba(192,225,255,.14),0 24px 65px rgba(4,23,64,.26)
+}
+.metrics>.primary .card-content{padding:clamp(25px,3vw,44px);padding-bottom:55px}
+.metrics>.primary .number{font-size:clamp(92px,8.4vw,150px);letter-spacing:-.065em}
+.metrics>.primary .metric-info{font-size:13px;letter-spacing:.005em}
+.metrics>.primary .kvn-ccu-status-line{margin-top:24px}
+.metrics>.primary .metric-bottom{border-top-color:rgba(119,184,255,.21);color:#adc8ec}
+.kvn-hero-inline-live{display:none;align-items:center;flex-wrap:wrap;gap:9px;border:1px solid rgba(99,181,255,.29);background:rgba(13,40,86,.66);border-radius:12px;padding:11px 14px;width:max-content;max-width:100%;margin-top:18px;font:750 10px 'Inter',sans-serif;color:#9ac8f7;letter-spacing:.075em}
+.kvn-hero-inline-live strong{font:800 22px 'Space Grotesk','Inter',sans-serif;color:#eaf8ff;font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+.kvn-hero-inline-live small{font:600 10px 'Inter',sans-serif;color:#8da9d1;letter-spacing:0}
+.kvn-hero-live-dot{display:inline-block;flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:#52bfff;box-shadow:0 0 0 4px rgba(65,167,255,.12)}
+.hero .visual .hero-poster{
+ border:1px solid rgba(155,212,255,.38);
+ box-shadow:0 35px 75px rgba(0,11,45,.7),0 0 54px rgba(34,103,225,.18),inset 0 1px 0 rgba(255,255,255,.16)
+}
+.hero .hero-poster img{transition:transform .45s cubic-bezier(.22,1,.36,1),filter .45s ease;filter:saturate(1.06)}
+@media(hover:hover) and (pointer:fine){
+ .hero .hero-poster:hover img{transform:scale(1.04);filter:saturate(1.16)}
+}
+.chart-panel{background:linear-gradient(150deg,rgba(15,38,79,.96),rgba(7,20,45,.98));border-color:rgba(105,172,245,.24);box-shadow:inset 0 1px rgba(205,232,255,.06),0 20px 55px rgba(1,10,35,.23)}
+.chart-panel .chart-wrap{border-color:rgba(92,158,239,.35);box-shadow:inset 0 1px rgba(201,229,255,.05)}
+.chart-panel #shade{opacity:.82}
+.chart-panel #curve{stroke-width:3;filter:drop-shadow(0 0 5px rgba(68,172,255,.36))}
+.chart-panel #point{filter:drop-shadow(0 0 5px rgba(90,206,255,.5))}
+.chart-panel #tooltip{box-shadow:0 12px 37px rgba(2,15,49,.54),0 0 0 1px rgba(110,185,255,.1)}
+@media(min-width:1200px){
+ .metrics{grid-template-columns:repeat(5,minmax(0,1fr));gap:17px;grid-auto-rows:minmax(170px,auto)}
+ .metrics>.primary{grid-column:span 3;grid-row:span 2;min-height:390px}
+ .metrics>.card:not(.primary){grid-column:span 1;min-height:168px}
+ .metrics>.primary .sparkline{width:57%;max-width:425px;height:58px}
+}
+@media(min-width:691px) and (max-width:1199px){
+ .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+ .metrics>.primary{grid-column:span 2;grid-row:auto;min-height:340px}
+ .metrics>.card:not(.primary){grid-column:span 1;min-height:145px}
+ .metrics>.primary .number{font-size:clamp(90px,11vw,140px)}
+ .metrics>.primary .sparkline{width:70%;max-width:420px;height:48px}
+}
+@media(max-width:690px){
+ .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .metrics>.primary{grid-column:span 2;grid-row:auto;min-height:315px}
+ .metrics>.card:not(.primary){grid-column:span 1;min-height:150px}
+ .metrics>.card:not(.primary) .card-content{padding:17px}
+ .metrics>.card:not(.primary) .number{font-size:clamp(25px,7vw,39px);margin-top:20px;white-space:normal;overflow-wrap:anywhere}
+ .metrics>.card:not(.primary) .metric-label{font-size:9px;letter-spacing:.06em}
+ .metrics>.card:not(.primary) .metric-info{font-size:11px}
+ .metrics>.primary .card-content{padding:25px;padding-bottom:52px}
+ .metrics>.primary .number{font-size:clamp(70px,17vw,104px)}
+ .kvn-hero-inline-live{display:inline-flex}
+ .hero .visual .hero-poster{box-shadow:0 18px 40px rgba(0,11,45,.65),0 0 24px rgba(34,103,225,.15)}
+ .chart-panel #curve{stroke-width:2.6}
+}
+@media(max-width:390px){
+ .metrics>.card:not(.primary) .card-content{padding:14px}
+ .metrics>.card:not(.primary) .number{font-size:clamp(23px,6.6vw,32px)}
+ .metrics>.primary .card-content{padding:22px;padding-bottom:53px}
+ .kvn-hero-inline-live{gap:7px;padding:9px 11px}
+ .kvn-hero-inline-live small{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){
+ .metrics>.card,.hero .hero-poster img{transition:none!important}
+ .hero .hero-poster:hover img{transform:none}
+}
+
 `;
 export const liveIntelligenceJS = String.raw`
 /* Event-driven CCU presentation: never alters or estimates Roblox data. */

@@ -1,5 +1,5 @@
 /* Focused Growth Brief: only verified observed samples, never estimates. */
-export const growthBriefMarkup = String.raw\`
+export const growthBriefMarkup = String.raw`
 <section class="gb-wrap wrap" id="growthBrief" aria-labelledby="gb-title">
   <div class="gb-intro"><span class="gb-kicker">GROWTH BRIEF / LIVE INTELLIGENCE</span><h2 id="gb-title">IS THE GAME <em>GROWING?</em></h2><p>A clear snapshot of actual player movement. Every comparison uses observed Roblox player counts, never predictions.</p></div>
   <div class="gb-grid">
@@ -9,8 +9,8 @@ export const growthBriefMarkup = String.raw\`
   </div>
   <p class="gb-footnote">Hour change compares the first and last available measurements in that window, which may not cover the full hour. A missing or stale signal is not a zero-player count.</p>
 </section>
-\`;
-export const growthBriefCSS = String.raw\`
+`;
+export const growthBriefCSS = String.raw`
 .gb-wrap{scroll-margin-top:110px;padding:35px 0 42px}
 .gb-intro{margin:0 0 22px}
 .gb-kicker,.gb-label{font:800 10px/1.4 'Outfit',Arial,sans-serif;letter-spacing:.17em;color:#7fc7ff}
@@ -29,8 +29,8 @@ export const growthBriefCSS = String.raw\`
 @media(max-width:850px){.gb-grid{grid-template-columns:1fr 1fr}.gb-lead{grid-column:1/-1}}
 @media(max-width:530px){.gb-grid{grid-template-columns:1fr}.gb-lead{grid-column:auto}.gb-tile{padding:22px}.gb-wrap{padding:26px 0}}
 @media(prefers-reduced-motion:reduce){.gb-track span{transition:none}}
-\`;
-export const growthBriefJS = String.raw\`
+`;
+export const growthBriefJS = String.raw`
 (()=>{
 'use strict';
 const get=id=>document.getElementById(id);
@@ -82,4 +82,4 @@ window.addEventListener('kvn:stats-updated',event=>{
 window.addEventListener('kvn:stats-unavailable',()=>{delayed=true;render();if(!last){fresh.textContent='Unavailable';freshNote.textContent='Roblox has not returned a verified signal';}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)render();});
 })();
-\`;
+`;

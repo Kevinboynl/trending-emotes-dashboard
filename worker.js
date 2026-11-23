@@ -275,14 +275,37 @@ const fmt=n=>Number.isFinite(n)?Math.round(n).toLocaleString('en-US'):'—';
 const compact=n=>Number.isFinite(n)?Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(n):'—';
 const TIMEKEY='kvn-trending-emotes-history-v2';
 const LAST_GOOD_STATS_KEY='kvn-trending-emotes-last-real-stats-v1';
+function readVerifiedStatsCache(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(LAST_GOOD_STATS_KEY)||'null');
+    if(!saved||!Number.isFinite(saved.timestamp)||saved.timestamp>Date.now()+30000||
+      Date.now()-saved.timestamp>72*3600000||!Number.isFinite(saved.playing))return null;
+    return saved;
+  }catch{return null;}
+}
 function storeVerifiedStats(value) {
   if (!value || value.stale || !Number.isFinite(value.playing)) return;
   try {
+    const old=readVerifiedStatsCache();
+    const freshVotes=Number.isSafeInteger(value.likes)&&value.likes>=0
+      &&Number.isSafeInteger(value.dislikes)&&value.dislikes>=0;
+    const oldVotes=old&&Number.isSafeInteger(old.likes)&&old.likes>=0
+      &&Number.isSafeInteger(old.dislikes)&&old.dislikes>=0;
+    const likes=freshVotes?value.likes:oldVotes?old.likes:null;
+    const dislikes=freshVotes?value.dislikes:oldVotes?old.dislikes:null;
+    const total=(likes??0)+(dislikes??0);
+    // Never overwrite a genuinely measured vote pair with null just because
+    // the OPTIONAL Roblox votes endpoint finished after the fast CCU poll.
     localStorage.setItem(LAST_GOOD_STATS_KEY,JSON.stringify({
-      playing:value.playing,visits:value.visits,favorites:value.favorites,
-      likes:value.likes,dislikes:value.dislikes,rating:value.rating,
-      name:value.name,icon:value.icon,thumbnail:value.thumbnail,
-      timestamp:value.timestamp
+      playing:value.playing,
+      visits:Number.isFinite(value.visits)?value.visits:old?.visits??null,
+      favorites:Number.isFinite(value.favorites)?value.favorites:old?.favorites??null,
+      likes,dislikes,rating:total?likes/total*100:null,
+      voteTimestamp:freshVotes?(value.voteTimestamp??value.timestamp):
+        oldVotes?(old.voteTimestamp??old.timestamp):null,
+      name:value.name,icon:value.icon||old?.icon||null,
+      thumbnail:value.thumbnail||old?.thumbnail||null,
+      timestamp:value.timestamp,gameId:VISIBLE_CCU_GAME_ID
     }));
   } catch {}
 }
@@ -553,6 +576,14 @@ async function stats(){
       // The previous actually SEEN count remains visible throughout the fetch.
       // The CCU rolling system runs only after a newer authoritative reading.
       currentStats=d;
+      // CCU, visits and favorites are fast primary measurements. Voting is
+      // a separate Roblox endpoint and must not erase earlier verified votes.
+      const oldVotes=readVerifiedStatsCache();
+      const liveVotes=Number.isSafeInteger(d.likes)&&d.likes>=0
+        &&Number.isSafeInteger(d.dislikes)&&d.dislikes>=0;
+      const previousVotes=oldVotes&&Number.isSafeInteger(oldVotes.likes)&&oldVotes.likes>=0
+        &&Number.isSafeInteger(oldVotes.dislikes)&&oldVotes.dislikes>=0;
+      const votes=liveVotes?d:previousVotes?oldVotes:null;
       for(const [id,key] of [
         ['playing','playing'],['heroCCU','playing'],['heroInlineCCU','playing'],['visits','visits'],
         ['favorites','favorites'],['likes','likes'],['dislikes','dislikes']
@@ -560,12 +591,23 @@ async function stats(){
         if((id==='playing'||id==='heroCCU'||id==='heroInlineCCU')&&!isAuthoritative&&visibleBefore)continue;
         if((id==='playing'||id==='heroCCU'||id==='heroInlineCCU')&&!isAuthoritative&&
           (!Number.isSafeInteger(d.playing)||d.playing<0))continue;
+        if((key==='likes'||key==='dislikes')&&!Number.isFinite(d[key])){
+          if(votes)animateNumber(id,votes[key]);
+          continue;
+        }
         animateNumber(id,d[key],undefined,id==='playing'&&Boolean(changed));
       }
-      const rating=Number.isFinite(d.rating)?d.rating.toFixed(1)+'%':'—';
+      const voteTotal=votes?(votes.likes+votes.dislikes):0;
+      const rating=voteTotal?(100*votes.likes/voteTotal).toFixed(1)+'%':'—';
       $('rating').textContent=rating;
       $('engagementRating').textContent=rating;
-      $('ratingFill').style.width=Number.isFinite(d.rating)?d.rating+'%':'0%';
+      $('ratingFill').style.width=voteTotal?100*votes.likes/voteTotal+'%':'0%';
+      const voteSource=liveVotes?(d.votesPreviouslyMeasured?'Previous recorded Roblox votes':'Latest verified Roblox votes'):
+        previousVotes?'Previously verified Roblox votes · checking for updates':
+        'Roblox votes temporarily unavailable';
+      for(const id of ['likes','dislikes','engagementRating']){
+        const field=$(id);if(field)field.title=voteSource;
+      }
       if(d.name)$('gameTitle').textContent=d.name;
       loadImage(d.icon,'poster',true);
       loadImage(d.thumbnail,'cover',true);

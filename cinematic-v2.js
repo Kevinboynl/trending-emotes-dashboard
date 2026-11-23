@@ -9,7 +9,7 @@ body.kvn-page-hidden .kvn-star,body.kvn-page-hidden .kvn-sidefx *,
 body.kvn-page-hidden .orbit,body.kvn-page-hidden .halo,
 body.kvn-page-hidden .ticker-inner{animation-play-state:paused!important}
 .kvn-sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.kvn-pointer-core{position:fixed;left:0;top:0;z-index:2;mix-blend-mode:screen;pointer-events:none;width:min(460px,60vw);height:min(460px,60vw);border-radius:50%;opacity:0;transform:translate3d(-999px,-999px,0) translate(-50%,-50%);background:radial-gradient(circle,rgba(71,179,255,.22) 0%,rgba(48,133,255,.085) 33%,transparent 70%);filter:blur(10px);will-change:transform,opacity;transition:opacity .25s ease}
+.kvn-pointer-core{position:fixed;left:0;top:0;z-index:58;mix-blend-mode:screen;pointer-events:none;width:min(460px,60vw);height:min(460px,60vw);border-radius:50%;opacity:0;transform:translate3d(-999px,-999px,0) translate(-50%,-50%);background:radial-gradient(circle,rgba(71,179,255,.22) 0%,rgba(48,133,255,.085) 33%,transparent 70%);filter:blur(10px);will-change:transform,opacity;transition:opacity .25s ease}
 .hero{contain:layout}
 .hero .hero-copy{isolation:isolate}
 .hero .hero-copy h1{display:block;text-wrap:balance}

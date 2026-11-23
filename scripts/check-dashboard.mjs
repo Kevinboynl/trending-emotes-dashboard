@@ -58,6 +58,10 @@ assert.ok(html.includes('family=Archivo:wght@600;700;800;900'),'KVN Studios Arch
 assert.ok(html.includes('family=Outfit:wght@400;500;600;700;800;900'),'KVN Studios Outfit font not loaded');
 assert.ok(embeddedStyle.includes('.hero h1 .kvn-hero-line'),'Hero title glyph clipping guard missing');
 assert.ok(embeddedStyle.includes('prefers-reduced-motion:reduce'),'Missing reduced-motion support');
+assert.ok(embeddedStyle.includes('.reveal{opacity:1;transform:none'),'Revealed sections must remain visible without JavaScript');
+assert.ok(embeddedStyle.includes('html.kvn-reveal-ready .reveal:not(.show)'),'Scroll reveals must require active JavaScript');
+assert.ok(embeddedScript.includes("typeof IntersectionObserver === 'function'"),'Missing observer-free reveal fallback');
+assert.ok(embeddedStyle.includes('.kvn-pointer-core{position:fixed;left:0;top:0;z-index:58;'),'Pointer glow is hidden behind main content');
 assert.ok(!html.includes('ROBLOX_ANALYTICS_API_KEY'),'Secret identifier leaked in page');
 assert.ok(!html.includes('x-api-key'),'Backend authorization exposed in page');
 assert.ok(embeddedScript.includes("fetch('/api/stats'"),'Public stats connection missing');

@@ -872,7 +872,28 @@ $('chart').addEventListener('pointerleave',e=>{
 },{passive:true});
 $('chart').addEventListener('pointercancel',clearChartHover,{passive:true});
 for(const card of document.querySelectorAll('.card'))card.addEventListener('pointermove',e=>{const r=card.getBoundingClientRect();card.style.setProperty('--mouse-x',(e.clientX-r.left)+'px');card.style.setProperty('--mouse-y',(e.clientY-r.top)+'px')});
-const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('show');observer.unobserve(entry.target)}},{threshold:.07});document.querySelectorAll('.reveal').forEach(x=>observer.observe(x));
+// Start reveal effects only after the observer exists. Without JavaScript or
+// IntersectionObserver, the CSS defaults to fully visible page content.
+const revealNodes=[...document.querySelectorAll('.reveal')];
+const observer=typeof IntersectionObserver==='function'
+  ?new IntersectionObserver(entries=>{
+    for(const entry of entries)if(entry.isIntersecting){
+      entry.target.classList.add('show');
+      observer.unobserve(entry.target);
+    }
+  },{threshold:.07})
+  :null;
+if(observer){
+  document.documentElement.classList.add('kvn-reveal-ready');
+  revealNodes.forEach(node=>observer.observe(node));
+  // Rescue visible sections if a browser delays intersection callbacks.
+  setTimeout(()=>{
+    for(const node of revealNodes){
+      const rect=node.getBoundingClientRect();
+      if(rect.top<innerHeight && rect.bottom>0)node.classList.add('show');
+    }
+  },2800);
+}else revealNodes.forEach(node=>node.classList.add('show'));
 $('footerTime').textContent='© '+new Date().getFullYear()+' KVN STUDIOS';
 window.addEventListener('kvn:official-analytics',()=>{acquisition();});
 // Restore other previously verified public fields, then put the last
@@ -930,13 +951,16 @@ window.addEventListener('online',resumeLiveStats);
 /* Render-time composition keeps the Roblox API, database schema and API routes unchanged.
    This visual layer is maintained separately in premium-theme.js and premium-interactions.js. */
 const THEMED_HTML = HTML
-  .replaceAll('KVN STUDIOS', 'KVN CLOTHING')
-  .replaceAll('<b>STUDIOS</b>', '<b>CLOTHING</b>')
   .replaceAll('#b6ff69', '#5daeff')
   .replaceAll('#aaff62', '#5daeff')
   .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n</style>')
   .replace('</section></main><footer', () => '</section>' + publicAnalyticsMarkup + '</main><footer')
-  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n</script></body></html>');
+  // Each progressive enhancement gets its own classic script: one broken
+  // optional visual effect cannot stop the dashboard or other layers.
+  .replace('</script></body></html>', () => '</script>\n' +
+    [premiumJS, publicAnalyticsClient, refinementJS, studioUpgradeJS, cinematicJS, liveIntelligenceJS]
+      .map(code => '<script>\n' + code + '\n</script>').join('\n') +
+    '\n</body></html>');
 export default {
   async fetch(request, env, ctx) {
     // Only safe, read-only methods are accepted, including on the HTML route.
@@ -1045,7 +1069,7 @@ export default {
     }
 
     const nonce=newPageNonce();
-    const html=THEMED_HTML.replace('<script>','<script nonce="'+nonce+'">');
+    const html=THEMED_HTML.replaceAll('<script>','<script nonce="'+nonce+'">');
     return protectResponse(new Response(html,{
       headers:{
         'Content-Type':'text/html; charset=utf-8',

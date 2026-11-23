@@ -977,7 +977,7 @@ export default {
     }
 
     if(pathname==='/api/public-analytics'){
-      return protectResponse(await publicAnalyticsResponse(env));
+      return protectResponse(await publicAnalyticsResponse(env,fetch,Date.now(),ctx));
     }
     if(pathname==='/api/stats'){
       try{

@@ -290,6 +290,80 @@ export const liveIntelligenceCSS = String.raw`
 .kvn-stats-retry:disabled{opacity:.65;cursor:wait}
 @media(prefers-reduced-motion:reduce){.kvn-stats-retry{transition:none}.kvn-stats-retry:hover{transform:none}}
 
+/* KVN Studios brand match (verified public reference, 2026-11-23).
+   Archivo + Outfit, charcoal navy #080e1c, #31aaff brand blue, #ff2997
+   as a *restrained* secondary accent. No gameplay/API changes. */
+:root{--kvn-reference-bg:#080e1c;--kvn-reference-panel:#101d31;
+ --kvn-reference-blue:#31aaff;--kvn-reference-cyan:#43c4ff;
+ --kvn-reference-pink:#ff2997;--kvn-reference-text:#f3f4f6;
+ --kvn-reference-muted:#9b9ea7}
+body{background:var(--kvn-reference-bg);color:var(--kvn-reference-text);
+ font-family:'Outfit',Arial,sans-serif}
+button,input,select,textarea{font-family:'Outfit',Arial,sans-serif}
+h1,h2,h3,.number,.wordmark,.bar h2,.detail .value,
+.official-card strong,.kvn-insight-card .k-value{
+ font-family:'Archivo','Outfit',Arial,sans-serif!important;font-synthesis:none
+}
+.hero .hero-copy h1{
+ font-family:'Archivo','Outfit',Arial,sans-serif!important;
+ font-size:clamp(48px,7.15vw,116px)!important;font-weight:900!important;
+ line-height:1.08!important;letter-spacing:-.046em!important;
+ max-width:100%;overflow:visible!important;
+ padding:.05em .11em .12em 0;margin-block:25px 24px
+}
+.hero h1 .kvn-hero-line{
+ box-sizing:border-box;display:block;width:max-content;max-width:100%;
+ line-height:1.1!important;white-space:nowrap;
+ overflow:visible!important;
+ padding:.04em .20em .11em .02em
+}
+.hero h1 .kvn-line-two{
+ background:none!important;color:#31aaff!important;
+ -webkit-text-fill-color:#31aaff!important
+}
+.hero .eyebrow{color:#82d1ff}
+.hero .eyebrow::after{content:"";width:5px;height:5px;flex:0 0 5px;
+ background:#ff2997;border-radius:50%;box-shadow:0 0 12px rgba(255,41,151,.42)}
+.hero .lead,.desc,.official-sub{color:#b9bbc2}
+.navlinks,.tabs{border-color:rgba(176,204,234,.16);
+ background:rgba(8,14,28,.76)}
+.navlinks a,.tabs button,.metric-switch button,.switches button{font-family:'Outfit',Arial,sans-serif}
+.navlinks a:hover,.navlinks a:focus-visible{background:rgba(49,170,255,.12)}
+.playbtn{background:linear-gradient(115deg,#238dff 0%,#31aaff 100%);
+ border-color:rgba(97,202,255,.50);color:#f3f4f6}
+.playbtn:hover{box-shadow:0 0 24px rgba(49,170,255,.22),0 12px 25px rgba(3,9,25,.35)}
+.metrics>.card:not(.primary){
+ background:linear-gradient(145deg,#11213b 0%,#0c172a 56%,#091220 100%);
+ border-color:rgba(117,171,226,.22)
+}
+.metrics>.primary{
+ background:radial-gradient(ellipse at 78% 67%,rgba(49,170,255,.14),transparent 68%),
+ linear-gradient(141deg,#142943 0%,#0c1c35 51%,#091422 100%);
+ border-color:rgba(83,177,255,.36)
+}
+.chart-panel,.official-card,.kvn-insight-card,.kvn-insight-banner,
+.official-message{background-color:#101d31;border-color:rgba(107,163,221,.22)}
+.chart-panel #curve{stroke:#31aaff}
+.chart-panel #point{stroke:#218cff;fill:#b2e9ff}
+.chart-panel #tooltip{border-color:rgba(67,196,255,.48);background:rgba(9,23,43,.96)}
+.bar h2 span,.wordmark b,.footer-brand b{color:#31aaff!important}
+.kvn-stats-retry,.kvn-retry-btn{color:#caeaff;border-color:rgba(49,170,255,.55)}
+@media(max-width:1100px){
+ .hero .hero-copy h1{font-size:clamp(46px,6.6vw,90px)!important}
+}
+@media(max-width:690px){
+ .hero .hero-copy h1{font-size:clamp(45px,11.4vw,75px)!important;
+  letter-spacing:-.048em!important;padding-right:.03em}
+ .hero h1 .kvn-hero-line{padding-right:.16em}
+ .hero .eyebrow::after{width:4px;height:4px;flex-basis:4px}
+}
+@media(max-width:390px){
+ .hero .hero-copy h1{font-size:clamp(43px,11.6vw,57px)!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .hero .eyebrow::after{box-shadow:none}
+}
+
 `;
 export const liveIntelligenceJS = String.raw`
 /* Event-driven CCU presentation: never alters or estimates Roblox data. */

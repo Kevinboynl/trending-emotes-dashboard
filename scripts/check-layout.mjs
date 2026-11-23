@@ -119,6 +119,40 @@ try{
       };
     });
     assert(rect.documentWidth<=width+2,'Page horizontally overflows at '+width+': '+JSON.stringify(rect));
+
+    // The live CCU must dominate the desktop overview, while staying
+    // full-width above compact metric cards on mobile and tablets.
+    const overview=await page.evaluate(()=>{
+      const metrics=document.querySelector('.metrics').getBoundingClientRect();
+      const primary=document.querySelector('.metrics .primary').getBoundingClientRect();
+      const small=document.querySelector('.metrics .card:not(.primary)').getBoundingClientRect();
+      const mobileLive=document.querySelector('.kvn-hero-inline-live');
+      const pointerGlow=document.querySelectorAll('.kvn-pointer-core').length;
+      const oldGlow=document.querySelectorAll('.kvn-cursor-glow').length;
+      return {
+        ratio:primary.width/metrics.width,
+        smallRatio:small.width/metrics.width,
+        liveVisible:getComputedStyle(mobileLive).display!=='none',
+        liveCCU:document.getElementById('heroInlineCCU')?.textContent,
+        pointerGlow,oldGlow,
+        bodyOverflow:document.documentElement.scrollWidth-innerWidth
+      };
+    });
+    assert(overview.oldGlow===0,'Duplicate immediate cursor glow still created at '+width);
+    assert(overview.pointerGlow<=1,'Multiple eased pointer glows created at '+width);
+    if(width>=1200){
+      assert(overview.ratio>.56 && overview.ratio<.68,
+        'Live CCU does not occupy the larger desktop hero area at '+width+': '+JSON.stringify(overview));
+      assert(!overview.liveVisible,'Mobile hero indicator should not clutter desktop hero at '+width);
+    }else{
+      assert(overview.ratio>.92,
+        'Live CCU should fill the overview width below 1200px at '+width+': '+JSON.stringify(overview));
+      if(width<=690){
+        assert(overview.liveVisible,'Mobile hero CCU indicator is missing at '+width);
+        assert.equal(overview.liveCCU,'48','Mobile hero must show the verified sample at '+width);
+      }
+    }
+
     assert(rect.chartGap>=18,'Chart controls overlap plot at '+width+': '+JSON.stringify(rect));
     assert(rect.plotLeft>=rect.panelLeft-2 && rect.plotRight<=rect.panelRight+2,
       'Chart extends beyond panel at '+width+': '+JSON.stringify(rect));
@@ -156,6 +190,19 @@ try{
     await page.locator('#tabs [data-tab="retention"]').click();
     assert.equal(await page.locator('.tabbody[data-page="retention"]').evaluate(el=>el.classList.contains('active')),true,
       'Retention tab did not activate at '+width);
+
+    await page.waitForTimeout(440);
+    const activeRail=await page.evaluate(()=>{
+      const rail=document.querySelector('#tabs .tab-indicator')?.getBoundingClientRect();
+      const active=document.querySelector('#tabs button.active')?.getBoundingClientRect();
+      return rail&&active?{
+        centerGap:Math.abs((rail.left+rail.width/2)-(active.left+active.width/2)),
+        widthGap:Math.abs(rail.width-active.width)
+      }:null;
+    });
+    assert(activeRail&&activeRail.centerGap<4&&activeRail.widthGap<4,
+      'Sliding tab indicator did not align with the active tab at '+width+': '+JSON.stringify(activeRail));
+
     assert.deepEqual(errors,[],'Browser JS errors at '+width);
     if(width===390){
       const setTestCCU=async(value,stale=false)=>{

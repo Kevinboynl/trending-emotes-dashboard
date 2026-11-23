@@ -404,7 +404,8 @@ try{
       // the network returns a temporary error. Its recovery is independent
       // from the public Roblox CCU refresh.
       await page.request.get(localURL+'__test__/settings?officialFailure=true');
-      await page.evaluate(()=>fetchPublished());
+      await page.reload({waitUntil:'domcontentloaded'});
+      await page.locator('.kvn-public-retry .kvn-retry-btn').waitFor({state:'visible'});
       assert.equal(await page.locator('.kvn-public-retry .kvn-retry-btn').isVisible(),true,
         'Official Insights error needs a visible Retry insights action');
       await page.request.get(localURL+'__test__/settings?officialFailure=false');

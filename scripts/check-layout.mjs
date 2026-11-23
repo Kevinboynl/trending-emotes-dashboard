@@ -22,6 +22,7 @@ let fixtureStale=false;
 let fixtureStamp=Date.now();
 let fixtureDelayMs=0;
 let fixtureFailure=false;
+let fixtureOfficialFailure=false;
 let fixtureRequestCount=0;
 
 function json(res,body){
@@ -59,6 +60,9 @@ const app=createServer(async(req,res)=>{
       if(url.searchParams.has('failure')){
         fixtureFailure=url.searchParams.get('failure')==='true';
       }
+      if(url.searchParams.has('officialFailure')){
+        fixtureOfficialFailure=url.searchParams.get('officialFailure')==='true';
+      }
       return json(res,{ok:true,delay:fixtureDelayMs,failure:fixtureFailure});
     }
     if(url.pathname==='/__test__/requests')return json(res,{count:fixtureRequestCount});
@@ -77,7 +81,14 @@ const app=createServer(async(req,res)=>{
       return json(res,snapshot);
     }
     if(url.pathname==='/api/history')return json(res,fixtureHistory(url.searchParams.get('range')));
-    if(url.pathname==='/api/public-analytics')return json(res,{state:'disabled',metrics:[]});
+    if(url.pathname==='/api/public-analytics'){
+      if(fixtureOfficialFailure){
+        res.writeHead(503,{'Content-Type':'application/json; charset=utf-8'});
+        res.end(JSON.stringify({state:'unavailable',metrics:[],note:'Local synthetic Open Cloud error'}));
+        return;
+      }
+      return json(res,{state:'disabled',metrics:[]});
+    }
     const answer=await worker.fetch(new Request('http://localhost'+req.url,{method:req.method}),{});
     res.writeHead(answer.status,Object.fromEntries(answer.headers.entries()));
     res.end(Buffer.from(await answer.arrayBuffer()));
@@ -91,7 +102,7 @@ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{
   for(const width of sizes){
     fixtureCCU=48;fixtureStale=false;fixtureStamp=Date.now();
-    fixtureDelayMs=0;fixtureFailure=false;
+    fixtureDelayMs=0;fixtureFailure=false;fixtureOfficialFailure=false;
     const context=await browser.newContext({viewport:{width,height:heights[width]},deviceScaleFactor:1});
     const page=await context.newPage();
     const errors=[];
@@ -379,11 +390,30 @@ try{
       await page.waitForFunction(()=>document.querySelector('#status')?.textContent?.includes('UNAVAILABLE'));
       assert.equal(await page.locator('#playing').getAttribute('data-value'),'55');
       assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).playing,visibleKey),55);
+      assert.equal(await page.locator('.kvn-stats-retry').isVisible(),true,
+        'Failed Roblox statistics request must display an actionable Retry data button');
       await page.request.get(localURL+'__test__/settings?failure=false');
       await page.request.get(localURL+'__test__/ccu?value=53');
-      await page.evaluate(()=>stats());
+      await page.locator('.kvn-stats-retry').click();
       await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='53');
+      assert.equal(await page.locator('.kvn-stats-retry').isVisible(),false,
+        'Recovery must hide Retry data when verified CCU refresh succeeds');
       assert.match(await page.locator('.kvn-ccu-change').innerText(),/−2\s*CCU/);
+
+      // Creator Analytics must never leave a permanent loading skeleton when
+      // the network returns a temporary error. Its recovery is independent
+      // from the public Roblox CCU refresh.
+      await page.request.get(localURL+'__test__/settings?officialFailure=true');
+      await page.evaluate(()=>fetchPublished());
+      assert.equal(await page.locator('.kvn-public-retry .kvn-retry-btn').isVisible(),true,
+        'Official Insights error needs a visible Retry insights action');
+      await page.request.get(localURL+'__test__/settings?officialFailure=false');
+      await page.locator('.kvn-public-retry .kvn-retry-btn').click();
+      await page.waitForFunction(()=>
+        document.querySelector('#publicMetricsContent')?.textContent
+        ?.includes('No owner-approved metrics have been selected'));
+      assert.equal(await page.locator('.kvn-public-retry .kvn-retry-btn').count(),0,
+        'Official Insights retry should resolve into a clear non-loading status');
 
       // Identical authoritative timestamps cannot introduce a contradictory
       // new count, regardless of whether the game API returned it.

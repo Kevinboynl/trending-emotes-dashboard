@@ -5,6 +5,7 @@ import { premiumJS } from './premium-interactions.js';
 import { studioUpgradeCSS, studioUpgradeJS } from './studio-upgrade.js';
 import { cinematicCSS, cinematicJS } from './cinematic-v2.js';
 import { liveIntelligenceCSS, liveIntelligenceJS } from './live-intelligence.js';
+import { activityFeedCSS, activityFeedJS } from './activity-feed.js';
 import { controlCenterCSS, controlCenterMarkup, controlCenterJS } from './control-center.js';
 import { playerGoalCSS, playerGoalMarkup, playerGoalJS } from './player-goals.js';
 import { allowPublicApi, protectResponse, safeError, newPageNonce } from './security.js';
@@ -936,11 +937,11 @@ const THEMED_HTML = HTML
   .replaceAll('<b>STUDIOS</b>', '<b>CLOTHING</b>')
   .replaceAll('#b6ff69', '#5daeff')
   .replaceAll('#aaff62', '#5daeff')
-  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + controlCenterCSS + '\n' + playerGoalCSS + '\n</style>')
+  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + controlCenterCSS + '\n' + playerGoalCSS + '\n' + activityFeedCSS + '\n</style>')
   .replace('<section class="wrap" id="dashboard">', () => controlCenterMarkup + '<section class="wrap" id="dashboard">')
   .replace('</section></main><footer', () => '</section>' + publicAnalyticsMarkup + '</main><footer')
   .replace('<div class="workspace reveal">', () => playerGoalMarkup + '<div class="workspace reveal">')
-  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n' + controlCenterJS + '\n' + playerGoalJS + '\n</script></body></html>');
+  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n' + controlCenterJS + '\n' + playerGoalJS + '\n' + activityFeedJS + '\n</script></body></html>');
 export default {
   async fetch(request, env, ctx) {
     // Only safe, read-only methods are accepted, including on the HTML route.

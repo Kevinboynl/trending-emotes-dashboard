@@ -51,7 +51,12 @@ for(const page of ['engagement','acquisition','retention','monetization','perfor
   assert.ok(html.includes('data-tab="'+page+'"'));
 for(const marker of ['kvn-pointer-core','kvn-sidefx','kvnCinemaReveal','kvn-refresh-data','kvn-ccu-status-line','kvn:verified-stats'])
   assert.ok(html.includes(marker),'Missing cinematic UI element '+marker);
-assert.ok(embeddedStyle.includes('--cyan:#38bdf8'),'Blue color palette changed');
+assert.ok(embeddedStyle.includes('--cyan:#43c4ff'),'KVN Studios cyan palette missing');
+assert.ok(embeddedStyle.includes('--bg:#080e1c'),'KVN Studios background missing');
+assert.ok(embeddedStyle.includes('--green:#31aaff'),'KVN Studios blue accent missing');
+assert.ok(html.includes('family=Archivo:wght@600;700;800;900'),'KVN Studios Archivo font not loaded');
+assert.ok(html.includes('family=Outfit:wght@400;500;600;700;800;900'),'KVN Studios Outfit font not loaded');
+assert.ok(embeddedStyle.includes('.hero h1 .kvn-hero-line'),'Hero title glyph clipping guard missing');
 assert.ok(embeddedStyle.includes('prefers-reduced-motion:reduce'),'Missing reduced-motion support');
 assert.ok(!html.includes('ROBLOX_ANALYTICS_API_KEY'),'Secret identifier leaked in page');
 assert.ok(!html.includes('x-api-key'),'Backend authorization exposed in page');

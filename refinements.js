@@ -16,7 +16,7 @@ a:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:2px solid 
 .navlinks a[aria-current="location"]{color:var(--white);background:color-mix(in srgb,var(--blue) 17%,transparent)}
 .navlinks a[aria-current="location"]:after{transform:scaleX(1)}
 .hero{isolation:isolate}
-.hero-sheen{position:absolute;z-index:1;left:0;top:0;width:290px;height:290px;border-radius:50%;opacity:0;pointer-events:none;filter:blur(25px);background:radial-gradient(circle,color-mix(in srgb,var(--cyan) 30%,transparent) 0%,color-mix(in srgb,var(--blue) 15%,transparent) 32%,transparent 72%);transform:translate3d(-600px,-600px,0);transition:opacity .22s ease;will-change:transform,opacity}
+
 .hero h1{max-width:750px}
 .hero .eyebrow{animation:refineIn .75s .08s var(--ease-enter) both}
 .hero .lead{max-width:590px}
@@ -113,7 +113,7 @@ footer .footer-brand{letter-spacing:-.4px}
 .metrics .card[data-tilt="1"]:hover{transform:perspective(900px) translateY(-5px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));transition:transform .2s ease-out,border-color .3s,box-shadow .3s}
 }
 @media(max-width:900px){
-.hero-sheen{width:240px;height:240px;opacity:.14;filter:blur(30px)}
+
 }
 @media(max-width:680px){
 .metrics .card:not(.primary) .card-content{min-height:154px}
@@ -133,7 +133,7 @@ footer .footer-brand{letter-spacing:-.4px}
 .official-card{min-width:0}
 }
 @media(hover:none),(pointer:coarse){
-.hero-sheen{display:none}
+
 .metrics .card:hover{transform:none}
 .card .corner{transform:none}
 }
@@ -143,7 +143,7 @@ footer .footer-brand{letter-spacing:-.4px}
 .metrics .card,.tabs .tab-indicator,.chart-wrap #tooltip,.official-card{transition:none!important}
 .metrics .card[data-tilt="1"]:hover{transform:none!important}
 .metrics.is-loading .card .number::after{animation:none!important}
-.hero-sheen{display:none!important}
+
 }
 
 /* Responsive CCU hero: draw sparkline only when it has enough room. */
@@ -205,7 +205,7 @@ footer .footer-brand{letter-spacing:-.4px}
  .hero .halo{width:225px;height:225px;filter:blur(38px)}
  .hero .floatbadge{top:11%;right:1%;padding:10px 12px}
  .hero .floatbadge strong{font-size:25px}
- .hero-sheen{display:none}
+ 
  #dashboard>.bar{margin-top:30px}
  #dashboard .metrics .card:not(.primary) .card-content{min-height:135px}
  #dashboard .metrics .primary .card-content{min-height:195px}
@@ -214,7 +214,7 @@ footer .footer-brand{letter-spacing:-.4px}
  #officialMetrics .bar{margin-top:42px}
 }
 @media(prefers-reduced-motion:reduce){
- .hero-sheen{display:none!important}
+ 
  .hero .hero-poster{animation:none}
 }
 

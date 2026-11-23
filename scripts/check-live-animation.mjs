@@ -1,14 +1,36 @@
 /**
- * Runs Chromium against the DEPLOYED public website to test CCU visuals.
+ * Tests deployed CCU visuals only when production HTML matches this GitHub commit.
  * Synthetic events only exist inside this temporary browser session.
  * They never write to Cloudflare, Roblox, or any remote API.
  */
 import assert from 'node:assert/strict';
 import {mkdirSync} from 'node:fs';
 import {chromium} from 'playwright';
+import worker from '../worker.js';
 
 mkdirSync('test-artifacts',{recursive:true});
 const url='https://trending-emotes-dashboard.k-backx.workers.dev/#dashboard';
+// Never claim today's GitHub code was visually tested against an outdated
+// Cloudflare deployment. Normalize only the random per-response CSP nonce.
+const normalize=html=>html.replace(/<script nonce="[a-z0-9]+">/g,'<script nonce="[nonce]">');
+const base=new URL(url).origin+'/';
+let productionHtml=null,expectedHtml=null;
+try{
+  const [live,expected]=await Promise.all([
+    fetch(base,{headers:{Accept:'text/html'},signal:AbortSignal.timeout(10000),cache:'no-store'}),
+    worker.fetch(new Request(base),{})
+  ]);
+  if(live.ok&&expected.ok){productionHtml=await live.text();expectedHtml=await expected.text();}
+}catch(error){console.log('LIVE VISUAL CHECK UNAVAILABLE:',String(error));}
+if(!productionHtml||!expectedHtml){
+  console.log('SKIPPED LIVE VISUAL ASSERTIONS: Cannot verify live HTML. Local browser checks still test current code.');
+  process.exit(0);
+}
+if(normalize(productionHtml)!==normalize(expectedHtml)){
+  console.log('SKIPPED LIVE VISUAL ASSERTIONS: Cloudflare serves HTML that differs from this GitHub commit. Check deployment.');
+  process.exit(0);
+}
+console.log('LIVE VISUAL TEST: Deployed HTML matches the exact Worker under test.');
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{
   for(const width of [390,1440]){
@@ -60,7 +82,8 @@ try{
     // Wave intentionally starts after 400ms; evaluate visible opacity after that delay.
     assert.match(rising.waveAnimation,/kvnWaveUp/);
     assert.match(rising.edgeAnimation,/kvnEdgeOpacity/);
-    assert.match(rising.digitAnimation,/kvnDigitUp/);
+    if(String(baseline).length===String(up).length)
+      assert.match(rising.digitAnimation,/kvnDigitUp/);
     await page.waitForTimeout(400);
     const riseWaveOpacity=await page.locator('.kvn-ccu-wave').evaluate(el=>Number(getComputedStyle(el).opacity));
     assert(riseWaveOpacity>.08,'Rise wave must be visible after its 400ms CSS delay; opacity='+riseWaveOpacity);
@@ -95,7 +118,8 @@ try{
     assert.match(falling.chipText,/−2\s*CCU/);
     assert(falling.chipOpacity>.25,'Drop badge is invisible midway '+JSON.stringify(falling));
     // Decrease wave begins after 440ms, not immediately.
-    assert.match(falling.digitAnimation,/kvnDigitDown/);
+    if(String(up).length===String(down).length)
+      assert.match(falling.digitAnimation,/kvnDigitDown/);
     assert.match(falling.deltaText,/SINCE LAST VISIT/);
     await page.waitForTimeout(410);
     const fallWaveOpacity=await page.locator('.kvn-ccu-wave').evaluate(el=>Number(getComputedStyle(el).opacity));

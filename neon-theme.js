@@ -194,4 +194,30 @@ body::after{
   .pulse,.ep-dot,.ep-small-dot,.kvn-feed-indicator{animation:none!important}
 }
 
+
+/* Prevent trailing digits being cropped on every counter. */
+#dashboard .metrics .card .number,
+.ep-count-wrap > strong,
+.gb-live-count,
+.gc-live-number,
+.gc-kpi > strong,
+.gc-funnel strong,
+.kvn-growth-focus__value,
+.kvn-growth-focus__tile-value,
+.detail .value,
+.official-card strong,
+.chart-foot .big{
+  letter-spacing:-.025em;
+  padding-inline-end:.13em;
+  padding-block-end:.06em;
+  overflow:visible;
+  text-overflow:clip;
+  font-variant-numeric:tabular-nums lining-nums;
+}
+.ep-count-wrap{flex-wrap:wrap;column-gap:14px;row-gap:8px}
+.ep-count-wrap > strong{flex:0 0 auto;min-width:max-content;max-width:none;line-height:1.04}
+.ep-ccu-tag{flex:0 0 auto}
+#dashboard .metrics .primary .number{letter-spacing:-.03em}
+@media(max-width:410px){.ep-count-wrap > strong{font-size:clamp(64px,17vw,96px)}}
+
 `;

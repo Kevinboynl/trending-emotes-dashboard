@@ -272,6 +272,11 @@ export const publicAnalyticsStyles = String.raw`
 .kvn-insight-banner a{font-size:12px;font-weight:700;color:#80cbff;text-decoration:underline;text-underline-offset:4px}
 .tabbody[data-page="acquisition"] .details{grid-template-columns:repeat(2,minmax(0,1fr))}
 .tabbody[data-page="acquisition"] .kvn-insight-card{min-height:220px}
+.kvn-public-retry{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.kvn-retry-btn{appearance:none;border:1px solid rgba(106,192,255,.5);border-radius:9px;background:rgba(34,100,193,.16);color:#c9e9ff;font:750 11px 'Inter',system-ui,sans-serif;padding:10px 14px;cursor:pointer;transition:background .2s,border-color .2s}
+.kvn-retry-btn:hover{background:rgba(39,126,239,.24);border-color:rgba(125,207,255,.75)}
+.kvn-retry-btn:focus-visible{outline:2px solid #66c6ff;outline-offset:3px}
+.kvn-retry-btn:disabled{opacity:.65;cursor:wait}
 @media(max-width:950px){.kvn-insights{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:680px){.kvn-insights,.tabbody[data-page="acquisition"] .details{grid-template-columns:1fr}.kvn-insight-card{padding:20px}.kvn-insight-card .k-value{font-size:34px}}
 @media(prefers-reduced-motion:reduce){.kvn-insight-card{transition:none}.kvn-insight-card:hover{transform:none}}
@@ -319,7 +324,25 @@ export const publicAnalyticsClient = String.raw`
    const min=Math.min(...arr),max=Math.max(...arr);
    return arr.map((v,i)=>((i*300/(arr.length-1)).toFixed(1))+','+((66-(v-min)/(max-min||1)*52).toFixed(1))).join(' ');
  };
- const message=(str)=>{root.replaceChildren();const box=document.createElement('div');box.className='official-message';box.textContent=str;root.append(box)};
+ const message=(str,retry=false)=>{
+   const hasPrevious=Boolean(window.__kvnPublishedAnalytics)&&Boolean(root.querySelector('.official-grid'));
+   if(!hasPrevious)root.replaceChildren();
+   root.querySelectorAll('.kvn-public-retry').forEach(el=>el.remove());
+   const box=document.createElement('div');
+   box.className='official-message kvn-public-retry';
+   box.textContent=(hasPrevious?'Showing the previous verified results. ':'')+str;
+   if(retry){
+     const btn=document.createElement('button');btn.type='button';
+     btn.className='kvn-retry-btn';btn.textContent='Retry insights';
+     btn.setAttribute('aria-label','Retry verified Roblox Creator Analytics');
+     btn.addEventListener('click',()=>{
+       btn.disabled=true;btn.textContent='Checking Roblox…';
+       void fetchPublished().finally(()=>{btn.disabled=false;btn.textContent='Retry insights';});
+     });
+     box.append(btn);
+   }
+   if(hasPrevious)root.prepend(box);else root.append(box);
+ };
 
  // Build the rich detail panels without exposing additional data. Metrics appear
  // only if the owner has explicitly put their exact ID in PUBLIC_ANALYTICS_METRICS.
@@ -423,7 +446,11 @@ export const publicAnalyticsClient = String.raw`
    lastOfficialRefresh=Date.now();
    officialRequest=(async()=>{
    try{
-     const r=await fetch('/api/public-analytics',{cache:'no-store'});
+     const controller=new AbortController();
+     const timeout=setTimeout(()=>controller.abort(),26000);
+     let r;
+     try{r=await fetch('/api/public-analytics',{cache:'no-store',signal:controller.signal});}
+     finally{clearTimeout(timeout);}
      const data=await r.json();
      renderPanels(data);
      // Reuse ONLY already approved public metrics for the Acquisition cards.
@@ -432,7 +459,7 @@ export const publicAnalyticsClient = String.raw`
      window.dispatchEvent(new Event('kvn:official-analytics'));
      if(!Array.isArray(data.metrics) || !data.metrics.length){
        const msg=data.state==='disabled'?'No owner-approved metrics have been selected for public display.':data.state==='not_configured'?'Open Cloud is ready. The owner must configure a Cloudflare Secret to enable the connection.':data.note||'The selected analytics are currently unavailable.';
-       message(msg);return;
+       message(msg,data.state!=='disabled'&&data.state!=='not_configured');return;
      }
      root.replaceChildren();const grid=document.createElement('div');grid.className='official-grid';
      for(const metric of data.metrics||[]){
@@ -453,7 +480,7 @@ export const publicAnalyticsClient = String.raw`
      }
      if(!grid.children.length){message('No selected metrics available.');return}
      root.append(grid);
-   }catch{renderPanels(null);message('Authorized Creator Analytics are temporarily unavailable.');}
+   }catch{renderPanels(window.__kvnPublishedAnalytics||null);message('Roblox Analytics is taking longer than expected. Try again or check back shortly.',true);}
    })();
    try{return await officialRequest;}
    finally{officialRequest=null;}

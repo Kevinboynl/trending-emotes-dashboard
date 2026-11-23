@@ -34,6 +34,19 @@ async function getJSON(url) {
     return await r.json();
   } finally { clearTimeout(timer); }
 }
+// Public, previously measured vote counts are useful when Roblox's vote
+// endpoint is briefly slow. D1 is a fallback, NEVER a fabricated vote value.
+async function readRecordedVotes(db){
+  if(!db)return null;
+  try{
+    const row=await db.prepare(
+      'SELECT t,likes,dislikes FROM samples WHERE likes IS NOT NULL AND dislikes IS NOT NULL ORDER BY t DESC LIMIT 1'
+    ).first();
+    if(!row||!Number.isSafeInteger(row.likes)||row.likes<0||
+      !Number.isSafeInteger(row.dislikes)||row.dislikes<0)return null;
+    return {likes:row.likes,dislikes:row.dislikes,voteTimestamp:row.t,recordedVotes:true};
+  }catch{return null;}
+}
 async function fetchStats(env = {}, ctx = null) {
   // The Universe ID, not Place ID, is required for public game statistics.
   const override=typeof env.ROBLOX_UNIVERSE_ID==='string'?env.ROBLOX_UNIVERSE_ID.trim():'';
@@ -114,8 +127,12 @@ async function fetchStats(env = {}, ctx = null) {
   }else gameData=initial.value;
   const g=gameData?.data?.[0];
   if(!g)throw new Error('Game details: Roblox returned no matching universe');
-  const likes=support?.likes??null;
-  const dislikes=support?.dislikes??null;
+  // Cold isolates may not yet have the parallel vote fetch. Use the most
+  // recent ACTUALLY RECORDED D1 votes, if any, until the new votes arrive.
+  const measuredVotes=Number.isFinite(support?.likes)&&Number.isFinite(support?.dislikes)
+    ?support:await readRecordedVotes(env.DB);
+  const likes=measuredVotes?.likes??null;
+  const dislikes=measuredVotes?.dislikes??null;
   const total=(likes??0)+(dislikes??0);
   return {
     source:'Roblox public API',placeId:PLACE_ID,universeId:u,
@@ -126,7 +143,8 @@ async function fetchStats(env = {}, ctx = null) {
     likes,dislikes,rating:total?likes/total*100:null,
     created:g.created||null,updated:g.updated||null,
     icon:support?.icon??null,thumbnail:support?.thumbnail??null,
-    voteTimestamp:support?.voteTimestamp??null,
+    voteTimestamp:measuredVotes?.voteTimestamp??null,
+    votesPreviouslyMeasured:Boolean(measuredVotes?.recordedVotes),
     timestamp:Date.now(),stale:false
   };
 }
@@ -168,8 +186,11 @@ async function record(db, s) {
   if (!db || !Number.isFinite(s.playing)) return;
   await ensureDB(db);
   const t = Math.floor(Date.now() / 300000) * 300000;
-  await db.prepare('INSERT OR IGNORE INTO samples (t,ccu,visits,favorites,likes,dislikes) VALUES (?,?,?,?,?,?)')
-    .bind(t, s.playing, s.visits, s.favorites, s.likes, s.dislikes).run();
+  await db.prepare(
+    'INSERT INTO samples (t,ccu,visits,favorites,likes,dislikes) VALUES (?,?,?,?,?,?)'+
+    ' ON CONFLICT(t) DO UPDATE SET likes=COALESCE(excluded.likes,samples.likes),'+
+    ' dislikes=COALESCE(excluded.dislikes,samples.dislikes)'
+  ).bind(t, s.playing, s.visits, s.favorites, s.likes, s.dislikes).run();
 }
 async function history(db, range) {
   if (!db) return {storage:'browser',points:[],comparison:{state:'d1_required'}};

@@ -413,19 +413,6 @@ try{
       await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='51');
       assert.equal(await page.locator('.kvn-ccu-change').isVisible(),false,
         'Missing baseline must not synthesize a prior CCU');
-      // A snapshot from another game is never an eligible baseline.
-      const wrongGame=Date.now()-60000;
-      await page.evaluate(({key,t})=>localStorage.setItem(key,JSON.stringify({
-        playing:999,timestamp:t-500,shownAt:t,fresh:true,gameId:'unrelated-place-id'
-      })),{key:visibleKey,t:wrongGame});
-      await page.request.get(localURL+'__test__/ccu?value=42');
-      await page.reload({waitUntil:'domcontentloaded'});
-      await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='42');
-      assert.equal(await page.locator('.kvn-ccu-change').isVisible(),false,
-        'Cross-game CCU baseline must not cause motion');
-      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).gameId,visibleKey),
-        '134944031090971','New baseline should include its actual Roblox game ID');
-
       assert.deepEqual(errors,[],'Browser JS error during returning visitor scenarios');
       console.log('PASS: Return up/down, reopen/reload, unseen fetch, rapid focus, stale/error, identical timestamp, 1h, expired and cleared storage.');
       // Closing a tab and opening another tab in the SAME browser context
@@ -474,6 +461,20 @@ try{
         storedBefore+2,{timeout:6000});
       assert.match(await page.locator('.kvn-ccu-delta').innerText(),/SINCE LAST VISIT/);
       console.log('PASS: Close/open same browser, reduced-motion return, actual visibility event and hidden poll exclusion.');
+      // A snapshot from another game is never an eligible baseline.
+      const wrongGame=Date.now()-60000;
+      await page.evaluate(({key,t})=>localStorage.setItem(key,JSON.stringify({
+        playing:999,timestamp:t-500,shownAt:t,fresh:true,gameId:'unrelated-place-id'
+      })),{key:visibleKey,t:wrongGame});
+      await page.request.get(localURL+'__test__/ccu?value=42');
+      await page.reload({waitUntil:'domcontentloaded'});
+      await page.waitForFunction(()=>document.querySelector('#playing')?.dataset.value==='42');
+      assert.equal(await page.locator('.kvn-ccu-change').isVisible(),false,
+        'Cross-game CCU baseline must not cause motion');
+      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).gameId,visibleKey),
+        '134944031090971','New baseline should include its actual Roblox game ID');
+
+
     }
     if(width===390||width===1440||width===1920){
       await chart.screenshot({path:artifactDir+'/chart-'+width+'.png',animations:'disabled'});

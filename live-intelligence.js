@@ -275,6 +275,21 @@ export const liveIntelligenceCSS = String.raw`
  .hero .hero-poster:hover img{transform:none}
 }
 
+/* Resilient, non-blocking data recovery affordance, native KVN blue. */
+.updated{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}
+.kvn-stats-retry{appearance:none;display:inline-flex;align-items:center;justify-content:center;
+ border:1px solid rgba(108,187,255,.44);border-radius:9px;padding:8px 11px;
+ color:#c7e9ff;background:rgba(33,107,205,.17);
+ font:750 10px 'Inter',system-ui,sans-serif;letter-spacing:.015em;
+ cursor:pointer;white-space:nowrap;
+ transition:border-color .22s ease,background .22s ease,transform .22s ease
+}
+.kvn-stats-retry[hidden]{display:none!important}
+.kvn-stats-retry:not(:disabled):hover{background:rgba(46,132,239,.26);border-color:rgba(110,205,255,.78);transform:translateY(-1px)}
+.kvn-stats-retry:focus-visible{outline:2px solid #7ac7ff;outline-offset:3px}
+.kvn-stats-retry:disabled{opacity:.65;cursor:wait}
+@media(prefers-reduced-motion:reduce){.kvn-stats-retry{transition:none}.kvn-stats-retry:hover{transform:none}}
+
 `;
 export const liveIntelligenceJS = String.raw`
 /* Event-driven CCU presentation: never alters or estimates Roblox data. */

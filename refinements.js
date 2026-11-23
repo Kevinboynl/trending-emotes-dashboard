@@ -91,8 +91,8 @@ a:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:2px solid 
 .tabs{position:relative;isolation:isolate}
 .tabs button{position:relative;z-index:2}
 .tabs.enhanced button.active{background:transparent;box-shadow:none}
-.tabs .tab-indicator{pointer-events:none;position:absolute;left:0;top:0;z-index:1;border-radius:10px;background:linear-gradient(120deg,var(--blue),var(--cyan));box-shadow:0 7px 20px color-mix(in srgb,var(--blue) 35%,transparent);transition:transform .48s var(--ease-enter),width .45s var(--ease-enter),height .45s var(--ease-enter);transform:translate3d(0,0,0)}
-.tabbody.active{animation:panelEnter .47s var(--ease-enter) both}
+.tabs .tab-indicator{pointer-events:none;position:absolute;left:0;top:0;z-index:1;border-radius:10px;background:linear-gradient(120deg,var(--blue),var(--cyan));box-shadow:0 7px 20px color-mix(in srgb,var(--blue) 35%,transparent);transition:transform .38s var(--ease-enter),width .38s var(--ease-enter),height .38s var(--ease-enter);transform:translate3d(0,0,0)}
+.tabbody.active{animation:panelEnter .38s var(--ease-enter) both}
 .tabbody .card:nth-child(1){animation:refineIn .5s var(--ease-enter) both}
 .tabbody .card:nth-child(2){animation:refineIn .5s .08s var(--ease-enter) both}
 .tabbody .card:nth-child(3){animation:refineIn .5s .16s var(--ease-enter) both}
@@ -323,6 +323,13 @@ if(tabBar){
   tabBar.addEventListener('click',()=>requestAnimationFrame(shift));
   window.addEventListener('resize',throttle(shift),{passive:true});
   tabBar.addEventListener('scroll',throttle(shift),{passive:true});
+  // Re-align after font loads and responsive button-label changes.
+  if(typeof ResizeObserver!=='undefined'){
+    const tracker=new ResizeObserver(()=>requestAnimationFrame(shift));
+    tracker.observe(tabBar);
+    for(const button of tabBar.querySelectorAll('button[data-tab]'))tracker.observe(button);
+  }
+  document.fonts?.ready?.then(()=>requestAnimationFrame(shift));
   requestAnimationFrame(shift);
 }
 

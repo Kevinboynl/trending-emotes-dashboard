@@ -241,7 +241,7 @@ const HTML = String.raw`<!doctype html>
 .workspace{display:grid;grid-template-columns:1.8fr 1fr;gap:16px;margin-top:16px}.chart-panel{padding:27px}.panel-head{display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap}.panel-head h3{font-size:24px;letter-spacing:-1px;margin-top:8px}.switches{display:flex;gap:4px;padding:5px;border:1px solid var(--line);border-radius:9px;background:#080c08;flex-wrap:wrap}.switches button{border:0;background:transparent;color:#91a18f;border-radius:6px;padding:8px 12px;font-size:10px;font-weight:800;transition:background .25s,color .25s}.switches button.active{background:#b6ff69;color:#11200c}.metric-switch{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0 20px}.metric-switch button{background:#161f16;border:1px solid #2d3b2e;border-radius:50px;color:#b1c0b0;padding:9px 15px;font-size:11px;font-weight:700;transition:.25s}.metric-switch button.active{color:var(--green);border-color:#83af59;background:#1e2d1b}.chart-wrap{height:300px;position:relative;border-bottom:1px solid #2b362b;background:repeating-linear-gradient(to bottom,transparent 0,transparent 59px,#293329 60px,#293329 61px)}#chart{width:100%;height:100%;display:block;overflow:visible}#curve{fill:none;stroke:var(--green);stroke-width:3;stroke-linejoin:round;stroke-linecap:round;filter:drop-shadow(0 0 6px #a0ff6b65)}#shade{fill:url(#chartGradient)}#tooltip{position:absolute;z-index:10;pointer-events:none;background:#1d2a1d;border:1px solid #567d45;border-radius:9px;padding:10px 13px;font-size:11px;transform:translate(-50%,-110%);white-space:nowrap;display:none;box-shadow:0 20px 35px #0008}.chart-nodata{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(#0e160e70,#0e160edc);color:#d0e1c8;gap:9px;font-size:13px}.chart-nodata strong{color:var(--green);font-size:15px}.chart-axis{display:flex;justify-content:space-between;font-size:10px;color:#7d907b;margin-top:13px}.chart-foot{display:flex;justify-content:space-between;gap:14px;margin-top:21px;padding-top:20px;border-top:1px solid var(--line)}.chart-foot .big{font-size:22px;font-family:'Space Grotesk';font-weight:700;margin-top:7px}.chart-foot small{color:#95a895;font-size:10px}
 .game-card{padding:0}.game-cover{position:relative;aspect-ratio:16/9;background:radial-gradient(circle at center,#345d2e,#182219 65%);overflow:hidden}.game-cover img{width:100%;height:100%;object-fit:cover;transition:transform .6s}.game-card:hover img{transform:scale(1.06)}.game-cover:after{content:'';position:absolute;inset:40% 0 0;background:linear-gradient(transparent,#131813)}.game-body{padding:23px}.gamerow{display:flex;align-items:center;gap:13px}.game-icon{width:59px;height:59px;border:1px solid #425c42;background:#172519;border-radius:13px;object-fit:cover}.game-title{font:700 18px 'Space Grotesk';line-height:1.2}.game-sub{color:var(--muted);font-size:11px;margin-top:7px}.gamelinks{display:flex;gap:10px;margin-top:25px}.gamelinks a{flex:1;text-align:center}.gamelinks .outlinebtn{padding:12px 9px}
 .tabs{display:flex;gap:7px;padding:7px;background:#101610;border:1px solid var(--line);border-radius:12px;width:max-content;max-width:100%;overflow-x:auto;margin:44px 0 20px}.tabs button{border:0;border-radius:9px;background:transparent;color:#a2b19e;padding:12px 18px;font-size:12px;font-weight:800;white-space:nowrap;transition:.2s}.tabs button.active{background:var(--green);color:#13200e}.tabbody{display:none;animation:rise .45s ease both}.tabbody.active{display:block}.details{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.detail{padding:26px}.detail h3{font-size:14px;margin:10px 0;color:#d4e3cd}.detail p{color:#a0af9d;font-size:12px;line-height:1.8}.detail .value{font:700 37px 'Space Grotesk';color:var(--white);margin:17px 0 8px;letter-spacing:-1px}.detail .tag{color:var(--green);font-size:10px;font-weight:800;letter-spacing:1px}.detail .tag.locked{color:#e2c39b}.rating-track{height:8px;background:#334033;border-radius:10px;margin-top:17px;overflow:hidden}.rating-track span{display:block;height:100%;width:0;background:var(--green);border-radius:10px;transition:width 1s}.privacy{border:1px dashed #405340;background:#101710;border-radius:14px;padding:28px;color:#c7d5bf;display:flex;gap:17px;align-items:start;margin-top:14px}.privacy strong{display:block;margin-bottom:9px}.privacy p{font-size:12px;line-height:1.75;color:var(--muted)}.privacy a{color:var(--green);text-decoration:underline;text-underline-offset:3px}
-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid var(--line);margin-top:70px;padding:30px 0 43px;color:#92a291;font-size:11px}.footer-brand{font:700 16px 'Space Grotesk';color:#d6e5d2}.footer-brand b{color:var(--green)}.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.1,1)}.reveal.show{opacity:1;transform:translateY(0)}
+footer{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid var(--line);margin-top:70px;padding:30px 0 43px;color:#92a291;font-size:11px}.footer-brand{font:700 16px 'Space Grotesk';color:#d6e5d2}.footer-brand b{color:var(--green)}.reveal{opacity:1;transform:none;transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.1,1)}html.kvn-reveal-ready .reveal:not(.show){opacity:0;transform:translateY(28px)}html.kvn-reveal-ready .reveal.show{opacity:1;transform:none}
 @keyframes float{0%,100%{transform:translateY(0) rotate(-7deg)}50%{transform:translateY(-17px) rotate(-3deg)}}@keyframes breathe{50%{transform:scale(1.17);opacity:.7}}@keyframes twinkle{50%{opacity:.2;transform:scale(.7) rotate(40deg)}}@keyframes orbit{to{transform:rotate(336deg) scaleX(1.1)}}@keyframes pulse{50%{box-shadow:0 0 0 12px #b6ff6900}}@keyframes marquee{to{transform:translateX(-50%)}}@keyframes rise{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:1020px){.wrap{padding:0 26px}.hero{min-height:440px}.navlinks{display:none}.metrics{grid-template-columns:repeat(2,1fr)}.primary{grid-column:span 2;grid-row:auto;min-height:250px}.primary .number{margin:10px 0}.workspace{grid-template-columns:1fr 1fr}.floatbadge{right:0}.details{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:680px){.wrap{padding:0 18px}.nav{height:66px}.wordmark{font-size:16px}.wordmark small{display:none}.slash{margin:0 7px}.livepill{display:none}.nav-right .playbtn{padding:10px 13px}.hero{grid-template-columns:1fr;padding-top:53px;padding-bottom:30px;gap:6px}.eyebrow{letter-spacing:1.5px}h1{letter-spacing:-4px;font-size:clamp(55px,14vw,82px);margin:26px 0 19px}.lead{font-size:13px}.visual{height:260px;overflow:hidden}.orbit{width:240px;height:240px}.orbit:nth-child(2){width:310px;height:125px}.hero-poster{width:176px;height:176px;border-radius:29px}.floatbadge{right:5px;top:9%;padding:10px}.floatbadge strong{font-size:23px}.bar{margin-top:38px;align-items:start}.bar h2{letter-spacing:-1.1px}.updated{font-size:10px;padding:10px}.metrics{gap:10px}.card{border-radius:13px}.card-content{padding:17px}.primary{min-height:245px}.primary .card-content{padding:22px}.primary .number{font-size:clamp(82px,17vw,108px)}.metric-label{font-size:10px;letter-spacing:.5px}.number{font-size:29px;margin-top:23px}.metric-info{font-size:10px}.metric-bottom{left:22px;right:22px;bottom:20px}.workspace{grid-template-columns:1fr}.chart-panel{padding:19px}.panel-head h3{font-size:20px}.switches button{padding:7px 9px}.chart-wrap{height:235px}.details{grid-template-columns:1fr}.tabs{width:100%}.tabs button{padding:11px 14px}.privacy{padding:19px}footer{display:block}footer>*{display:block;margin:8px 0}}
@@ -249,6 +249,9 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;bo
 </style></head><body>
 <div class="noise"></div>
 <header class="top"><div class="wrap nav"><a href="#top" class="wordmark">KVN <b>STUDIOS</b><span class="slash">/</span><small>INTELLIGENCE</small></a><div class="navlinks"><a href="#dashboard">OVERVIEW</a><a href="#analytics">ANALYTICS</a><a href="#details">DEEP DIVE</a></div><div class="nav-right"><span class="livepill"><span class="pulse" id="pulse"></span><span id="status">CONNECTING</span></span><a class="playbtn" href="https://www.roblox.com/games/134944031090971/" target="_blank" rel="noopener">PLAY GAME ↗</a></div></div></header>
+<nav class="kvn-mobile-quicknav" aria-label="Dashboard quick navigation">
+  <a href="#dashboard">Overview</a><a href="#analytics">Analytics</a><a href="#details">Deep dive</a><a href="#officialMetrics">Official insights</a>
+</nav>
 <main id="top"><section class="hero wrap"><div><div class="eyebrow">THE KVN ANALYTICS LAB</div><h1>TRENDING<br><span>EMOTES!</span></h1><p class="lead">Real-time insights into your Roblox experience. Live players, growth, engagement, and historical trends — all in one place.</p><div class="kvn-hero-inline-live"><span class="kvn-hero-live-dot" aria-hidden="true"></span><span id="heroInlineStatus">CHECKING CCU</span><strong id="heroInlineCCU" aria-live="off">—</strong><small>Verified Roblox CCU</small></div><div class="hero-actions"><a class="playbtn" href="#dashboard">EXPLORE DASHBOARD ↓</a><a class="outlinebtn" href="https://www.roblox.com/communities/15819510" target="_blank" rel="noopener noreferrer">KVN STUDIOS ↗</a><span class="tiny">PLACE ID: 134944031090971</span></div></div><div class="visual"><div class="orbit"></div><div class="orbit"></div><div class="halo"></div><div class="hero-poster" id="poster"><span class="fallback">✳</span></div><div class="floatbadge">● <span id="heroBadgeStatus">CHECKING CCU</span> <strong id="heroCCU">—</strong><span class="small">PLAYERS RIGHT NOW</span></div><div class="spark sp1">✦</div><div class="spark sp2">✳</div></div></section>
 <div class="ticker" aria-hidden="true"><div class="ticker-inner">ROBLOX ANALYTICS <strong>✳</strong> PLAYERS IN REAL TIME <strong>✳</strong> POWERED BY KVN STUDIOS <strong>✳</strong> TRENDING EMOTES! <strong>✳</strong> ROBLOX ANALYTICS <strong>✳</strong> PLAYERS IN REAL TIME <strong>✳</strong> POWERED BY KVN STUDIOS <strong>✳</strong> TRENDING EMOTES! <strong>✳</strong></div></div>
 <section class="wrap" id="dashboard"><div class="bar reveal"><div><div class="sec-label">01 / EXPERIENCE OVERVIEW</div><h2>THE NUMBERS<span style="color:var(--green)">.</span></h2><p class="desc">Verified Roblox statistics, checked automatically every 20 seconds.</p></div><div class="updated"><span class="pulse"></span><span id="lastUpdate">Waiting for Roblox...</span></div></div>
@@ -538,11 +541,12 @@ async function stats(){
     try{
       const controller=new AbortController();
       const timeout=setTimeout(()=>controller.abort(),12000);
-      let response;
+      let response,d;
       try{
         response=await fetch('/api/stats',{cache:'no-store',signal:controller.signal});
+        // Keep the timeout active while reading the response body, too.
+        d=await response.json();
       }finally{clearTimeout(timeout);}
-      const d=await response.json();
       if(!response.ok||d.error)throw Error(d.error||'Roblox unavailable');
       lastFetchedCCU=d;
       const isAuthoritative=!d.stale&&
@@ -872,7 +876,16 @@ $('chart').addEventListener('pointerleave',e=>{
 },{passive:true});
 $('chart').addEventListener('pointercancel',clearChartHover,{passive:true});
 for(const card of document.querySelectorAll('.card'))card.addEventListener('pointermove',e=>{const r=card.getBoundingClientRect();card.style.setProperty('--mouse-x',(e.clientX-r.left)+'px');card.style.setProperty('--mouse-y',(e.clientY-r.top)+'px')});
-const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('show');observer.unobserve(entry.target)}},{threshold:.07});document.querySelectorAll('.reveal').forEach(x=>observer.observe(x));
+// Render HTML visibly by default. Only opt into scroll-reveals after the
+// observer exists; otherwise a JS error / unsupported API must not blank the page.
+const canReveal=typeof IntersectionObserver==='function'&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const observer=canReveal?new IntersectionObserver(entries=>{
+  for(const entry of entries)if(entry.isIntersecting){
+    entry.target.classList.add('show');observer.unobserve(entry.target);
+  }
+},{threshold:.07}):{observe(node){node.classList.add('show')},unobserve(){}};
+if(canReveal)document.documentElement.classList.add('kvn-reveal-ready');
+document.querySelectorAll('.reveal').forEach(node=>observer.observe(node));
 $('footerTime').textContent='© '+new Date().getFullYear()+' KVN STUDIOS';
 window.addEventListener('kvn:official-analytics',()=>{acquisition();});
 // Restore other previously verified public fields, then put the last
@@ -927,14 +940,25 @@ window.addEventListener('pageshow',event=>{
 window.addEventListener('online',resumeLiveStats);
 </script></body></html>`;
 
+const resilienceCSS = String.raw`
+/* Quick navigation remains useful even if JavaScript or the Roblox API fails. */
+.kvn-mobile-quicknav{display:none}
+@media(max-width:1020px){
+  .kvn-mobile-quicknav{display:flex;position:sticky;top:78px;z-index:59;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding:8px 18px;background:rgba(8,16,33,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
+  .kvn-mobile-quicknav a{display:inline-flex;flex:none;align-items:center;justify-content:center;min-height:42px;padding:9px 14px;border-radius:10px;color:#b8d3ee;border:1px solid transparent;font-size:12px;font-weight:700;white-space:nowrap}
+  .kvn-mobile-quicknav a:hover,.kvn-mobile-quicknav a:focus-visible{color:var(--white);background:rgba(49,170,255,.13);border-color:var(--line)}
+  #dashboard,#analytics,#details,#officialMetrics{scroll-margin-top:150px}
+}
+@media(max-width:680px){.kvn-mobile-quicknav{top:66px;padding-inline:12px}}
+@media(prefers-reduced-motion:reduce){html.kvn-reveal-ready .reveal:not(.show){opacity:1;transform:none}}
+`;
+
 /* Render-time composition keeps the Roblox API, database schema and API routes unchanged.
    This visual layer is maintained separately in premium-theme.js and premium-interactions.js. */
 const THEMED_HTML = HTML
-  .replaceAll('KVN STUDIOS', 'KVN CLOTHING')
-  .replaceAll('<b>STUDIOS</b>', '<b>CLOTHING</b>')
   .replaceAll('#b6ff69', '#5daeff')
   .replaceAll('#aaff62', '#5daeff')
-  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n</style>')
+  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + resilienceCSS + '\n</style>')
   .replace('</section></main><footer', () => '</section>' + publicAnalyticsMarkup + '</main><footer')
   .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n</script></body></html>');
 export default {

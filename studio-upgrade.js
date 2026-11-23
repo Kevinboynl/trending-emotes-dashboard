@@ -225,7 +225,7 @@ export const studioUpgradeJS = String.raw`
   text('.hero .eyebrow','LIVE EXPERIENCE INTELLIGENCE');
   text('.hero .lead','Discover what drives TRENDING EMOTES! — live players, growth, engagement and verified Roblox analytics. All in one place.');
   text('.hero .hero-note','REAL ROBLOX DATA  /  ZERO MADE-UP NUMBERS');
-  text('#dashboard .bar .desc','Verified public Roblox statistics, refreshed every minute.');
+  text('#dashboard .bar .desc','Live player counts checked every 20 seconds; other Roblox statistics may update less often.');
   text('#analytics .bar .desc','Explore real player activity and historical performance.');
   text('#details .bar .desc','A closer look at the signals behind your experience.');
   all('.metrics .metric-info',[

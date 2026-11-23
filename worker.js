@@ -690,6 +690,7 @@ function getVerifiedHistory(){
 }
 function getPoints(){const since=Date.now()-spans[currentRange];return getVerifiedHistory().filter(x=>x.t>=since&&Number.isFinite(x[currentMetric]));}
 let historyRequestVersion=0;
+let lastCloudHistoryRange=null;
 async function loadHistory(){
   const requestedRange=currentRange,version=++historyRequestVersion;
   let unavailable=false;
@@ -702,6 +703,7 @@ async function loadHistory(){
       ?data.comparison:{state:'unavailable'};
     if(data.storage==='cloud'){
       usingCloud=true;
+      lastCloudHistoryRange=requestedRange;
       cloudHistory=Array.isArray(data.points)?
         data.points.filter(p=>p&&Number.isFinite(p.t)):[];
       $('storageInfo').textContent='Cloudflare D1 history · collected automatically when scheduled tasks are running.';
@@ -712,8 +714,14 @@ async function loadHistory(){
   }catch{
     if(version!==historyRequestVersion||requestedRange!==currentRange)return;
     unavailable=true;
-    usingCloud=false;
-    $('storageInfo').textContent='History service unavailable · showing any locally saved measurements.';
+    // Preserve previously verified D1 points only when the failed request
+    // is for that exact range. Never display 24H data as a failed 7D query.
+    if(usingCloud&&lastCloudHistoryRange===requestedRange&&cloudHistory.length){
+      $('storageInfo').textContent='History refresh delayed · showing last verified Cloudflare D1 measurements.';
+    }else{
+      usingCloud=false;
+      $('storageInfo').textContent='History service unavailable · showing any locally saved measurements.';
+    }
   }
   if(version!==historyRequestVersion||requestedRange!==currentRange)return;
   draw();

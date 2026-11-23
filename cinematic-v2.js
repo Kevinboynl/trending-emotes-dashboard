@@ -271,6 +271,10 @@ if(chart){
     if(!box.width||!box.height)return;
     point?.setAttribute('cx',p.x);point?.setAttribute('cy',p.y);
     point?.setAttribute('visibility','visible');
+    const wrapper=chart.closest('.chart-wrap');
+    wrapper?.classList.add('hovering');
+    const cross=wrapper?.querySelector('.chart-crosshair');
+    if(cross)cross.style.transform='translateX('+(p.x/860*box.width).toFixed(2)+'px)';
     if(tooltip){
       tooltip.style.display='block';
       tooltip.textContent=dateTime(p.raw.t)+' · '+fmt(p.raw[currentMetric])+' '+valueFields[currentMetric];
@@ -287,7 +291,7 @@ if(chart){
     move(e.key==='Home'?0:e.key==='End'?chartPoints.length-1:index+(e.key==='ArrowRight'?1:-1));
   });
   chart.addEventListener('focus',()=>move(index));
-  chart.addEventListener('blur',()=>{if(tooltip)tooltip.style.display='none';point?.setAttribute('visibility','hidden');});
+  chart.addEventListener('blur',()=>{if(tooltip)tooltip.style.display='none';point?.setAttribute('visibility','hidden');chart.closest('.chart-wrap')?.classList.remove('hovering');});
   const curve=document.getElementById('curve');
   if(curve)new MutationObserver(()=>{index=0;}).observe(curve,{attributes:true,attributeFilter:['d']});
 }

@@ -202,5 +202,85 @@ assert.equal(requests.game,2);
 assert.equal(requests.votes,1,'Votes should be cached while CCU changes');
 assert.equal(requests.icons,1,'Artwork should be cached while CCU changes');
 assert.equal(third.timestamp,fakeNow);
+// Prevent a slow Roblox thumbnail endpoint from blanking the PUBLIC vote
+// counters while the primary game data and vote API respond immediately.
+const slowAssets=[];
+const slowImageFetch=async(url)=>{
+  const u=String(url);
+  if(u.includes('/universes/v1/places/'))return Response.json({universeId:123456});
+  if(u.startsWith('https://games.roblox.com/v1/games?'))
+    return Response.json({data:[{name:'TRENDING EMOTES!',playing:21,visits:220,favoritedCount:33}]});
+  if(u.includes('/games/votes?'))
+    return Response.json({data:[{upVotes:44,downVotes:14}]});
+  if(u.includes('thumbnails.roblox.com')){
+    await new Promise(resolve=>setTimeout(resolve,950));
+    return Response.json({data:[{imageUrl:'https://example.test/slow.png',
+      thumbnails:[{imageUrl:'https://example.test/slow.png'}]}]});
+  }
+  throw Error('Unrecognized synthetic Roblox URL: '+u);
+};
+const slowRuntime={...nativeContext,fetch:slowImageFetch};
+const slowWorker=runInNewContext(bundle,slowRuntime,{timeout:4000})(...Object.values(modules)).worker;
+const started=Date.now();
+const slowContext={waitUntil(p){slowAssets.push(p)}};
+const fastVotes=await (await slowWorker.fetch(request('/api/stats'),{},slowContext)).json();
+assert.equal(fastVotes.playing,21);
+assert.equal(fastVotes.likes,44,'Votes must not await slow artwork');
+assert.equal(fastVotes.dislikes,14,'Negative votes must not await slow artwork');
+assert.ok(Date.now()-started<850,'Art enrichment slowed the CCU response');
+await Promise.all(slowAssets);
+console.log('PASS: Slow thumbnails cannot blank fresh verified Roblox votes or stall live CCU.');
+
+// Shared D1 aggregate results must survive new Worker isolates and return
+// previously VERIFIED Roblox metrics during a later query failure.
+const analyticsMemory=new Map();
+const analyticsDB={
+  prepare(sql){
+    if(sql.startsWith('CREATE TABLE'))return {run:async()=>({})};
+    if(sql.startsWith('SELECT updated_at,payload FROM public_analytics_cache')){
+      return {bind:key=>({first:async()=>analyticsMemory.get(key)||null})};
+    }
+    if(sql.startsWith('INSERT INTO public_analytics_cache')){
+      return {bind:(key,updated_at,payload)=>({run:async()=>{
+        analyticsMemory.set(key,{updated_at,payload});
+        return {};
+      }})};
+    }
+    throw Error('Unexpected public analytics cache SQL: '+sql);
+  }
+};
+const analyticsNow=Date.now();
+const analyticEnv={
+  PUBLIC_ANALYTICS_METRICS:'DailyActiveUsers',
+  ROBLOX_ANALYTICS_API_KEY:'SYNTHETIC_TEST_KEY_NEVER_PUBLISHED',
+  ROBLOX_UNIVERSE_ID:'123456',
+  DB:analyticsDB
+};
+const genuineFixture=async(url)=>{
+  assert.ok(String(url).startsWith('https://apis.roblox.com/analytics-query-api/'));
+  return Response.json({done:true,response:{values:[{
+    dataPoints:[{time:new Date(analyticsNow-2*86400000).toISOString(),
+      value:28,status:'Valid'}]
+  }]}});
+};
+const analyticsA=evalNamedModule(file('public-analytics.js'),'analytics-instance-a.js');
+const firstOfficial=await (await analyticsA.publicAnalyticsResponse(
+  analyticEnv,genuineFixture,analyticsNow
+)).json();
+assert.equal(firstOfficial.state,'ready');
+assert.equal(firstOfficial.metrics[0].latest.value,28);
+assert.equal(analyticsMemory.size,1,'Verified metrics were not saved to D1');
+const analyticsB=evalNamedModule(file('public-analytics.js'),'analytics-instance-b.js');
+const failingAnalytics=async()=>{throw Error('synthetic-upstream-temporary-outage')};
+const recovered=await (await analyticsB.publicAnalyticsResponse(
+  analyticEnv,failingAnalytics,analyticsNow+20*60000
+)).json();
+assert.equal(recovered.metrics[0].latest.value,28,
+  'D1 shared verified analytics must survive a later Roblox outage');
+assert.equal(recovered.previouslyVerified,true,
+  'Old saved analytics must be labeled previously verified');
+assert.equal(recovered.cacheState,'previously_verified');
+console.log('PASS: Shared Cloudflare D1 analytics preserve actual previous metrics across outages.');
+
 console.log('PASS: Browser 20s refresh, official analytics timer, verified CCU update and Roblox upstream caching.');
 console.log('PASS: Worker composition, dashboard JavaScript, selected filters, real-data wiring, CSS, CSP nonce, invalid routes and public API states.');

@@ -6,6 +6,7 @@ import { studioUpgradeCSS, studioUpgradeJS } from './studio-upgrade.js';
 import { cinematicCSS, cinematicJS } from './cinematic-v2.js';
 import { liveIntelligenceCSS, liveIntelligenceJS } from './live-intelligence.js';
 import { pulseMarkup, pulseCSS, pulseJS } from './emote-pulse.js';
+import { signalMarkup, signalCSS, signalJS } from './live-signal.js';
 import { playerGoalCSS, playerGoalMarkup, playerGoalJS } from './player-goals.js';
 import { allowPublicApi, protectResponse, safeError, newPageNonce } from './security.js';
 /* TRENDING EMOTES — one-file Cloudflare Worker. Optional D1 binding: DB.
@@ -936,11 +937,12 @@ const THEMED_HTML = HTML
   .replaceAll('<b>STUDIOS</b>', '<b>CLOTHING</b>')
   .replaceAll('#b6ff69', '#5daeff')
   .replaceAll('#aaff62', '#5daeff')
-  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + pulseCSS + '\n' + playerGoalCSS + '\n</style>')
+  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + pulseCSS + '\n' + playerGoalCSS + '\n' + signalCSS + '\n</style>')
   .replace('<section class="wrap" id="dashboard">', () => pulseMarkup + '\n<section class="wrap" id="dashboard">')
+  .replace('<div class="metrics reveal">', () => signalMarkup + '\n<div class="metrics reveal">')
   .replace('</section></main><footer', () => '</section>' + publicAnalyticsMarkup + '</main><footer')
   .replace('<div class="workspace reveal">', () => playerGoalMarkup + '<div class="workspace reveal">')
-  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n' + pulseJS + '\n' + playerGoalJS + '\n</script></body></html>');
+  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n' + pulseJS + '\n' + playerGoalJS + '\n' + signalJS + '\n</script></body></html>');
 export default {
   async fetch(request, env, ctx) {
     // Only safe, read-only methods are accepted, including on the HTML route.

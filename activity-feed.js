@@ -4,14 +4,19 @@ export const activityFeedMarkup = String.raw`
   <div class="kvn-feed-head">
     <div><div class="kvn-feed-kicker"><span class="kvn-feed-indicator"></span> LIVE PLAYER MOVEMENT / SESSION</div>
       <h3 id="kvn-feed-title">THE ACTIVITY <span>FEED.</span></h3>
-      <p>See when verified concurrent players rise or fall, as they happen.</p>
+      <p>Track verified CCU changes, 5-minute momentum, and the session peak.</p>
     </div>
     <div class="kvn-feed-summary"><small>CHANGE SINCE FIRST READING</small><strong id="kvn-feed-total">—</strong></div>
+  </div>
+  <div class="kvn-feed-insights" aria-label="Live player movement statistics">
+    <div class="kvn-feed-insight"><small>NET CHANGE · LAST 5 MIN</small><strong id="kvn-feed-5m">—</strong><span id="kvn-feed-5m-note">Collecting live readings</span></div>
+    <div class="kvn-feed-insight"><small>PEAK · THIS SESSION</small><strong id="kvn-feed-peak">—</strong><span>Highest verified player count</span></div>
+    <div class="kvn-feed-insight"><small>DATA STATUS</small><strong id="kvn-feed-status">CONNECTING</strong><span id="kvn-feed-status-note">Waiting for Roblox</span></div>
   </div>
   <div class="kvn-feed-events" id="kvn-feed-events" role="log" aria-live="off" aria-label="Recent verified player count changes">
     <p class="kvn-feed-empty">Waiting for the first two verified player readings…</p>
   </div>
-  <div class="kvn-feed-footer"><span>TRACKING ONLY WHILE THIS PAGE IS OPEN</span><span>NO ESTIMATED PLAYER COUNTS</span></div>
+  <div class="kvn-feed-footer"><span>LIVE UPDATES · SESSION-BASED</span><span>CCU CHANGE ≠ EXACT JOINS OR LEAVES</span></div>
 </section>`;
 export const activityFeedCSS = String.raw`
 .kvn-activity-feed{margin:22px 0 40px;padding:27px 30px 21px;border:1px solid rgba(94,164,249,.26);border-radius:21px;background:linear-gradient(125deg,rgba(13,33,67,.94),rgba(9,22,46,.96));box-shadow:0 22px 55px rgba(3,13,35,.2);color:#edf6ff}
@@ -34,43 +39,91 @@ export const activityFeedCSS = String.raw`
 .kvn-feed-detail{min-width:0}.kvn-feed-detail strong{display:block;font:750 13px/1.4 'Outfit',system-ui,sans-serif}.kvn-feed-detail small{color:#93aecd;font-size:11px}
 .kvn-feed-time{color:#90aac9;font:700 11px/1.4 'Outfit',system-ui,sans-serif;font-variant-numeric:tabular-nums}
 .kvn-feed-footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:15px;color:#799abd;font:700 9px/1.6 'Outfit',system-ui,sans-serif;letter-spacing:.1em}
+.kvn-feed-insights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 18px}
+.kvn-feed-insight{display:flex;flex-direction:column;gap:7px;padding:18px;border-radius:13px;border:1px solid rgba(115,174,242,.18);background:rgba(29,63,116,.25);min-width:0}
+.kvn-feed-insight small{font:800 9px/1.5 'Outfit',system-ui,sans-serif;letter-spacing:.1em;color:#92b4db}
+.kvn-feed-insight strong{font:800 clamp(19px,2.7vw,30px)/1.1 'Outfit',system-ui,sans-serif;color:#edf6ff;font-variant-numeric:tabular-nums}
+.kvn-feed-insight strong[data-trend="up"]{color:#66deb7}
+.kvn-feed-insight strong[data-trend="down"]{color:#ffa39d}
+.kvn-feed-insight strong[data-state="delayed"]{color:#f3c08a}
+.kvn-feed-insight>span{font:500 11px/1.45 'Outfit',system-ui,sans-serif;color:#9bb3d0}
+@media(max-width:640px){.kvn-feed-insights{grid-template-columns:1fr 1fr}.kvn-feed-insight:last-child{grid-column:1/-1}}
 @media(max-width:640px){.kvn-activity-feed{padding:20px 16px}.kvn-feed-head{align-items:flex-start;flex-direction:column}.kvn-feed-summary{text-align:left}.kvn-feed-event{gap:9px;padding:10px}.kvn-feed-footer{font-size:8px}}
 `;
-export const activityFeedJS = String.raw`
+export const activityFeedJS = String.raw\`
 (function(){
-  var source=document.getElementById('playing'), list=document.getElementById('kvn-feed-events'), total=document.getElementById('kvn-feed-total');
-  if(!source||!list||!total)return;
-  var baseline=null, previous=null, events=[], lastRendered='', maxEvents=6;
-  var fmt=function(n){return n.toLocaleString('en-US');};
-  function render(){
-    var raw=(source.textContent||'').trim();
-    // Accept only formatted non-negative integer readings (never placeholder text).
-    if(!/^\\d[\\d,.\\s]*$/.test(raw))return;
-    var count=Number(raw.replace(/[,\\s.]/g,''));
-    if(!Number.isSafeInteger(count)||count<0)return;
-    if(raw===lastRendered&&count===previous)return;
-    lastRendered=raw;
-    if(previous===null){previous=count;baseline=count;total.textContent='0';return;}
-    if(count===previous)return;
-    var difference=count-previous, direction=difference>0?'up':'down';
-    previous=count;
-    var since=count-baseline;
-    total.textContent=(since>0?'+':'')+fmt(since);
-    total.dataset.trend=since>0?'up':since<0?'down':'neutral';
-    events.unshift({count:count,diff:difference,dir:direction,time:new Date()});
-    events=events.slice(0,maxEvents);
-    list.replaceChildren();
-    events.forEach(function(event){
-      var row=document.createElement('div');row.className='kvn-feed-event';row.dataset.trend=event.dir;
-      var arrow=document.createElement('span');arrow.className='kvn-feed-arrow';arrow.textContent=event.dir==='up'?'↗':'↘';arrow.setAttribute('aria-hidden','true');
-      var detail=document.createElement('div');detail.className='kvn-feed-detail';
-      var heading=document.createElement('strong');heading.textContent=(event.diff>0?'+':'')+fmt(event.diff)+' players';
-      var note=document.createElement('small');note.textContent=fmt(event.count)+' concurrent players measured';
-      detail.append(heading,note);
-      var time=document.createElement('time');time.className='kvn-feed-time';time.dateTime=event.time.toISOString();time.textContent=event.time.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      row.append(arrow,detail,time);list.append(row);
-    });
+  'use strict';
+  const list=document.getElementById('kvn-feed-events');
+  const total=document.getElementById('kvn-feed-total');
+  const five=document.getElementById('kvn-feed-5m');
+  const fiveNote=document.getElementById('kvn-feed-5m-note');
+  const peak=document.getElementById('kvn-feed-peak');
+  const status=document.getElementById('kvn-feed-status');
+  const statusNote=document.getElementById('kvn-feed-status-note');
+  if(!list||!total||!five||!peak||!status)return;
+  let samples=[],events=[],lastCount=null,baseline=null,high=null,lastTime=null,delayed=false;
+  const fmt=n=>n.toLocaleString('en-US');
+  const signed=n=>(n>0?'+':'')+fmt(n);
+  function display(){
+    if(lastCount===null)return;
+    const change=lastCount-baseline;
+    total.textContent=signed(change);
+    total.dataset.trend=change>0?'up':change<0?'down':'neutral';
+    peak.textContent=fmt(high);
+    const recent=samples.filter(s=>s.t>=lastTime-300000);
+    // A five-minute delta needs two readings with actual time separation.
+    if(recent.length>=2){
+      const delta=recent[recent.length-1].ccu-recent[0].ccu;
+      five.textContent=signed(delta);
+      five.dataset.trend=delta>0?'up':delta<0?'down':'neutral';
+      fiveNote.textContent='Across '+recent.length+' verified readings';
+    } else {
+      five.textContent='—';
+      five.removeAttribute('data-trend');
+      fiveNote.textContent='Waiting for more measurements';
+    }
+    status.textContent=delayed?'DELAYED':'LIVE';
+    status.dataset.state=delayed?'delayed':'live';
+    statusNote.textContent=delayed?'Roblox unavailable · retrying':'Last verified '+new Date(lastTime).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   }
-  var observer=new MutationObserver(render);observer.observe(source,{childList:true,subtree:true,characterData:true});render();
+  function update(detail){
+    const d=detail&&detail.stats;
+    if(!d||d.stale||!Number.isSafeInteger(d.playing)||d.playing<0)return;
+    const t=Number(d.timestamp);
+    if(!Number.isFinite(t)||t<=0||t>Date.now()+30000)return;
+    if(lastTime!==null&&t<=lastTime)return;
+    const count=d.playing;
+    delayed=false;
+    if(baseline===null)baseline=count;
+    if(high===null||count>high)high=count;
+    samples.push({t,ccu:count});
+    samples=samples.filter(s=>s.t>=t-300000).slice(-60);
+    if(lastCount!==null&&count!==lastCount){
+      const diff=count-lastCount;
+      events.unshift({count,diff,time:t,dir:diff>0?'up':'down'});
+      events=events.slice(0,6);
+      list.replaceChildren();
+      events.forEach(e=>{
+        const row=document.createElement('div');row.className='kvn-feed-event';row.dataset.trend=e.dir;
+        const arrow=document.createElement('span');arrow.className='kvn-feed-arrow';arrow.textContent=e.dir==='up'?'↗':'↘';arrow.setAttribute('aria-hidden','true');
+        const detail=document.createElement('div');detail.className='kvn-feed-detail';
+        const heading=document.createElement('strong');heading.textContent=signed(e.diff)+' net CCU';
+        const note=document.createElement('small');note.textContent=fmt(e.count)+' concurrent players measured · not exact joins/leaves';
+        detail.append(heading,note);
+        const time=document.createElement('time');time.className='kvn-feed-time';
+        time.dateTime=new Date(e.time).toISOString();
+        time.textContent=new Date(e.time).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        row.append(arrow,detail,time);list.append(row);
+      });
+    }
+    lastCount=count;lastTime=t;display();
+  }
+  window.addEventListener('kvn:verified-stats',event=>update(event.detail));
+  window.addEventListener('kvn:stats-unavailable',()=>{
+    delayed=true;
+    status.textContent='DELAYED';
+    status.dataset.state='delayed';
+    statusNote.textContent=lastTime?'Last verified '+new Date(lastTime).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}):'Waiting for Roblox · retrying';
+  });
 })();
-`;
+\`;

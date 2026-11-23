@@ -86,12 +86,13 @@ const app=createServer(async(req,res)=>{
 await new Promise(resolve=>app.listen(0,'127.0.0.1',resolve));
 const localURL='http://127.0.0.1:'+app.address().port+'/';
 const sizes=[320,360,375,390,430,768,1024,1280,1440,1920];
+const heights={320:720,360:800,375:812,390:844,430:932,768:1024,1024:768,1280:720,1440:900,1920:1080};
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{
   for(const width of sizes){
     fixtureCCU=48;fixtureStale=false;fixtureStamp=Date.now();
     fixtureDelayMs=0;fixtureFailure=false;
-    const context=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:1});
+    const context=await browser.newContext({viewport:{width,height:heights[width]},deviceScaleFactor:1});
     const page=await context.newPage();
     const errors=[];
     page.on('pageerror',e=>errors.push(e.message));
@@ -484,10 +485,38 @@ try{
 
 
     }
-    if(width===390||width===1440||width===1920){
+    if([360,390,430,1280,1440,1920].includes(width)){
       await chart.screenshot({path:artifactDir+'/chart-'+width+'.png',animations:'disabled'});
       await page.screenshot({path:artifactDir+'/dashboard-'+width+'.png',fullPage:true,animations:'disabled'});
     }
+
+    if(width===1440){
+      // Filmstrip samples are representative times after page navigation;
+      // screenshots are local fixture renders, not claims about frame-perfect
+      // clock alignment or Cloudflare's deployed page.
+      const film=await context.newPage();
+      await film.goto(localURL,{waitUntil:'domcontentloaded'});
+      const start=Date.now();
+      for(const elapsed of [0,100,200,350,500,750,1000,1400,1800]){
+        await film.waitForTimeout(Math.max(0,elapsed-(Date.now()-start)));
+        await film.locator('.hero').screenshot({
+          path:artifactDir+'/hero-'+elapsed+'ms-1440.png',
+          animations:'allow'
+        });
+      }
+      await film.waitForTimeout(250);
+      const finalHero=await film.evaluate(()=>{
+        const title=document.querySelector('.hero h1');
+        const artwork=document.querySelector('.hero .hero-poster');
+        return {titleOpacity:Number(getComputedStyle(title).opacity),
+          artworkOpacity:Number(getComputedStyle(artwork).opacity)};
+      });
+      assert(finalHero.titleOpacity>.9&&finalHero.artworkOpacity>.9,
+        'Hero intro failed to settle after 1.8s: '+JSON.stringify(finalHero));
+      await film.close();
+      console.log('PASS: Hero 0–1800ms representative filmstrip captured with local verified-data fixtures.');
+    }
+
     console.log('PASS viewport '+width+'px; plot gap '+rect.chartGap.toFixed(1)+'px; no horizontal overflow, tabs and chart work.');
     await page.close();
     await context.close();

@@ -14,7 +14,8 @@ const root = resolve(fileURLToPath(new URL('../', import.meta.url)));
 const file = name => readFileSync(resolve(root,name),'utf8');
 const moduleNames = [
   'public-analytics.js','premium-theme.js','premium-interactions.js',
-  'refinements.js','studio-upgrade.js','cinematic-v2.js','live-intelligence.js','security.js'
+  'refinements.js','studio-upgrade.js','cinematic-v2.js','live-intelligence.js',
+  'emote-pulse.js','player-goals.js','security.js'
 ];
 const nativeContext = {
   Response, Request, Headers, URL, fetch: async()=>{throw Error('Unexpected remote request in smoke test');},

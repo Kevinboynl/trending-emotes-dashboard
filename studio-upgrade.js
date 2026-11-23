@@ -4,7 +4,7 @@ export const studioUpgradeCSS = String.raw`
 :root{--studio-ease:cubic-bezier(.16,1,.3,1);--studio-hairline:color-mix(in srgb,var(--cyan) 16%,transparent)}
 html{scroll-behavior:smooth}
 body{overflow-x:clip}
-body::before{background:radial-gradient(ellipse 62% 39% at 82% 10%,rgba(32,91,215,.25),transparent 76%),radial-gradient(ellipse 42% 44% at 0% 46%,rgba(15,54,147,.14),transparent 80%),linear-gradient(180deg,#050b1e 0%,#080e23 56%,#050a17 100%)}
+body::before{background:radial-gradient(ellipse 62% 39% at 82% 10%,rgba(32,91,215,.25),transparent 76%),radial-gradient(ellipse 42% 44% at 0% 46%,rgba(15,54,147,.14),transparent 80%),linear-gradient(180deg,#080e1c 0%,#0b1427 54%,#050a13 100%)}
 body>main,body>.ticker,body>footer{position:relative;z-index:1}
 
 .kvn-scroll-progress{position:fixed;inset:0 0 auto;height:2px;z-index:300;pointer-events:none;background:linear-gradient(90deg,var(--blue),var(--cyan),#a8e3ff);transform:scaleX(0);transform-origin:left center;box-shadow:0 0 14px var(--cyan);will-change:transform}
@@ -153,26 +153,26 @@ footer{border-top-color:rgba(89,157,255,.25)}
 /* KVN typography refresh: sharper display, bright cool-white text and electric-blue hierarchy.
    Only typographic presentation is affected; existing surfaces and charts stay intact. */
 :root{
-  --kvn-type-body:'Inter','DM Sans',system-ui,sans-serif;
-  --kvn-type-display:'Space Grotesk','Inter',system-ui,sans-serif;
-  --kvn-text-main:#f6faff;
-  --kvn-text-bright:#e7f4ff;
-  --kvn-text-secondary:#b8ccef;
-  --kvn-text-muted:#98afd3;
-  --kvn-text-label:#91c9ff;
-  --kvn-text-accent:#63bdff;
+  --kvn-type-body:'Outfit',Arial,sans-serif;
+  --kvn-type-display:'Archivo','Outfit',Arial,sans-serif;
+  --kvn-text-main:#f3f4f6;
+  --kvn-text-bright:#f6f8fc;
+  --kvn-text-secondary:#b9bbc2;
+  --kvn-text-muted:#9b9ea7;
+  --kvn-text-label:#8bd4ff;
+  --kvn-text-accent:#31aaff;
 }
 body,button,input,select,textarea{font-family:var(--kvn-type-body);color:var(--kvn-text-main)}
-body{font-weight:450;letter-spacing:-.008em;font-synthesis:none}
+body{font-weight:500;letter-spacing:-.004em;font-synthesis:none}
 h1,h2,h3,.number,.wordmark,.game-title,.chart-foot .big,.detail .value,
 .floatbadge strong,.signal-card strong,.official-card strong,.kvn-insight-card .k-value{
   font-family:var(--kvn-type-display)!important;
   font-synthesis:none;
 }
-h1,h2,h3,.bar h2,.panel-head h3,.detail h3{color:var(--kvn-text-main);font-weight:800;letter-spacing:-.045em}
-.hero .hero-copy h1{font-weight:800;letter-spacing:-.084em}
+h1,h2,h3,.bar h2,.panel-head h3,.detail h3{color:var(--kvn-text-main);font-weight:900;letter-spacing:-.045em}
+.hero .hero-copy h1{font-weight:900;letter-spacing:-.045em}
 .hero h1 span{
-  background:linear-gradient(110deg,#f0faff 2%,#a4d8ff 38%,#4b99ff 70%,#a7e5ff 100%);
+  background:linear-gradient(106deg,#f3f4f6 3%,#b5e6ff 38%,#31aaff 72%,#7bd5ff 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;
 }
 .bar h2 span{color:var(--kvn-text-accent)!important}

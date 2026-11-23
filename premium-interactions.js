@@ -30,7 +30,7 @@ export const premiumJS = String.raw`
       '<div class="signal-card"><div><span>DATA POINTS · SELECTED RANGE</span><strong id="signalSamples">—</strong></div><em aria-hidden="true">◷</em></div>' +
       '<div class="signal-card"><div><span>CURRENT DATA SOURCE</span><strong id="signalSource">—</strong></div><em aria-hidden="true">◈</em></div>';
     metricGrid.insertAdjacentElement('afterend', strip);
-    if (typeof observer !== 'undefined') observer.observe(strip);
+    if (typeof observer !== 'undefined' && observer) observer.observe(strip);
     else strip.classList.add('show');
   }
   const tabBar = $id('tabs');
@@ -96,7 +96,7 @@ export const premiumJS = String.raw`
   const met = $id('metrics');
   if (met) met.addEventListener('click', () => setTimeout(updateSignals, 50));
   updateSignals();
-  setInterval(updateSignals, 15000);
+  setInterval(()=>{if(!document.hidden)updateSignals();},15000);
 
   if (hero && !reduced.matches && window.matchMedia('(pointer:fine)').matches) {
     let scheduled = false;
@@ -115,6 +115,6 @@ export const premiumJS = String.raw`
     }, {passive:true});
   }
   const title = document.querySelector('title');
-  if(title) title.textContent = 'TRENDING EMOTES! | KVN CLOTHING Analytics';
+  if(title) title.textContent = 'TRENDING EMOTES! | KVN STUDIOS Analytics';
 })();
 `;

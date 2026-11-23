@@ -11,6 +11,7 @@ import { growthBriefMarkup, growthBriefCSS, growthBriefJS } from './growth-brief
 import { signalMarkup, signalCSS, signalJS } from './live-signal.js';
 import { activityFeedMarkup, activityFeedCSS, activityFeedJS } from './activity-feed.js';
 import { playerGoalCSS, playerGoalMarkup, playerGoalJS } from './player-goals.js';
+import { growthCommandMarkup, growthCommandCSS, growthCommandJS } from './growth-command-center.js';
 import { allowPublicApi, protectResponse, safeError, newPageNonce } from './security.js';
 /* TRENDING EMOTES — one-file Cloudflare Worker. Optional D1 binding: DB.
    Optional cron expression: every five minutes (collects without visitors).
@@ -940,12 +941,12 @@ const THEMED_HTML = HTML
   .replaceAll('<b>STUDIOS</b>', '<b>CLOTHING</b>')
   .replaceAll('#b6ff69', '#5daeff')
   .replaceAll('#aaff62', '#5daeff')
-  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + pulseCSS + '\n' + peakHoursCSS + '\n' + growthBriefCSS + '\n' + playerGoalCSS + '\n' + signalCSS + '\n' + activityFeedCSS + '\n</style>')
-  .replace('<section class="wrap" id="dashboard">', () => pulseMarkup + '\n' + growthBriefMarkup + '\n<section class="wrap" id="dashboard">')
+  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + pulseCSS + '\n' + peakHoursCSS + '\n' + growthBriefCSS + '\n' + playerGoalCSS + '\n' + signalCSS + '\n' + activityFeedCSS + '\n' + growthCommandCSS + '\n</style>')
+  .replace('<section class="wrap" id="dashboard">', () => growthCommandMarkup + '\n' + pulseMarkup + '\n' + growthBriefMarkup + '\n<section class="wrap" id="dashboard">')
   .replace('<div class="metrics reveal">', () => signalMarkup + '\n' + activityFeedMarkup + '\n' + peakHoursMarkup + '\n<div class="metrics reveal">')
   .replace('</section></main><footer', () => '</section>' + publicAnalyticsMarkup + '</main><footer')
   .replace('<div class="workspace reveal">', () => playerGoalMarkup + '<div class="workspace reveal">')
-  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n' + pulseJS + '\n' + peakHoursJS + '\n' + growthBriefJS + '\n' + playerGoalJS + '\n' + signalJS + '\n' + activityFeedJS + '\n</script></body></html>');
+  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n' + pulseJS + '\n' + peakHoursJS + '\n' + growthBriefJS + '\n' + playerGoalJS + '\n' + signalJS + '\n' + activityFeedJS + '\n' + growthCommandJS + '\n</script></body></html>');
 export default {
   async fetch(request, env, ctx) {
     // Only safe, read-only methods are accepted, including on the HTML route.

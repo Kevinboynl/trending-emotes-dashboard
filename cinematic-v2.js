@@ -13,7 +13,7 @@ body.kvn-page-hidden .ticker-inner{animation-play-state:paused!important}
 .hero{contain:layout}
 .hero .hero-copy{isolation:isolate}
 .hero .hero-copy h1{display:block;text-wrap:balance}
-.hero h1 .kvn-hero-line{display:block;width:max-content;max-width:100%;white-space:nowrap;line-height:.91}
+.hero h1 .kvn-hero-line{display:block;box-sizing:border-box;width:max-content;max-width:100%;white-space:nowrap;line-height:1.08;overflow:visible;padding:.055em .18em .09em .02em}
 .hero h1 .kvn-line-one{background:none!important;color:#f6fbff!important;-webkit-text-fill-color:#f6fbff!important}
 .hero h1 .kvn-line-two{background:linear-gradient(108deg,#e8f6ff,#9bd4ff 34%,#4b94ff 72%,#a8e6ff);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .hero .hero-note{opacity:.94}
@@ -100,7 +100,7 @@ body.kvn-intro-active .hero h1 .kvn-line-two::after{animation:kvnCinemaShine 1.2
 .kvn-sidefx{pointer-events:none}
 html{scrollbar-color:#315b91 #071328;scrollbar-width:thin}
 @media(max-width:1100px){
- .hero .hero-copy h1{font-size:clamp(55px,7.8vw,97px);letter-spacing:-.068em}
+ .hero .hero-copy h1{font-size:clamp(52px,7.2vw,97px);letter-spacing:-.045em}
  .workspace{gap:14px}
  .navlinks a{min-height:38px}
  .chart-wrap{min-width:0}
@@ -117,7 +117,7 @@ html{scrollbar-color:#315b91 #071328;scrollbar-width:thin}
  html{scroll-padding-top:145px}
  .wrap{padding-left:16px;padding-right:16px}
  .hero{grid-template-columns:minmax(0,1fr);padding-top:30px;padding-bottom:28px;overflow:hidden;min-width:0}
- .hero .hero-copy h1{font-size:clamp(51px,13.2vw,79px);line-height:.92;letter-spacing:-.075em}
+ .hero .hero-copy h1{font-size:clamp(48px,12.2vw,76px);line-height:1.07;letter-spacing:-.045em}
  .hero h1 .kvn-hero-line{max-width:100%}
  .hero .lead{max-width:42ch}
  .hero .hero-actions{align-items:stretch;gap:8px}
@@ -152,7 +152,7 @@ html{scrollbar-color:#315b91 #071328;scrollbar-width:thin}
  .playbtn,.outlinebtn{min-height:44px}
 }
 @media(max-width:390px){
- .hero .hero-copy h1{font-size:clamp(48px,12.9vw,62px)}
+ .hero .hero-copy h1{font-size:clamp(46px,12.4vw,60px)}
  .navlinks a{font-size:9px;padding:10px 5px}
  .hero .visual{height:250px}
  .chart-panel{padding:14px}

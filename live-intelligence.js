@@ -364,6 +364,19 @@ h1,h2,h3,.number,.wordmark,.bar h2,.detail .value,
  .hero .eyebrow::after{box-shadow:none}
 }
 
+/* Compact data-quality row, visually secondary to the verified chart. */
+.kvn-history-health{display:flex;align-items:center;gap:9px;min-height:24px;
+  margin:0 0 13px;color:#9ab9d6;font:700 10px 'Outfit',Arial,sans-serif;
+  letter-spacing:.045em;line-height:1.5;overflow-wrap:anywhere}
+.kvn-history-health-dot{width:7px;height:7px;flex:0 0 7px;border-radius:50%;
+  background:#7896b8;box-shadow:0 0 0 3px rgba(120,150,184,.1)}
+.kvn-history-health[data-state="healthy"] .kvn-history-health-dot{
+  background:var(--cyan);box-shadow:0 0 0 3px rgba(67,196,255,.12)}
+.kvn-history-health[data-state="partial"] .kvn-history-health-dot,
+.kvn-history-health[data-state="delayed"] .kvn-history-health-dot{
+  background:#ffb7c6;box-shadow:0 0 0 3px rgba(255,183,198,.10)}
+@media(max-width:690px){.kvn-history-health{font-size:9px;margin-bottom:10px}}
+
 `;
 export const liveIntelligenceJS = String.raw`
 /* Event-driven CCU presentation: never alters or estimates Roblox data. */
@@ -531,6 +544,73 @@ document.addEventListener('visibilitychange',()=>{
 });
 const chartPanel=document.querySelector('.chart-panel');
 if(chartPanel){
+  // Chart data health: use recorded measurements, never synthetic estimates.
+  // This is informational and must not prevent normal chart interactions.
+  const health=document.createElement('div');
+  health.className='kvn-history-health';
+  health.setAttribute('role','status');
+  const healthDot=document.createElement('span');
+  healthDot.className='kvn-history-health-dot';
+  healthDot.setAttribute('aria-hidden','true');
+  const healthText=document.createElement('span');
+  healthText.className='kvn-history-health-text';
+  healthText.textContent='CHECKING MEASUREMENT COVERAGE';
+  health.append(healthDot,healthText);
+  const chartHeading=chartPanel.querySelector('.panel-head');
+  if(chartHeading)chartHeading.after(health);
+  let healthTimer=0;
+  let measurementPoints=[];
+  let lastHealthRange='24h';
+  let lastHealthError=false;
+  let lastHealthCloud=false;
+  const periods={'1h':3600000,'24h':86400000,'7d':604800000,'30d':2592000000};
+  function renderHistoryHealth(){
+    if(document.hidden)return;
+    const duration=periods[lastHealthRange]||periods['24h'];
+    const now=Date.now();
+    const values=measurementPoints.filter(p=>p&&Number.isFinite(p.t)&&Number.isFinite(p.ccu)
+      &&p.t<=now+30000&&p.t>=now-duration).map(p=>p.t).sort((a,b)=>a-b);
+    const latest=values.length?values[values.length-1]:null;
+    const age=latest===null?null:Math.max(0,now-latest);
+    const maxGap=values.reduce((gap,t,i)=>i?Math.max(gap,t-values[i-1]):gap,0);
+    const gapWarning=maxGap>Math.max(20*60000,duration/10);
+    let state='checking',message='CHECKING MEASUREMENT COVERAGE';
+    if(lastHealthError){
+      state='delayed';
+      message=latest!==null?'HISTORY REFRESH DELAYED · LAST VERIFIED DATA':'HISTORY TEMPORARILY UNAVAILABLE';
+    }else if(!values.length){
+      state='empty';
+      message=lastHealthCloud?'WAITING FOR VERIFIED HISTORY':'NO SAVED HISTORY YET';
+    }else if(age>Math.max(20*60000,duration/12)){
+      state='delayed';
+      message='LATEST HISTORY SAMPLE IS '+Math.floor(age/60000)+' MIN OLD';
+    }else if(gapWarning){
+      state='partial';
+      message='MEASUREMENT GAPS · '+values.length+' VERIFIED POINTS';
+    }else{
+      state='healthy';
+      message='VERIFIED HISTORY · '+values.length+' POINTS';
+    }
+    health.dataset.state=state;
+    healthText.textContent=message;
+    health.title='History is based on measured samples. Missing points are not filled with estimates.';
+  }
+  window.addEventListener('kvn:history-loaded',event=>{
+    const detail=event.detail||{};
+    lastHealthRange=detail.range||'24h';
+    lastHealthError=Boolean(detail.error);
+    lastHealthCloud=Boolean(detail.cloud);
+    // getVerifiedHistory is the same verified source used by the actual SVG.
+    measurementPoints=typeof getVerifiedHistory==='function'?getVerifiedHistory().slice():[];
+    renderHistoryHealth();
+  });
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)renderHistoryHealth();
+  });
+  healthTimer=window.setInterval(()=>{
+    if(!document.hidden)renderHistoryHealth();
+  },60000);
+  renderHistoryHealth();
   const compare=document.createElement('section');compare.className='kvn-compare';
   compare.setAttribute('aria-label','Historical CCU comparison');
   const left=document.createElement('div');left.className='kvn-compare-left';

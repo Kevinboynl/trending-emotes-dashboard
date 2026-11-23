@@ -344,8 +344,8 @@ if(tabs){
   const run=()=>requestAnimationFrame(decorateCards);
   tabs.addEventListener('click',run);
 }
-// The single viewport glow owns all pointer-atmosphere motion. Use elapsed
-// time, not a fixed per-frame lerp, so 60/120/144Hz feel consistent.
+// Keep the atmospheric glow centred on the actual pointer. Only one
+// compositor update is scheduled per frame, even on 144Hz monitors.
 if(fine.matches&&!reduce.matches){
   const halo=document.createElement('div');halo.className='kvn-pointer-core';
   halo.setAttribute('aria-hidden','true');document.body.append(halo);
@@ -361,8 +361,8 @@ if(fine.matches&&!reduce.matches){
     if(document.hidden||!visible)return;
     const elapsed=lastFrame?Math.min(64,Math.max(0,now-lastFrame)):16.67;
     lastFrame=now;
-    // An ~85ms time constant gives a natural ~100–180ms trailing glow.
-    const alpha=1-Math.exp(-elapsed/85);
+    // No trailing offset: the centre must match the pointer on every frame.
+    const alpha=1;
     x+=(targetX-x)*alpha;y+=(targetY-y)*alpha;
     halo.style.transform='translate3d('+x.toFixed(2)+'px,'+y.toFixed(2)+'px,0) translate(-50%,-50%)';
     if(Math.hypot(x-targetX,y-targetY)>.65)tick=requestAnimationFrame(update);

@@ -3,9 +3,9 @@ export const pulseMarkup = String.raw`
 <section class="ep-section wrap" id="pulse" aria-labelledby="ep-title">
   <div class="ep-heading">
     <div>
-      <div class="ep-overline"><span class="ep-star" aria-hidden="true">✦</span> THE LIVE EMOTE PULSE <span class="ep-index">/ 001</span></div>
-      <h2 id="ep-title">FEEL THE <span>PULSE.</span></h2>
-      <p>One Roblox experience. A live signal from the players in it. Follow the crowd as it moves.</p>
+      <div class="ep-overline"><span class="ep-star" aria-hidden="true">✦</span> LIVE PLAYER GROWTH <span class="ep-index">/ 001</span></div>
+      <h2 id="ep-title">FOLLOW THE <span>PLAYERS.</span></h2>
+      <p>Follow TRENDING EMOTES! growth through verified live players, recent changes and measured activity.</p>
     </div>
     <div class="ep-heading-side"><span class="ep-small-dot" aria-hidden="true"></span><span>POWERED BY VERIFIED ROBLOX DATA</span></div>
   </div>
@@ -18,7 +18,7 @@ export const pulseMarkup = String.raw`
       <div class="ep-pane-footer"><span>LAST VERIFIED MEASUREMENT</span><time id="ep-time">—</time></div>
     </div>
     <div class="ep-graph-pane">
-      <div class="ep-graph-top"><div><span class="ep-overline">THE PLAYER RHYTHM</span><h3>Live activity</h3></div><span class="ep-chart-label">MEASURED CCU / LAST 12 SAMPLES</span></div>
+      <div class="ep-graph-top"><div><span class="ep-overline">PLAYER MOMENTUM</span><h3>Recent player activity</h3></div><span class="ep-chart-label">MEASURED CCU / LAST 12 SAMPLES</span></div>
       <div class="ep-bars" id="ep-bars" aria-label="Waiting for verified player count samples">
         <div class="ep-chart-empty" id="ep-empty">Waiting for Roblox measurements…</div>
       </div>

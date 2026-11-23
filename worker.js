@@ -223,7 +223,7 @@ async function history(db, range) {
 const HTML = String.raw`<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#080a08"><meta name="description" content="Live Roblox analytics for TRENDING EMOTES! by KVN STUDIOS.">
+<meta name="theme-color" content="#080e1c"><meta name="description" content="Live Roblox analytics for TRENDING EMOTES! by KVN STUDIOS.">
 <title>TRENDING EMOTES! — KVN STUDIOS / Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -241,11 +241,11 @@ const HTML = String.raw`<!doctype html>
 .workspace{display:grid;grid-template-columns:1.8fr 1fr;gap:16px;margin-top:16px}.chart-panel{padding:27px}.panel-head{display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap}.panel-head h3{font-size:24px;letter-spacing:-1px;margin-top:8px}.switches{display:flex;gap:4px;padding:5px;border:1px solid var(--line);border-radius:9px;background:#080c08;flex-wrap:wrap}.switches button{border:0;background:transparent;color:#91a18f;border-radius:6px;padding:8px 12px;font-size:10px;font-weight:800;transition:background .25s,color .25s}.switches button.active{background:#b6ff69;color:#11200c}.metric-switch{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0 20px}.metric-switch button{background:#161f16;border:1px solid #2d3b2e;border-radius:50px;color:#b1c0b0;padding:9px 15px;font-size:11px;font-weight:700;transition:.25s}.metric-switch button.active{color:var(--green);border-color:#83af59;background:#1e2d1b}.chart-wrap{height:300px;position:relative;border-bottom:1px solid #2b362b;background:repeating-linear-gradient(to bottom,transparent 0,transparent 59px,#293329 60px,#293329 61px)}#chart{width:100%;height:100%;display:block;overflow:visible}#curve{fill:none;stroke:var(--green);stroke-width:3;stroke-linejoin:round;stroke-linecap:round;filter:drop-shadow(0 0 6px #a0ff6b65)}#shade{fill:url(#chartGradient)}#tooltip{position:absolute;z-index:10;pointer-events:none;background:#1d2a1d;border:1px solid #567d45;border-radius:9px;padding:10px 13px;font-size:11px;transform:translate(-50%,-110%);white-space:nowrap;display:none;box-shadow:0 20px 35px #0008}.chart-nodata{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(#0e160e70,#0e160edc);color:#d0e1c8;gap:9px;font-size:13px}.chart-nodata strong{color:var(--green);font-size:15px}.chart-axis{display:flex;justify-content:space-between;font-size:10px;color:#7d907b;margin-top:13px}.chart-foot{display:flex;justify-content:space-between;gap:14px;margin-top:21px;padding-top:20px;border-top:1px solid var(--line)}.chart-foot .big{font-size:22px;font-family:'Space Grotesk';font-weight:700;margin-top:7px}.chart-foot small{color:#95a895;font-size:10px}
 .game-card{padding:0}.game-cover{position:relative;aspect-ratio:16/9;background:radial-gradient(circle at center,#345d2e,#182219 65%);overflow:hidden}.game-cover img{width:100%;height:100%;object-fit:cover;transition:transform .6s}.game-card:hover img{transform:scale(1.06)}.game-cover:after{content:'';position:absolute;inset:40% 0 0;background:linear-gradient(transparent,#131813)}.game-body{padding:23px}.gamerow{display:flex;align-items:center;gap:13px}.game-icon{width:59px;height:59px;border:1px solid #425c42;background:#172519;border-radius:13px;object-fit:cover}.game-title{font:700 18px 'Space Grotesk';line-height:1.2}.game-sub{color:var(--muted);font-size:11px;margin-top:7px}.gamelinks{display:flex;gap:10px;margin-top:25px}.gamelinks a{flex:1;text-align:center}.gamelinks .outlinebtn{padding:12px 9px}
 .tabs{display:flex;gap:7px;padding:7px;background:#101610;border:1px solid var(--line);border-radius:12px;width:max-content;max-width:100%;overflow-x:auto;margin:44px 0 20px}.tabs button{border:0;border-radius:9px;background:transparent;color:#a2b19e;padding:12px 18px;font-size:12px;font-weight:800;white-space:nowrap;transition:.2s}.tabs button.active{background:var(--green);color:#13200e}.tabbody{display:none;animation:rise .45s ease both}.tabbody.active{display:block}.details{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.detail{padding:26px}.detail h3{font-size:14px;margin:10px 0;color:#d4e3cd}.detail p{color:#a0af9d;font-size:12px;line-height:1.8}.detail .value{font:700 37px 'Space Grotesk';color:var(--white);margin:17px 0 8px;letter-spacing:-1px}.detail .tag{color:var(--green);font-size:10px;font-weight:800;letter-spacing:1px}.detail .tag.locked{color:#e2c39b}.rating-track{height:8px;background:#334033;border-radius:10px;margin-top:17px;overflow:hidden}.rating-track span{display:block;height:100%;width:0;background:var(--green);border-radius:10px;transition:width 1s}.privacy{border:1px dashed #405340;background:#101710;border-radius:14px;padding:28px;color:#c7d5bf;display:flex;gap:17px;align-items:start;margin-top:14px}.privacy strong{display:block;margin-bottom:9px}.privacy p{font-size:12px;line-height:1.75;color:var(--muted)}.privacy a{color:var(--green);text-decoration:underline;text-underline-offset:3px}
-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid var(--line);margin-top:70px;padding:30px 0 43px;color:#92a291;font-size:11px}.footer-brand{font:700 16px 'Space Grotesk';color:#d6e5d2}.footer-brand b{color:var(--green)}.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.1,1)}.reveal.show{opacity:1;transform:translateY(0)}
+footer{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid var(--line);margin-top:70px;padding:30px 0 43px;color:#92a291;font-size:11px}.footer-brand{font:700 16px 'Space Grotesk';color:#d6e5d2}.footer-brand b{color:var(--green)}.reveal{opacity:1;transform:none;transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.1,1)}html.kvn-reveal-ready .reveal:not(.show){opacity:0;transform:translateY(28px)}.reveal.show{opacity:1;transform:translateY(0)}
 @keyframes float{0%,100%{transform:translateY(0) rotate(-7deg)}50%{transform:translateY(-17px) rotate(-3deg)}}@keyframes breathe{50%{transform:scale(1.17);opacity:.7}}@keyframes twinkle{50%{opacity:.2;transform:scale(.7) rotate(40deg)}}@keyframes orbit{to{transform:rotate(336deg) scaleX(1.1)}}@keyframes pulse{50%{box-shadow:0 0 0 12px #b6ff6900}}@keyframes marquee{to{transform:translateX(-50%)}}@keyframes rise{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:1020px){.wrap{padding:0 26px}.hero{min-height:440px}.navlinks{display:none}.metrics{grid-template-columns:repeat(2,1fr)}.primary{grid-column:span 2;grid-row:auto;min-height:250px}.primary .number{margin:10px 0}.workspace{grid-template-columns:1fr 1fr}.floatbadge{right:0}.details{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:680px){.wrap{padding:0 18px}.nav{height:66px}.wordmark{font-size:16px}.wordmark small{display:none}.slash{margin:0 7px}.livepill{display:none}.nav-right .playbtn{padding:10px 13px}.hero{grid-template-columns:1fr;padding-top:53px;padding-bottom:30px;gap:6px}.eyebrow{letter-spacing:1.5px}h1{letter-spacing:-4px;font-size:clamp(55px,14vw,82px);margin:26px 0 19px}.lead{font-size:13px}.visual{height:260px;overflow:hidden}.orbit{width:240px;height:240px}.orbit:nth-child(2){width:310px;height:125px}.hero-poster{width:176px;height:176px;border-radius:29px}.floatbadge{right:5px;top:9%;padding:10px}.floatbadge strong{font-size:23px}.bar{margin-top:38px;align-items:start}.bar h2{letter-spacing:-1.1px}.updated{font-size:10px;padding:10px}.metrics{gap:10px}.card{border-radius:13px}.card-content{padding:17px}.primary{min-height:245px}.primary .card-content{padding:22px}.primary .number{font-size:clamp(82px,17vw,108px)}.metric-label{font-size:10px;letter-spacing:.5px}.number{font-size:29px;margin-top:23px}.metric-info{font-size:10px}.metric-bottom{left:22px;right:22px;bottom:20px}.workspace{grid-template-columns:1fr}.chart-panel{padding:19px}.panel-head h3{font-size:20px}.switches button{padding:7px 9px}.chart-wrap{height:235px}.details{grid-template-columns:1fr}.tabs{width:100%}.tabs button{padding:11px 14px}.privacy{padding:19px}footer{display:block}footer>*{display:block;margin:8px 0}}
-@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.reveal{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.reveal{opacity:1;transform:none}html.kvn-reveal-ready .reveal:not(.show){opacity:1;transform:none}}
 </style></head><body>
 <div class="noise"></div>
 <header class="top"><div class="wrap nav"><a href="#top" class="wordmark">KVN <b>STUDIOS</b><span class="slash">/</span><small>INTELLIGENCE</small></a><div class="navlinks"><a href="#dashboard">OVERVIEW</a><a href="#analytics">ANALYTICS</a><a href="#details">DEEP DIVE</a></div><div class="nav-right"><span class="livepill"><span class="pulse" id="pulse"></span><span id="status">CONNECTING</span></span><a class="playbtn" href="https://www.roblox.com/games/134944031090971/" target="_blank" rel="noopener">PLAY GAME ↗</a></div></div></header>
@@ -871,8 +871,40 @@ $('chart').addEventListener('pointerleave',e=>{
   if(e.pointerType!=='touch')clearChartHover();
 },{passive:true});
 $('chart').addEventListener('pointercancel',clearChartHover,{passive:true});
-for(const card of document.querySelectorAll('.card'))card.addEventListener('pointermove',e=>{const r=card.getBoundingClientRect();card.style.setProperty('--mouse-x',(e.clientX-r.left)+'px');card.style.setProperty('--mouse-y',(e.clientY-r.top)+'px')});
-const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('show');observer.unobserve(entry.target)}},{threshold:.07});document.querySelectorAll('.reveal').forEach(x=>observer.observe(x));
+// Hover lighting is a fine-pointer enhancement. Batch DOM reads/writes to one
+// animation frame instead of forcing layout on every mouse event (or on touch).
+if(window.matchMedia('(hover:hover) and (pointer:fine)').matches){
+  for(const card of document.querySelectorAll('.card')){
+    let frame=0,clientX=0,clientY=0;
+    card.addEventListener('pointermove',e=>{
+      clientX=e.clientX;clientY=e.clientY;
+      if(frame)return;
+      frame=requestAnimationFrame(()=>{
+        frame=0;
+        const rect=card.getBoundingClientRect();
+        card.style.setProperty('--mouse-x',(clientX-rect.left)+'px');
+        card.style.setProperty('--mouse-y',(clientY-rect.top)+'px');
+      });
+    },{passive:true});
+    card.addEventListener('pointerleave',()=>{
+      if(frame)cancelAnimationFrame(frame);
+      frame=0;
+    },{passive:true});
+  }
+}
+// Reveal content remains visible by default if a script fails or a browser
+// lacks IntersectionObserver. Only enable hiding once the observer is ready.
+const observer=typeof IntersectionObserver === 'function'
+  ? new IntersectionObserver(entries=>{
+      for(const entry of entries)if(entry.isIntersecting){
+        entry.target.classList.add('show');
+        observer.unobserve(entry.target);
+      }
+    },{threshold:.07})
+  : {observe(node){node.classList.add('show')},unobserve(){}};
+if(typeof IntersectionObserver === 'function')
+  document.documentElement.classList.add('kvn-reveal-ready');
+document.querySelectorAll('.reveal').forEach(node=>observer.observe(node));
 $('footerTime').textContent='© '+new Date().getFullYear()+' KVN STUDIOS';
 window.addEventListener('kvn:official-analytics',()=>{acquisition();});
 // Restore other previously verified public fields, then put the last

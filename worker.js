@@ -1,4 +1,5 @@
 import { refinementCSS, refinementJS } from './refinements.js';
+import { growthRadarCSS, growthRadarMarkup, growthRadarJS } from './growth-radar.js';
 import { publicAnalyticsResponse, publicAnalyticsStyles, publicAnalyticsMarkup, publicAnalyticsClient } from './public-analytics.js';
 import { premiumCSS } from './premium-theme.js';
 import { premiumJS } from './premium-interactions.js';
@@ -937,12 +938,12 @@ const THEMED_HTML = HTML
   .replaceAll('<b>STUDIOS</b>', '<b>CLOTHING</b>')
   .replaceAll('#b6ff69', '#5daeff')
   .replaceAll('#aaff62', '#5daeff')
-  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + pulseCSS + '\n' + playerGoalCSS + '\n' + signalCSS + '\n</style>')
-  .replace('<section class="wrap" id="dashboard">', () => pulseMarkup + '\n<section class="wrap" id="dashboard">')
+  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + pulseCSS + '\n' + playerGoalCSS + '\n' + signalCSS + '\n' + growthRadarCSS + '\n</style>')
+  .replace('<section class="wrap" id="dashboard">', () => pulseMarkup + '\n' + growthRadarMarkup + '\n<section class="wrap" id="dashboard">')
   .replace('<div class="metrics reveal">', () => signalMarkup + '\n<div class="metrics reveal">')
   .replace('</section></main><footer', () => '</section>' + publicAnalyticsMarkup + '</main><footer')
   .replace('<div class="workspace reveal">', () => playerGoalMarkup + '<div class="workspace reveal">')
-  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n' + pulseJS + '\n' + playerGoalJS + '\n' + signalJS + '\n</script></body></html>');
+  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n' + pulseJS + '\n' + playerGoalJS + '\n' + signalJS + '\n' + growthRadarJS + '\n</script></body></html>');
 export default {
   async fetch(request, env, ctx) {
     // Only safe, read-only methods are accepted, including on the HTML route.

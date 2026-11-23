@@ -9,7 +9,7 @@ body.kvn-page-hidden .kvn-star,body.kvn-page-hidden .kvn-sidefx *,
 body.kvn-page-hidden .orbit,body.kvn-page-hidden .halo,
 body.kvn-page-hidden .ticker-inner{animation-play-state:paused!important}
 .kvn-sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.kvn-pointer-core{position:fixed;left:0;top:0;z-index:0;pointer-events:none;width:min(460px,60vw);height:min(460px,60vw);border-radius:50%;opacity:0;transform:translate3d(-999px,-999px,0) translate(-50%,-50%);background:radial-gradient(circle,rgba(71,179,255,.22) 0%,rgba(48,133,255,.085) 33%,transparent 70%);filter:blur(10px);will-change:transform,opacity;transition:opacity .25s ease}
+.kvn-pointer-core{position:fixed;left:0;top:0;z-index:2;mix-blend-mode:screen;pointer-events:none;width:min(460px,60vw);height:min(460px,60vw);border-radius:50%;opacity:0;transform:translate3d(-999px,-999px,0) translate(-50%,-50%);background:radial-gradient(circle,rgba(71,179,255,.22) 0%,rgba(48,133,255,.085) 33%,transparent 70%);filter:blur(10px);will-change:transform,opacity;transition:opacity .25s ease}
 .hero{contain:layout}
 .hero .hero-copy{isolation:isolate}
 .hero .hero-copy h1{display:block;text-wrap:balance}
@@ -340,31 +340,45 @@ if(tabs){
   const run=()=>requestAnimationFrame(decorateCards);
   tabs.addEventListener('click',run);
 }
-// A smaller, eased halo complements the existing immediate cursor glow.
-// The animation loop stops after settling and while the tab is hidden.
+// The single viewport glow owns all pointer-atmosphere motion. Use elapsed
+// time, not a fixed per-frame lerp, so 60/120/144Hz feel consistent.
 if(fine.matches&&!reduce.matches){
   const halo=document.createElement('div');halo.className='kvn-pointer-core';
   halo.setAttribute('aria-hidden','true');document.body.append(halo);
-  let x=-900,y=-900,goalX=-900,goalY=-900,tick=0,visible=false;
-  const update=()=>{
-    tick=0;if(document.hidden||!visible)return;
-    // ~125ms perceived easing at 60fps, on a single transform-only layer.
-    x+=(goalX-x)*.18;y+=(goalY-y)*.18;
-    halo.style.transform='translate3d('+x+'px,'+y+'px,0) translate(-50%,-50%)';
-    if(Math.abs(x-goalX)+Math.abs(y-goalY)>.75)tick=requestAnimationFrame(update);
+  let x=0,y=0,targetX=0,targetY=0,tick=0,visible=false,lastFrame=0;
+  const stop=()=>{
+    visible=false;
+    halo.style.opacity='0';
+    if(tick)cancelAnimationFrame(tick);
+    tick=0;lastFrame=0;
   };
-  window.addEventListener('pointermove',e=>{
-    if(e.pointerType && e.pointerType!=='mouse' && e.pointerType!=='pen')return;
-    if(!visible){x=e.clientX;y=e.clientY;visible=true;halo.style.opacity='.78';}
-    goalX=e.clientX;goalY=e.clientY;
-    if(!tick)tick=requestAnimationFrame(update);
-  },{passive:true});
-  document.documentElement.addEventListener('pointerleave',()=>{visible=false;halo.style.opacity='0';if(tick)cancelAnimationFrame(tick);tick=0;},{passive:true});
-  window.addEventListener('blur',()=>{visible=false;halo.style.opacity='0';if(tick)cancelAnimationFrame(tick);tick=0;});
+  const update=now=>{
+    tick=0;
+    if(document.hidden||!visible)return;
+    const elapsed=lastFrame?Math.min(64,Math.max(0,now-lastFrame)):16.67;
+    lastFrame=now;
+    // An ~85ms time constant gives a natural ~100–180ms trailing glow.
+    const alpha=1-Math.exp(-elapsed/85);
+    x+=(targetX-x)*alpha;y+=(targetY-y)*alpha;
+    halo.style.transform='translate3d('+x.toFixed(2)+'px,'+y.toFixed(2)+'px,0) translate(-50%,-50%)';
+    if(Math.hypot(x-targetX,y-targetY)>.65)tick=requestAnimationFrame(update);
+  };
+  const move=e=>{
+    if(e.pointerType&&e.pointerType!=='mouse'&&e.pointerType!=='pen')return;
+    targetX=e.clientX;targetY=e.clientY;
+    if(!visible){
+      x=targetX;y=targetY;lastFrame=0;
+      visible=true;halo.style.opacity='.72';
+      halo.style.transform='translate3d('+x+'px,'+y+'px,0) translate(-50%,-50%)';
+    }
+    if(!tick&&!document.hidden)tick=requestAnimationFrame(update);
+  };
+  window.addEventListener('pointermove',move,{passive:true});
+  document.documentElement.addEventListener('pointerleave',stop,{passive:true});
+  window.addEventListener('blur',stop,{passive:true});
   document.addEventListener('visibilitychange',()=>{
     document.body.classList.toggle('kvn-page-hidden',document.hidden);
-    if(document.hidden){if(tick)cancelAnimationFrame(tick);tick=0;halo.style.opacity='0';}
-    else if(visible){halo.style.opacity='.78';if(!tick)tick=requestAnimationFrame(update);}
+    if(document.hidden)stop();
   },{passive:true});
 } else document.addEventListener('visibilitychange',()=>{
   document.body.classList.toggle('kvn-page-hidden',document.hidden);

@@ -132,76 +132,39 @@ try{
     });
     assert(rect.documentWidth<=width+2,'Page horizontally overflows at '+width+': '+JSON.stringify(rect));
 
-    // KVN Studios typography & brand: Archivo display + Outfit body,
-    // and the terminal ! on EMOTES! must be fully visible at every width.
+    // Growth Command Center is now the primary above-the-fold experience.
+    // Verify its headline, live CCU, accessible layout and original brand tokens.
     await page.evaluate(()=>document.fonts.ready);
-    const typeCheck=await page.evaluate(()=>{
-      const heading=document.querySelector('.hero h1');
-      const headline=document.querySelector('.hero .kvn-line-two');
-      const text=headline?.firstChild;
-      const last=text?.textContent?.lastIndexOf('!')??-1;
-      const copy=heading?.closest('.hero-copy')?.getBoundingClientRect();
-      const frame=headline?.getBoundingClientRect();
-      let punctuation=null;
-      if(text&&last>=0){
-        const range=document.createRange();
-        range.setStart(text,last);range.setEnd(text,last+1);
-        const r=range.getBoundingClientRect();
-        punctuation={left:r.left,right:r.right,top:r.top,bottom:r.bottom};
-      }
+    await page.waitForFunction(()=>document.getElementById('gc-live-value')?.textContent.trim()==='48',null,{timeout:12000});
+    const growthCheck=await page.evaluate(()=>{
+      const heading=document.querySelector('#gc-title');
+      const panel=document.querySelector('.gc-live-panel');
+      const headline=heading?.getBoundingClientRect();
+      const live=panel?.getBoundingClientRect();
       return {
         headingFont:getComputedStyle(heading).fontFamily,
         bodyFont:getComputedStyle(document.body).fontFamily,
         background:getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(),
         accent:getComputedStyle(document.documentElement).getPropertyValue('--green').trim(),
-        headline:headline?.textContent,frame:frame?.toJSON(),copy:copy?.toJSON(),
-        punctuation,overflow:headline?.scrollWidth-headline?.clientWidth
+        headline:headline?.toJSON(),live:live?.toJSON(),
+        liveText:document.getElementById('gc-live-value')?.textContent.trim(),
+        heroHidden:getComputedStyle(document.querySelector('.hero')).display==='none',
+        pointerGlow:document.querySelectorAll('.kvn-pointer-core').length,
+        oldGlow:document.querySelectorAll('.kvn-cursor-glow').length
       };
     });
-    assert.match(typeCheck.headingFont,/Archivo/,'KVN Studios headline font missing at '+width);
-    assert.match(typeCheck.bodyFont,/Outfit/,'KVN Studios body font missing at '+width);
-    assert.equal(typeCheck.background,'#080e1c','Incorrect KVN Studios background at '+width);
-    assert.equal(typeCheck.accent,'#31aaff','Incorrect KVN Studios blue at '+width);
-    assert(typeCheck.punctuation && typeCheck.copy &&
-      typeCheck.punctuation.left>=typeCheck.copy.left-2 &&
-      typeCheck.punctuation.right<=typeCheck.copy.right-3,
-      'EMOTES! exclamation is clipped at '+width+': '+JSON.stringify(typeCheck));
-    assert(typeCheck.overflow<=3,'EMOTES! line overflows its own box at '+width+
-      ': '+JSON.stringify(typeCheck));
-
-
-    // The live CCU must dominate the desktop overview, while staying
-    // full-width above compact metric cards on mobile and tablets.
-    const overview=await page.evaluate(()=>{
-      const metrics=document.querySelector('.metrics').getBoundingClientRect();
-      const primary=document.querySelector('.metrics .primary').getBoundingClientRect();
-      const small=document.querySelector('.metrics .card:not(.primary)').getBoundingClientRect();
-      const mobileLive=document.querySelector('.kvn-hero-inline-live');
-      const pointerGlow=document.querySelectorAll('.kvn-pointer-core').length;
-      const oldGlow=document.querySelectorAll('.kvn-cursor-glow').length;
-      return {
-        ratio:primary.width/metrics.width,
-        smallRatio:small.width/metrics.width,
-        liveVisible:getComputedStyle(mobileLive).display!=='none',
-        liveCCU:document.getElementById('heroInlineCCU')?.textContent,
-        pointerGlow,oldGlow,
-        bodyOverflow:document.documentElement.scrollWidth-innerWidth
-      };
-    });
-    assert(overview.oldGlow===0,'Duplicate immediate cursor glow still created at '+width);
-    assert(overview.pointerGlow<=1,'Multiple eased pointer glows created at '+width);
-    if(width>=1200){
-      assert(overview.ratio>.56 && overview.ratio<.68,
-        'Live CCU does not occupy the larger desktop hero area at '+width+': '+JSON.stringify(overview));
-      assert(!overview.liveVisible,'Mobile hero indicator should not clutter desktop hero at '+width);
-    }else{
-      assert(overview.ratio>.92,
-        'Live CCU should fill the overview width below 1200px at '+width+': '+JSON.stringify(overview));
-      if(width<=690){
-        assert(overview.liveVisible,'Mobile hero CCU indicator is missing at '+width);
-        assert.equal(overview.liveCCU,'48','Mobile hero must show the verified sample at '+width);
-      }
-    }
+    assert.match(growthCheck.headingFont,/Archivo/,'Growth headline font missing at '+width);
+    assert.match(growthCheck.bodyFont,/Outfit/,'KVN Studios body font missing at '+width);
+    assert.equal(growthCheck.background,'#080e1c','Incorrect KVN Studios background at '+width);
+    assert.equal(growthCheck.accent,'#31aaff','Incorrect KVN Studios blue at '+width);
+    assert(growthCheck.headline?.width>100&&growthCheck.headline.right<=width+2,
+      'Growth heading is clipped at '+width+': '+JSON.stringify(growthCheck));
+    assert(growthCheck.live?.width>120&&growthCheck.live.right<=width+2,
+      'Growth live player card is clipped at '+width+': '+JSON.stringify(growthCheck));
+    assert.equal(growthCheck.liveText,'48','Verified CCU missing from Growth Center at '+width);
+    assert(growthCheck.heroHidden,'Redundant legacy hero should be hidden when Growth Center is active');
+    assert.equal(growthCheck.oldGlow,0,'Duplicate immediate cursor glow created at '+width);
+    assert(growthCheck.pointerGlow<=1,'Multiple eased pointer glows created at '+width);
 
     assert(rect.chartGap>=18,'Chart controls overlap plot at '+width+': '+JSON.stringify(rect));
     assert(rect.plotLeft>=rect.panelLeft-2 && rect.plotRight<=rect.panelRight+2,
@@ -560,30 +523,22 @@ try{
     }
 
     if(width===1440){
-      // Filmstrip samples are representative times after page navigation;
-      // screenshots are local fixture renders, not claims about frame-perfect
-      // clock alignment or Cloudflare's deployed page.
       const film=await context.newPage();
       await film.goto(localURL,{waitUntil:'domcontentloaded'});
-      const start=Date.now();
-      for(const elapsed of [0,100,200,350,500,750,1000,1400,1800]){
-        await film.waitForTimeout(Math.max(0,elapsed-(Date.now()-start)));
-        await film.locator('.hero').screenshot({
-          path:artifactDir+'/hero-'+elapsed+'ms-1440.png',
-          animations:'allow'
-        });
-      }
-      await film.waitForTimeout(250);
-      const finalHero=await film.evaluate(()=>{
-        const title=document.querySelector('.hero h1');
-        const artwork=document.querySelector('.hero .hero-poster');
-        return {titleOpacity:Number(getComputedStyle(title).opacity),
-          artworkOpacity:Number(getComputedStyle(artwork).opacity)};
+      await film.waitForFunction(()=>document.getElementById('gc-live-value')?.textContent.trim()==='48');
+      await film.locator('.gc-shell').screenshot({
+        path:artifactDir+'/growth-command-center-1440.png',animations:'disabled'
       });
-      assert(finalHero.titleOpacity>.9&&finalHero.artworkOpacity>.9,
-        'Hero intro failed to settle after 1.8s: '+JSON.stringify(finalHero));
+      const finalHero=await film.evaluate(()=>{
+        const title=document.querySelector('#gc-title');
+        const live=document.querySelector('.gc-live-panel');
+        return {titleVisible:title?.getBoundingClientRect().height>0,
+          liveVisible:live?.getBoundingClientRect().height>0};
+      });
+      assert(finalHero.titleVisible&&finalHero.liveVisible,
+        'Growth Command Center is not visible: '+JSON.stringify(finalHero));
       await film.close();
-      console.log('PASS: Hero 0–1800ms representative filmstrip captured with local verified-data fixtures.');
+      console.log('PASS: Growth Command Center screenshot and visibility checks.');
     }
 
     console.log('PASS viewport '+width+'px; plot gap '+rect.chartGap.toFixed(1)+'px; no horizontal overflow, tabs and chart work.');

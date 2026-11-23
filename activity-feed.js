@@ -50,7 +50,7 @@ export const activityFeedCSS = String.raw`
 @media(max-width:640px){.kvn-feed-insights{grid-template-columns:1fr 1fr}.kvn-feed-insight:last-child{grid-column:1/-1}}
 @media(max-width:640px){.kvn-activity-feed{padding:20px 16px}.kvn-feed-head{align-items:flex-start;flex-direction:column}.kvn-feed-summary{text-align:left}.kvn-feed-event{gap:9px;padding:10px}.kvn-feed-footer{font-size:8px}}
 `;
-export const activityFeedJS = String.raw\`
+export const activityFeedJS = String.raw`
 (function(){
   'use strict';
   const list=document.getElementById('kvn-feed-events');
@@ -126,4 +126,4 @@ export const activityFeedJS = String.raw\`
     statusNote.textContent=lastTime?'Last verified '+new Date(lastTime).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}):'Waiting for Roblox · retrying';
   });
 })();
-\`;
+`;

@@ -382,4 +382,33 @@ body :is(.gc-live-panel,.gc-kpi,.gc-decision,.gc-priorities,.gb-tile,.kvn-feed-i
   body :is(.gc-kpi,.gb-tile,.kvn-feed-insight){padding:clamp(16px,4vw,24px)}
 }
 
+
+/* Brand color corrections: remove the remaining pink micro-accent from the
+   previous reference layer and align legacy component tokens with blue. */
+:root{
+  --kvn-reference-bg:#040b15;
+  --kvn-reference-panel:#0c2441;
+  --kvn-reference-blue:#258fff;
+  --kvn-reference-cyan:#39b9ff;
+  --kvn-reference-pink:#39b9ff;
+  --kvn-reference-text:#f5fbff;
+  --kvn-reference-muted:#99b6d0;
+}
+.hero .eyebrow::after{background:#39b9ff;box-shadow:0 0 14px rgba(57,185,255,.46)}
+body .hero h1 .kvn-line-two{
+  background:linear-gradient(105deg,#39b9ff,#32b0ff 34%,#258fff 74%,#2181ff)!important;
+  background-clip:text!important;
+  -webkit-background-clip:text!important;
+  color:transparent!important;
+  -webkit-text-fill-color:transparent!important;
+}
+body .kvn-live-pulse__metric,
+body .kvn-live-pulse__trace,
+body .kvn-ccu-change,
+body .gc-decision-state:not([data-trend="up"]):not([data-trend="down"]){
+  border-color:rgba(87,170,255,.33);
+}
+body .gc-actions .gc-primary-action:focus-visible,
+body .playbtn:focus-visible{outline:2px solid #9cdeff;outline-offset:3px}
+
 `;

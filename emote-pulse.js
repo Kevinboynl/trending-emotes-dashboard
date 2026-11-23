@@ -19,12 +19,14 @@ export const pulseMarkup = String.raw`
     </div>
     <div class="ep-graph-pane">
       <div class="ep-graph-top"><div><span class="ep-overline">PLAYER MOMENTUM</span><h3>Recent player activity</h3></div><span class="ep-chart-label">MEASURED CCU / LAST 12 SAMPLES</span></div>
+      <div class="ep-toolbar"><div class="ep-range" role="group" aria-label="Player history timeframe"><button type="button" data-ep-range="1" aria-pressed="true">1 HOUR</button><button type="button" data-ep-range="24" aria-pressed="false">24 HOURS</button></div><span class="ep-coverage" id="ep-coverage">Waiting for measurements</span></div>
       <div class="ep-bars" id="ep-bars" aria-label="Waiting for verified player count samples">
         <div class="ep-chart-empty" id="ep-empty">Waiting for Roblox measurements…</div>
       </div>
       <div class="ep-graph-bottom">
         <div><small>HIGHEST SEEN THIS VISIT</small><strong id="ep-visit-high">—</strong></div>
         <div><small>VERIFIED SAMPLES SHOWN</small><strong id="ep-samples">—</strong></div>
+        <div class="ep-momentum"><small>CHANGE IN SELECTED PERIOD</small><strong id="ep-period-change">—</strong><span id="ep-period-detail">At least two measurements required</span></div>
       </div>
       <p class="ep-disclaimer">Only observed player counts are shown. The bars use a relative scale; missing intervals are never filled in.</p>
     </div>
@@ -67,6 +69,16 @@ export const pulseCSS = String.raw`
 .ep-graph-top{display:flex;justify-content:space-between;gap:12px;align-items:center}
 .ep-graph-top h3{font:800 24px 'Archivo','Outfit',Arial,sans-serif;letter-spacing:-.04em;margin:9px 0 0;color:#eef8ff}
 .ep-chart-label{color:#7f9bbd;text-align:right;font:800 9px/1.5 'Outfit',Arial,sans-serif;letter-spacing:.08em}
+.ep-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:18px}
+.ep-range{display:flex;gap:4px;padding:4px;border:1px solid rgba(104,173,246,.25);border-radius:10px;background:rgba(4,14,32,.5)}
+.ep-range button{border:0;border-radius:7px;padding:9px 12px;color:#95b0d2;background:transparent;cursor:pointer;font:800 10px 'Outfit',Arial,sans-serif;letter-spacing:.06em;transition:background .15s,color .15s}
+.ep-range button[aria-pressed="true"]{background:#235ba6;color:#fff}
+.ep-range button:focus-visible{outline:2px solid #93dcff;outline-offset:3px}
+.ep-coverage{font:600 10px 'Outfit',Arial,sans-serif;color:#8ea9cc}
+.ep-momentum{grid-column:1/-1;padding-top:14px;border-top:1px solid rgba(116,170,238,.15)}
+.ep-momentum strong[data-direction="up"]{color:#80dfff}
+.ep-momentum strong[data-direction="down"]{color:#d2dcee}
+.ep-momentum span{color:#91aaca;font:600 10px 'Outfit',Arial,sans-serif}
 .ep-bars{display:flex;align-items:flex-end;justify-content:space-between;gap:7px;position:relative;flex:1;min-height:160px;max-height:190px;margin:26px 0 23px;padding:12px 1px 0;border-bottom:1px solid rgba(119,169,236,.35);background:repeating-linear-gradient(to top,transparent 0,transparent 39px,rgba(80,137,217,.13) 40px,transparent 41px)}
 .ep-bar{flex:1 1 0;min-width:0;max-width:42px;min-height:3px;border-radius:5px 5px 0 0;background:linear-gradient(0deg,#2051a0,#288de7 75%,#7bd6ff);box-shadow:0 0 14px rgba(40,141,231,.12);transform-origin:bottom;animation:ep-grow .48s cubic-bezier(.2,.75,.2,1) both}
 .ep-bar:last-child{background:linear-gradient(0deg,#2972c9,#4bb7ff 70%,#b5efff);box-shadow:0 0 15px rgba(61,172,255,.2)}
@@ -86,7 +98,7 @@ export const pulseCSS = String.raw`
 @keyframes ep-grow{from{transform:scaleY(.1);opacity:.25}to{transform:scaleY(1);opacity:1}}
 @media(max-width:1100px){.ep-board{grid-template-columns:1fr 1fr}.ep-live-pane,.ep-graph-pane{padding:27px 26px}.ep-count-wrap{margin-top:45px}.ep-count-wrap strong{font-size:clamp(64px,9.2vw,122px)}.ep-ccu-tag{font-size:11px}.ep-heading-side{display:none}}
 @media(max-width:760px){.ep-section{padding-top:32px}.ep-heading h2{font-size:clamp(42px,9vw,67px)}.ep-board{grid-template-columns:1fr}.ep-live-pane,.ep-graph-pane{padding:26px 24px}.ep-count-wrap{margin-top:30px}.ep-count-wrap strong{font-size:clamp(85px,18vw,130px)}.ep-graph-pane{min-height:350px}.ep-bars{min-height:130px;max-height:155px}.ep-footline{flex-wrap:wrap;gap:9px}}
-@media(max-width:410px){.ep-heading h2{font-size:39px}.ep-heading p{font-size:12px}.ep-live-pane,.ep-graph-pane{padding:22px 18px}.ep-count-wrap{gap:12px}.ep-count-wrap strong{font-size:clamp(68px,19vw,99px)}.ep-ccu-tag{font-size:10px}.ep-ccu-tag span{font-size:8px}.ep-graph-top{align-items:flex-start}.ep-chart-label{max-width:95px}.ep-footline{font-size:8px}}
+@media(max-width:410px){.ep-toolbar{align-items:flex-start}.ep-range button{padding:8px 9px}.ep-heading h2{font-size:39px}.ep-heading p{font-size:12px}.ep-live-pane,.ep-graph-pane{padding:22px 18px}.ep-count-wrap{gap:12px}.ep-count-wrap strong{font-size:clamp(68px,19vw,99px)}.ep-ccu-tag{font-size:10px}.ep-ccu-tag span{font-size:8px}.ep-graph-top{align-items:flex-start}.ep-chart-label{max-width:95px}.ep-footline{font-size:8px}}
 @media(prefers-reduced-motion:reduce){#pulse .ep-bar,#pulse .ep-dot{animation:none!important}}
 `;
 
@@ -100,7 +112,9 @@ const get=id=>document.getElementById(id);
 const count=get('ep-count'),state=get('ep-state'),delta=get('ep-delta');
 const bars=get('ep-bars'),empty=get('ep-empty');
 const time=get('ep-time'),visitHigh=get('ep-visit-high'),sampleCount=get('ep-samples');
-let highest=null,lastObserved=null;
+let highest=null,lastObserved=null,rangeHours=1,verifiedHistory=[];
+const rangeButtons=[...panel.querySelectorAll('[data-ep-range]')];
+const periodChange=get('ep-period-change'),periodDetail=get('ep-period-detail'),coverage=get('ep-coverage');
 const valid=p=>p&&Number.isSafeInteger(p.ccu)&&p.ccu>=0&&
   Number.isFinite(p.t)&&p.t>0&&p.t<=Date.now()+30000;
 const format=n=>n.toLocaleString('en-US');
@@ -109,9 +123,22 @@ function signal(kind,wording){panel.dataset.signal=kind;state.textContent=wordin
 function plot(history){
   const unique=new Map();
   for(const sample of history){
-    if(valid(sample)&&Date.now()-sample.t<=86400000)unique.set(sample.t,sample.ccu);
+    if(valid(sample)&&Date.now()-sample.t<=rangeHours*3600000)unique.set(sample.t,sample.ccu);
   }
-  const samples=[...unique].sort((a,b)=>a[0]-b[0]).slice(-12);
+  const ordered=[...unique].sort((a,b)=>a[0]-b[0]);
+  const samples=ordered.slice(-12);
+  if(ordered.length>=2){
+    const first=ordered[0],last=ordered[ordered.length-1],diff=last[1]-first[1];
+    periodChange.textContent=(diff>0?'+':diff<0?'−':'')+format(Math.abs(diff));
+    periodChange.dataset.direction=diff>0?'up':diff<0?'down':'flat';
+    const elapsed=Math.round((last[0]-first[0])/60000);
+    periodDetail.textContent='Across '+elapsed+' measured minute'+(elapsed===1?'':'s')+' · not a full-period estimate';
+    coverage.textContent='OBSERVED '+elapsed+' MIN · '+ordered.length+' SAMPLES';
+  }else{
+    periodChange.textContent='—';periodChange.dataset.direction='none';
+    periodDetail.textContent='At least two measurements required';
+    coverage.textContent=ordered.length?'ONLY 1 VERIFIED SAMPLE':'WAITING FOR DATA';
+  }
   sampleCount.textContent=samples.length?String(samples.length):'—';
   bars.replaceChildren();
   if(!samples.length){
@@ -163,7 +190,13 @@ window.addEventListener('kvn:verified-stats',event=>{
     lastObserved={t:d.timestamp,ccu:d.playing};
   }
   const hist=Array.isArray(payload.history)?payload.history:[];
-  plot(hist.concat([{t:d.timestamp,ccu:d.playing}]));
+  verifiedHistory=hist.concat([{t:d.timestamp,ccu:d.playing}]);
+  plot(verifiedHistory);
+});
+for(const button of rangeButtons)button.addEventListener('click',()=>{
+  rangeHours=Number(button.dataset.epRange)===24?24:1;
+  for(const b of rangeButtons)b.setAttribute('aria-pressed',String(b===button));
+  plot(verifiedHistory);
 });
 window.addEventListener('kvn:stats-unavailable',()=>{
   signal('unavailable',lastObserved?'REFRESH DELAYED · LAST VERIFIED SHOWN':'ROBLOX DATA TEMPORARILY UNAVAILABLE');

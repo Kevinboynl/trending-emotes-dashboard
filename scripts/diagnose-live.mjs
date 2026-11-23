@@ -40,7 +40,17 @@ console.log('PUBLIC HISTORY API:',JSON.stringify({
  status:history.status,error:history.error||h?.error||null,
  storage:h?.storage??null,points:Array.isArray(h?.points)?h.points.length:null
 }));
-if(live.error||snap.error||history.error)console.log('DIAGNOSIS: This runner could not reach all live endpoints. No false production claims.');
+const official=await get('/api/public-analytics');
+let officialData=null;try{officialData=JSON.parse(official.text||'null')}catch{}
+console.log('PUBLIC ANALYTICS API:',JSON.stringify({
+ status:official.status,error:official.error||officialData?.error||null,
+ state:officialData?.state??officialData?.status??null,
+ publishedMetricCount:Array.isArray(officialData?.metrics)?officialData.metrics.length:
+  (officialData?.metrics&&typeof officialData.metrics==='object'?Object.keys(officialData.metrics).length:null)
+}));
+// No creator analytics values or API secrets are printed to CI logs.
+
+if(live.error||snap.error||history.error||official.error)console.log('DIAGNOSIS: This runner could not reach all live endpoints. No false production claims.');
 else if(!live.text||snap.status!==200)console.log('DIAGNOSIS: Live site / stats endpoint failed or is not returning normal verified metrics.');
 else if(body?.stale)console.log('DIAGNOSIS: Dashboard is receiving cached fallback; movement effects are intentionally suppressed.');
 else if(body?.playing==null)console.log('DIAGNOSIS: No valid public CCU available to animate.');

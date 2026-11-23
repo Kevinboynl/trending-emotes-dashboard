@@ -224,7 +224,7 @@ async function history(db, range) {
 const HTML = String.raw`<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#080a08"><meta name="description" content="Live Roblox analytics for TRENDING EMOTES! by KVN STUDIOS.">
+<meta name="theme-color" content="#080e1c"><meta name="description" content="Live Roblox analytics for TRENDING EMOTES! by KVN STUDIOS.">
 <title>TRENDING EMOTES! — KVN STUDIOS / Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -925,15 +925,24 @@ window.addEventListener('pageshow',event=>{
   if(event.persisted)markVisitorAway();
   resumeLiveStats();
 });
-window.addEventListener('online',resumeLiveStats);
+window.addEventListener('online',()=>{
+  // A connection returning does not mean Roblox is connected until a
+  // fresh, verified sample arrives. Keep cached data visible while retrying.
+  if(document.hidden)return;
+  state('RECONNECTING TO ROBLOX',true);
+  void resumeLiveStats();
+});
+window.addEventListener('offline',()=>{
+  state('YOU ARE OFFLINE · SHOWING LAST VERIFIED DATA',true);
+  setHeroCCUState(lastVisibleCCU||currentStats?'cached':'unavailable');
+  statsRetryButton.hidden=false;
+});
 </script></body></html>`;
 
 /* Render-time composition keeps the Roblox API, database schema and API routes unchanged.
    This visual layer is maintained separately in premium-theme.js and premium-interactions.js. */
 const THEMED_HTML = HTML
-  .replaceAll('KVN STUDIOS', 'KVN CLOTHING')
-  .replaceAll('<b>STUDIOS</b>', '<b>CLOTHING</b>')
-  .replaceAll('#b6ff69', '#5daeff')
+    .replaceAll('#b6ff69', '#5daeff')
   .replaceAll('#aaff62', '#5daeff')
   .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + controlCenterCSS + '\n</style>')
   .replace('<section class="wrap" id="dashboard">', () => controlCenterMarkup + '<section class="wrap" id="dashboard">')

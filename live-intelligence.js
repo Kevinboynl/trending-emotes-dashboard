@@ -377,6 +377,37 @@ h1,h2,h3,.number,.wordmark,.bar h2,.detail .value,
   background:#ffb7c6;box-shadow:0 0 0 3px rgba(255,183,198,.10)}
 @media(max-width:690px){.kvn-history-health{font-size:9px;margin-bottom:10px}}
 
+
+/* Reliability: sections are visible by default. Reveal motion is opt-in only
+   after the dashboard has installed its IntersectionObserver. */
+.reveal{opacity:1;transform:none}
+html.kvn-reveal-ready .reveal:not(.show){opacity:0;transform:translate3d(0,18px,0)}
+html.kvn-reveal-ready .reveal.show{opacity:1;transform:none}
+html.kvn-reveal-ready .reveal{transition:opacity .52s ease,transform .52s cubic-bezier(.22,1,.36,1)}
+/* Prevent the exclamation point and large Archivo glyphs from being clipped. */
+.hero .hero-copy h1{overflow:visible!important}
+.hero h1 .kvn-hero-line{overflow:visible!important;padding-right:.28em!important}
+/* Clear keyboard focus for navigation and data controls. */
+.tabs button:focus-visible,.metric-switch button:focus-visible,
+.switches button:focus-visible,.navlinks a:focus-visible,
+.kvn-stats-retry:focus-visible,.kvn-refresh-data:focus-visible{
+ outline:2px solid #83d4ff;outline-offset:3px
+}
+/* Keep the same blue visual identity while reducing expensive compositing
+   and distracting motion on compact touch screens. */
+@media(max-width:690px){
+ .kvn-stars,.atmosphere{display:none!important}
+ .hero .visual{filter:none!important}
+ .hero h1 .kvn-hero-line{padding-right:.3em!important}
+}
+@media(hover:none),(pointer:coarse){
+ .kvn-pointer-core{display:none!important}
+ .metrics .card::before{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ html.kvn-reveal-ready .reveal:not(.show){opacity:1;transform:none}
+ .hero h1 .kvn-hero-line{animation:none!important}
+}
 `;
 export const liveIntelligenceJS = String.raw`
 /* Event-driven CCU presentation: never alters or estimates Roblox data. */

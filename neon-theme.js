@@ -220,4 +220,166 @@ body::after{
 #dashboard .metrics .primary .number{letter-spacing:-.03em}
 @media(max-width:410px){.ep-count-wrap > strong{font-size:clamp(64px,17vw,96px)}}
 
+
+/* Consistent Dashboard System v1 */
+/* Fonts are loaded once in worker.js: Outfit (UI) and Archivo (display).
+   Normalize the previous mix of DM Sans, Inter, Oxanium and Space Grotesk.
+   Keep display sizes contextual; normalize families, rhythm, palette, and surfaces. */
+:root{
+  --kvn-type-body:'Outfit',Arial,sans-serif;
+  --kvn-type-display:'Archivo','Outfit',Arial,sans-serif;
+  --kvn-text-main:#f5fbff;
+  --kvn-text-bright:#ffffff;
+  --kvn-text-secondary:#b4cde5;
+  --kvn-text-muted:#91b1ce;
+  --kvn-text-label:#73ccff;
+  --kvn-text-accent:#39b9ff;
+  --ds-surface:#0c2441;
+  --ds-surface-hover:#113053;
+  --ds-line:rgba(83,163,245,.3);
+  --ds-line-strong:rgba(99,191,255,.54);
+  --ds-radius:18px;
+}
+body,body *{font-family:var(--kvn-type-body)!important}
+body :is(h1,h2,h3,h4,.wordmark,.footer-brand,.number,.gc-big,.gc-live-number,
+ .gc-kpi strong,.gc-funnel strong,.gc-decision h2,.gc-priorities h3,
+ .gc-intro h1,.gc-heading h2,.gc-hero h1,
+ .gc-live-panel .gc-live-number,.gc-big-label + strong,
+ .kvn-growth-focus__value,.kvn-growth-focus__tile-value,
+ .kvn-live-pulse__title,.kvn-live-pulse__metric strong,
+ .ep-count-wrap strong,.gb-tile strong,.gb-live-count,
+ .kvn-feed-summary strong,.kvn-feed-insight strong,
+ .official-card strong,.kvn-insight-card .k-value,
+ .kvn-ccu-change,.kvn-ccu-card .number,.detail .value,
+ .chart-foot .big,.floatbadge strong){
+  font-family:var(--kvn-type-display)!important;
+  font-synthesis:none;
+}
+body{font-weight:500;line-height:1.6;color:#f5fbff;-webkit-font-smoothing:antialiased}
+body :is(button,input,select,textarea){font-weight:650}
+body :is(h1,h2,h3,h4){font-weight:900;line-height:1.09;letter-spacing:-.045em}
+body :is(.wordmark,.footer-brand){font-weight:850;letter-spacing:-.045em}
+body :is(.gc-intro h1,.hero h1){font-weight:900;letter-spacing:-.052em}
+body :is(#ep-title,#gb-title,.gc-funnel-head h2,.gb-intro h2,
+ .ep-heading h2,.bar h2,.gc-heading h2,.kvn-growth-focus h2){
+  font-size:clamp(30px,3.7vw,53px);
+  letter-spacing:-.047em;
+  line-height:1.05;
+  color:var(--kvn-text-main);
+}
+body :is(.gc-decision h2,.gc-priorities h3,.panel-head h3,
+ .kvn-live-pulse__title,.ep-graph-top h3,.gb-explain h3){
+  letter-spacing:-.035em;
+  line-height:1.17;
+}
+body :is(.number,.gc-kpi strong,.gc-live-number,.gc-funnel strong,
+ .kvn-growth-focus__value,.kvn-growth-focus__tile-value,
+ .ep-count-wrap strong,.gb-tile strong,.detail .value,.official-card strong){
+  font-variant-numeric:tabular-nums lining-nums;
+  font-feature-settings:"tnum" 1;
+}
+body :is(p,.lead,.desc,.metric-info,.gc-intro p,.gc-decision>p,.gb-intro p,
+ .ep-heading p,.ep-graph-top p,.kvn-activity-feed p){
+  color:var(--kvn-text-secondary);
+}
+body :is(.metric-label,.gc-kpi-top,.gc-kicker,.gc-mini-heading,.gc-live-head,
+ .gb-kicker,.gb-label,.ep-overline,.ep-pane-kicker,.ep-chart-label,
+ .kvn-feed-kicker,.kvn-feed-insight small,.kvn-growth-focus__label,
+ .kvn-growth-focus__eyebrow,.sec-label,.official-card .k-label,
+ .kvn-insight-card .k-label,.kvn-live-pulse__eyebrow){
+  font-size:11px;
+  font-weight:800;
+  line-height:1.4;
+  letter-spacing:.105em;
+}
+body :is(.gc-kicker,.gc-mini-heading,.gb-kicker,.ep-overline,
+ .sec-label,.kvn-growth-focus__eyebrow,.kvn-feed-kicker,
+ .kvn-insight-card .k-label){color:#78cdff}
+body :is(.gc-intro h1 em,.gc-heading h2 span,.gc-funnel-head h2 span,
+ .kvn-growth-focus h2 span,.ep-heading h2 span,
+ .gb-intro h2 em,.kvn-activity-feed h3 span,
+ .bar h2 span,.ep-star){
+  color:#39b9ff;
+  text-shadow:0 0 24px rgba(44,159,255,.19);
+}
+body :is(.gc-brandtag,.gc-live-detail,.gc-live-foot,.gc-kpi p,
+ .gc-funnel p,.gc-disclaimer,.ep-disclaimer,.gb-footnote,
+ .kvn-feed-footer,.kvn-growth-focus__intro){
+  color:#9bb9d6;
+}
+body :is(.gc-hero,.gc-shell,.gb-wrap,.ep-section,.kvn-growth-focus){color:#f5fbff}
+/* Surfaces from separately developed modules now share depth and border weight. */
+body :is(.gc-live-panel,.gc-kpi,.gc-decision,.gc-priorities,.gc-funnel article,
+ .gc-card,.gc-action,.gc-live,
+ .kvn-growth-focus__surface,.kvn-growth-focus__primary,
+ .kvn-growth-focus__tile,.kvn-growth-focus__timeline,
+ .gb-tile,.gb-explain,.kvn-activity-feed,.kvn-feed-insight,
+ .kvn-feed-event,.kvn-signal,.official-card,.kvn-insight-card,
+ .signal-card,.detail,.chart-panel,.game-card,.metrics .card){
+  background:linear-gradient(145deg,rgba(18,49,88,.94),rgba(8,29,55,.97) 68%,rgba(6,22,44,.99));
+  border:1px solid var(--ds-line);
+  border-radius:var(--ds-radius);
+  box-shadow:inset 0 1px 0 rgba(211,237,255,.06),0 15px 37px rgba(1,9,28,.21);
+}
+body :is(.gc-live-panel,.gc-kpi,.gc-decision,.gc-priorities,.gc-funnel article,
+ .kvn-growth-focus__primary,.kvn-growth-focus__tile,
+ .gb-tile,.kvn-feed-insight,.official-card,.signal-card,.detail,.metrics .card){
+  transition:border-color .22s ease,box-shadow .22s ease,transform .22s ease;
+}
+@media(hover:hover){
+  body :is(.gc-kpi,.gc-funnel article,.kvn-growth-focus__tile,
+   .gb-tile,.kvn-feed-insight,.official-card,.signal-card,.detail,.metrics .card):hover{
+    border-color:var(--ds-line-strong);
+    box-shadow:inset 0 1px rgba(211,237,255,.11),
+               0 16px 37px rgba(0,8,27,.26),0 0 23px rgba(45,155,255,.105);
+  }
+}
+body :is(.gc-live-panel,.kvn-growth-focus__surface,.ep-board,.metrics .primary){
+  border-color:rgba(93,181,255,.44);
+  background:radial-gradient(circle at 90% 3%,rgba(44,146,255,.17),transparent 56%),
+    linear-gradient(145deg,#143960,#0b2445 62%,#081c37);
+  box-shadow:inset 0 1px rgba(201,232,255,.095),0 23px 54px rgba(0,8,29,.3);
+}
+body :is(.ep-live-pane,.ep-graph-pane){
+  background:linear-gradient(145deg,#102e54,#091f3d 73%,#081b32);
+}
+body :is(.gc-priorities,.gc-decision,.gc-funnel article,.gc-kpi){
+  border-color:var(--ds-line);
+}
+body :is(.gc-primary-action,.gc-actions a.gc-primary-action,
+ .playbtn,.tabs button.active,.switches button.active,
+ .ep-range button[aria-pressed="true"]){
+  background:linear-gradient(115deg,#39b9ff 0%,#278fff 58%,#1d75e9 100%);
+  color:#fff!important;
+  border-color:#5abaff;
+  box-shadow:0 8px 24px rgba(35,132,244,.24),inset 0 1px rgba(255,255,255,.2);
+}
+body :is(.gc-secondary-action,.gc-section-jump a,.outlinebtn,
+ .gc-decision-bottom a,.gc-funnel-head a){
+  border-color:rgba(87,166,248,.33);
+  color:#c9e5ff;
+}
+body :is(.tabs,.switches,.ep-range,.navlinks,.metric-switch){
+  background:rgba(7,27,54,.9);
+  border-color:rgba(79,159,248,.3);
+}
+body :is(.tabs button,.switches button,.ep-range button,.metric-switch button,
+ .gc-actions a,.gc-section-jump a,.navlinks a){
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.035em;
+}
+body :is(.gc-live-panel,.gc-kpi,.gc-decision,.gc-priorities,.gb-tile,.kvn-feed-insight){
+  min-width:0;
+}
+@media(max-width:680px){
+  body :is(#ep-title,#gb-title,.gc-funnel-head h2,.gb-intro h2,
+   .ep-heading h2,.bar h2,.gc-heading h2,.kvn-growth-focus h2){
+    font-size:clamp(27px,7vw,39px);
+  }
+  body :is(.gc-live-panel,.gc-kpi,.gc-decision,.gc-priorities,
+   .gc-funnel article,.gb-tile,.gb-explain,.kvn-activity-feed){border-radius:16px}
+  body :is(.gc-kpi,.gb-tile,.kvn-feed-insight){padding:clamp(16px,4vw,24px)}
+}
+
 `;

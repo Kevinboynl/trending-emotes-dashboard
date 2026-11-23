@@ -331,17 +331,7 @@ if(chart && frame && curve){
   foot.innerHTML='<div class="key-left"><i class="key-mark" aria-hidden="true"></i><span class="key-name">Live activity</span></div><span class="key-source">Measured Roblox data • no estimates</span>';
   const chartAxis=document.querySelector('.chart-axis');
   if(chartAxis) chartAxis.before(foot);
-  const mark=throttle(e=>{
-    const rect=chart.getBoundingClientRect();
-    const fraction=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
-    const pts=typeof chartPoints!=='undefined'&&Array.isArray(chartPoints)?chartPoints:[];
-    const nearest=pts.length?pts.reduce((best,p)=>Math.abs(p.x-fraction*860)<Math.abs(best.x-fraction*860)?p:best,pts[0]):null;
-    cross.style.transform='translateX('+(nearest?nearest.x/860*rect.width:fraction*rect.width)+'px)';
-    frame.classList.add('hovering');
-  });
-  chart.addEventListener('pointermove',mark,{passive:true});
-  chart.addEventListener('pointerleave',()=>frame.classList.remove('hovering'));
-  chart.addEventListener('pointercancel',()=>frame.classList.remove('hovering'));
+  // The Worker chart controller is the sole owner of tooltip/crosshair motion.
   function refreshChart(){
     const pts=safeArray(typeof chartPoints!=='undefined'?chartPoints:[]);
     const label=typeof valueFields!=='undefined'?valueFields[currentMetric]:currentMetric;

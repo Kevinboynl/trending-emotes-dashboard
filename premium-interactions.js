@@ -1,6 +1,6 @@
 /* Browser microinteractions and enhancements; appended to the existing Worker UI. */
 export const premiumJS = String.raw`
-/* KVN CLOTHING interaction refinements — leave the existing analytics logic intact. */
+/* KVN STUDIOS interaction refinements — leave the existing analytics logic intact. */
 (() => {
   'use strict';
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -115,6 +115,6 @@ export const premiumJS = String.raw`
     }, {passive:true});
   }
   const title = document.querySelector('title');
-  if(title) title.textContent = 'TRENDING EMOTES! | KVN CLOTHING Analytics';
+  if(title) title.textContent = 'TRENDING EMOTES! | KVN STUDIOS Analytics';
 })();
 `;

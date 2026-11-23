@@ -5,6 +5,7 @@ import { premiumJS } from './premium-interactions.js';
 import { studioUpgradeCSS, studioUpgradeJS } from './studio-upgrade.js';
 import { cinematicCSS, cinematicJS } from './cinematic-v2.js';
 import { liveIntelligenceCSS, liveIntelligenceJS } from './live-intelligence.js';
+import { commandCenterMarkup, commandCenterCSS, commandCenterJS } from './command-center.js';
 import { allowPublicApi, protectResponse, safeError, newPageNonce } from './security.js';
 /* TRENDING EMOTES — one-file Cloudflare Worker. Optional D1 binding: DB.
    Optional cron expression: every five minutes (collects without visitors).
@@ -934,9 +935,17 @@ const THEMED_HTML = HTML
   .replaceAll('<b>STUDIOS</b>', '<b>CLOTHING</b>')
   .replaceAll('#b6ff69', '#5daeff')
   .replaceAll('#aaff62', '#5daeff')
-  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n</style>')
+  .replace('THE KVN ANALYTICS LAB', 'LIVE ROBLOX COMMAND CENTER')
+  .replace('01 / EXPERIENCE OVERVIEW', '01 / LIVE PLAYER ACTIVITY')
+  .replace('THE NUMBERS', 'THE LIVE SIGNAL')
+  .replace('02 / ANALYTICS ENGINE', '02 / PLAYER MOMENTUM')
+  .replace('GROWTH & ACTIVITY', 'ACTIVITY TRENDS')
+  .replace('03 / DEEP DIVE', '03 / GAME INTELLIGENCE')
+  .replace('BEYOND THE BASICS', 'THE BIGGER PICTURE')
+  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + commandCenterCSS + '\n</style>')
+  .replace('<div class="metrics reveal">', () => commandCenterMarkup + '<div class="metrics reveal">')
   .replace('</section></main><footer', () => '</section>' + publicAnalyticsMarkup + '</main><footer')
-  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n</script></body></html>');
+  .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n' + commandCenterJS + '\n</script></body></html>');
 export default {
   async fetch(request, env, ctx) {
     // Only safe, read-only methods are accepted, including on the HTML route.

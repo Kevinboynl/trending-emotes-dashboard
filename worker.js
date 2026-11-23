@@ -448,6 +448,23 @@ async function dashboardFetchJSON(path,timeoutMs=7500){
   }finally{clearTimeout(timer);}
 }
 
+// Keep the whole page usable when an API fails: a small explicit retry
+// control beats an endless shimmer or asking the visitor to reload.
+const statsRetryButton=document.createElement('button');
+statsRetryButton.type='button';
+statsRetryButton.className='kvn-stats-retry';
+statsRetryButton.textContent='Retry data';
+statsRetryButton.setAttribute('aria-label','Retry live Roblox statistics');
+statsRetryButton.hidden=true;
+const statsInfo=$('lastUpdate');
+statsInfo?.parentElement?.append(statsRetryButton);
+statsRetryButton.addEventListener('click',async()=>{
+  statsRetryButton.disabled=true;
+  statsRetryButton.textContent='Checking…';
+  try{await stats();}
+  finally{statsRetryButton.disabled=false;statsRetryButton.textContent='Retry data';}
+});
+
 const LIVE_POLL_MS=20000;
 const HISTORY_POLL_MS=60000;
 let liveStatsInFlight=null;
@@ -521,6 +538,7 @@ async function stats(){
       loadImage(d.icon,'gameIcon',false);
       state(!isAuthoritative?'CACHED • WAITING FOR ROBLOX':'LIVE • CONNECTED',!isAuthoritative);
       setHeroCCUState(isAuthoritative?'live':'cached');
+      statsRetryButton.hidden=isAuthoritative;
       if(Number.isFinite(d.timestamp)){
         $('lastUpdate').textContent=(!isAuthoritative?'Last verified (cached): ':'Last verified sample: ')+
           new Date(d.timestamp).toLocaleString('en-GB');
@@ -558,6 +576,7 @@ async function stats(){
       if(document.hidden||visitorAway||requestVisibilityEpoch!==visibilityEpoch)return;
       state('ROBLOX TEMPORARILY UNAVAILABLE',true);
       setHeroCCUState(lastVisibleCCU||currentStats?'cached':'unavailable');
+      statsRetryButton.hidden=false;
       if(lastVisibleCCU&&validVisibleSnapshot(lastVisibleCCU)){
         $('lastUpdate').textContent='Refresh delayed · last visible verified sample: '+
           new Date(lastVisibleCCU.timestamp).toLocaleString('en-GB');

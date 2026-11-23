@@ -65,6 +65,7 @@ async function getUniverse(env, fetcher) {
 function failureReason(error) {
   const code=String(error?.message||'');
   if (code === 'universe-lookup-failed' || code === 'universe-lookup-invalid') return 'universe_lookup';
+  if (code==='analytics-timeout' || /abort|timeout/i.test(code))return 'timeout';
   if (/^analytics-(upstream|poll)-status-401$/.test(code)) return 'key_or_scope';
   if (/^analytics-(upstream|poll)-status-403$/.test(code)) return 'creator_access';
   if (/^analytics-upstream-status-(400|404|422)$/.test(code) || code === 'analytics-query-rejected-2001') return 'request_invalid';
@@ -84,7 +85,8 @@ function publicReasonMessage(reason){
     upstream:'The Roblox Analytics API is temporarily unavailable.',
     invalid_response:'Roblox returned an unexpected analytics response.',
     no_data:'Roblox has not supplied finalized data for this period yet.',
-    pending:'Roblox is still processing this query.'
+    pending:'Roblox is still processing this query.',
+    timeout:'The Roblox Analytics API took too long. Verified metrics received so far are shown; others will be retried.'
   };
   return labels[reason]||labels.upstream;
 }
@@ -172,8 +174,9 @@ export async function publicAnalyticsResponse(env,fetcher=fetch,now=Date.now()){
         // metrics must not blast the Roblox API with 18 requests at once.
         const results=new Array(selected.length);
         let next=0;
+        let expired=false;
         async function worker(){
-          while(next<selected.length){
+          while(!expired&&next<selected.length){
             const i=next++;
             try{
               results[i]={status:'fulfilled',value:await loadOperation(
@@ -184,11 +187,21 @@ export async function publicAnalyticsResponse(env,fetcher=fetch,now=Date.now()){
             }
           }
         }
-        await Promise.all(Array.from({length:Math.min(6,selected.length)},()=>worker()));
+        // A slow Roblox operation must not keep the whole website spinning.
+        let deadlineTimer;
+        try{
+          await Promise.race([
+            Promise.all(Array.from({length:Math.min(6,selected.length)},()=>worker())),
+            new Promise(resolve=>{deadlineTimer=setTimeout(()=>{
+              expired=true;
+              resolve();
+            },14000);})
+          ]);
+        }finally{clearTimeout(deadlineTimer);}
         const metrics=selected.map((id,i)=>{
           const info=ANALYTICS_CATALOG[id];
           if(results[i]?.status==='fulfilled')return {id,...info,...results[i].value};
-          const reason=failureReason(results[i]?.reason);
+          const reason=results[i]?failureReason(results[i].reason):'timeout';
           return {id,...info,state:'unavailable',reason,points:[],latest:null};
         });
         const ready=metrics.filter(m=>m.state==='ready').length;
@@ -204,7 +217,7 @@ export async function publicAnalyticsResponse(env,fetcher=fetch,now=Date.now()){
             note:publicReasonMessage(reasons[0])}:{})
         };
         // Cache only this explicitly approved aggregate result.
-        cache.set(cachedKey,{body,until:Date.now()+(ready?TTL:45000)});
+        cache.set(cachedKey,{body,until:Date.now()+(ready===selected.length?TTL:ready?120000:45000)});
         return {body,status:200};
       }catch(err){
         const reason=failureReason(err);

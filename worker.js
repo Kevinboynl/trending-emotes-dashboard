@@ -54,41 +54,54 @@ async function fetchStats(env = {}, ctx = null) {
     'https://thumbnails.roblox.com/v1/games/icons?universeIds='+u+'&size=512x512&format=Png&isCircular=false',
     'https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds='+u+'&countPerUniverse=1&defaults=true&size=768x432&format=Png&isCircular=false'
   ];
-  // Refresh CCU, visits and favorites independently from slower-moving votes,
-  // icons, and thumbnails. Avoid four Roblox API calls every 20 seconds.
+  // The votes request must NOT wait for the icon/thumbnail endpoints: a slow
+  // thumbnail previously held likes and dislikes behind Promise.allSettled,
+  // leaving the engagement cards as dashes on cold Worker instances.
   let support=secondaryCacheUniverse===u ? secondaryCache : null;
   if(!support||Date.now()>=secondaryCacheUntil){
     if(!secondaryPending||secondaryCacheUniverse!==u){
       const previous=support||{};
       secondaryCacheUniverse=u;
-      secondaryPending=Promise.allSettled(secondaryUrls.map(getJSON)).then(results=>{
-        const vote=results[0].status==='fulfilled'?results[0].value?.data?.[0]:null;
-        const icon=results[1].status==='fulfilled'?results[1].value?.data?.[0]?.imageUrl:null;
-        const thumbs=results[2].status==='fulfilled'?results[2].value?.data?.[0]?.thumbnails:null;
+      const updateSupport=patch=>{
+        if(secondaryCacheUniverse!==u)return;
+        secondaryCache={...previous,...(secondaryCache||{}),...patch};
+        secondaryCacheUntil=Date.now()+SUPPORT_CACHE_MS;
+      };
+      const votesPromise=getJSON(secondaryUrls[0]).then(data=>{
+        const vote=data?.data?.[0];
+        if(Number.isFinite(vote?.upVotes)&&Number.isFinite(vote?.downVotes)){
+          updateSupport({likes:vote.upVotes,dislikes:vote.downVotes,voteTimestamp:Date.now()});
+        }
+      }).catch(()=>{});
+      const imagesPromise=getJSON(secondaryUrls[1]).then(data=>{
+        const icon=data?.data?.[0]?.imageUrl;
+        if(typeof icon==='string'&&icon.startsWith('https://'))updateSupport({icon});
+      }).catch(()=>{});
+      const thumbnailPromise=getJSON(secondaryUrls[2]).then(data=>{
+        const thumbs=data?.data?.[0]?.thumbnails;
         const thumbnail=Array.isArray(thumbs)?thumbs.find(x=>x?.imageUrl)?.imageUrl:null;
-        const values={
-          likes:Number.isFinite(vote?.upVotes)?vote.upVotes:(previous.likes??null),
-          dislikes:Number.isFinite(vote?.downVotes)?vote.downVotes:(previous.dislikes??null),
-          icon:typeof icon==='string'&&icon.startsWith('https://')?icon:(previous.icon??null),
-          thumbnail:typeof thumbnail==='string'&&thumbnail.startsWith('https://')?thumbnail:(previous.thumbnail??null),
-          voteTimestamp:vote&&Number.isFinite(vote.upVotes)&&Number.isFinite(vote.downVotes)?Date.now():(previous.voteTimestamp??null)
-        };
-        secondaryCache=values;
-        const anyNew=results.some(x=>x.status==='fulfilled');
-        secondaryCacheUntil=Date.now()+(anyNew?SUPPORT_CACHE_MS:45000);
-        return values;
-      }).finally(()=>{secondaryPending=null;});
-      // Cloudflare may stop unawaited work after the response. Keep optional
-      // artwork/vote enrichment alive without delaying live player counts.
-      if(ctx&&typeof ctx.waitUntil==='function')
-        ctx.waitUntil(secondaryPending.catch(()=>{}));
+        if(typeof thumbnail==='string'&&thumbnail.startsWith('https://'))updateSupport({thumbnail});
+      }).catch(()=>{});
+      secondaryPending=Promise.allSettled([votesPromise,imagesPromise,thumbnailPromise])
+        .then(()=>{
+          if(secondaryCacheUniverse===u){
+            if(!secondaryCache)secondaryCache={...previous};
+            if(!secondaryCacheUntil||Date.now()>=secondaryCacheUntil)
+              secondaryCacheUntil=Date.now()+45000;
+          }
+        }).finally(()=>{secondaryPending=null;});
+      // Keep background enrichment alive after responding with the fast CCU.
+      if(ctx&&typeof ctx.waitUntil==='function')ctx.waitUntil(secondaryPending.catch(()=>{}));
+      // Only vote readiness matters for the short first-response grace period.
+      // Artwork never blocks public engagement data.
+      support=await Promise.race([
+        votesPromise.then(()=>secondaryCacheUniverse===u?secondaryCache:null),
+        new Promise(resolve=>setTimeout(()=>resolve(secondaryCacheUniverse===u?secondaryCache:null),650))
+      ]) || support;
+    }else{
+      // A second visitor can reuse the background votes completed earlier.
+      support=secondaryCacheUniverse===u?secondaryCache:support;
     }
-    // Give fast optional metrics a brief chance, but do not make public
-    // player counts wait for thumbnails, votes, or their 9-second timeout.
-    support=await Promise.race([
-      secondaryPending,
-      new Promise(resolve=>setTimeout(()=>resolve(secondaryCacheUniverse===u?secondaryCache:null),400))
-    ]) || support;
   }
   // Retry a transient game-details error once; do not invent game stats.
   let gameData;

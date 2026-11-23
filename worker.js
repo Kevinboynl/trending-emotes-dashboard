@@ -668,6 +668,7 @@ $('ranges').addEventListener('click',e=>{
   if(!b||b.dataset.range===currentRange)return;
   currentRange=b.dataset.range;
   for(const x of $('ranges').querySelectorAll('button'))x.classList.toggle('active',x===b);
+  clearChartHover();
   $('curve').setAttribute('d','');$('shade').setAttribute('d','');
   $('point').setAttribute('visibility','hidden');
   chartPoints=[];
@@ -678,8 +679,60 @@ $('ranges').addEventListener('click',e=>{
 });
 $('metrics').addEventListener('click',e=>{const b=e.target.closest('[data-metric]');if(!b)return;currentMetric=b.dataset.metric;for(const x of $('metrics').querySelectorAll('button'))x.classList.toggle('active',x===b);draw();});
 $('tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;for(const x of $('tabs').querySelectorAll('button'))x.classList.toggle('active',x===b);for(const x of document.querySelectorAll('.tabbody'))x.classList.toggle('active',x.dataset.page===b.dataset.tab);});
-$('chart').addEventListener('pointermove',e=>{if(chartPoints.length<2)return;const box=$('chart').getBoundingClientRect();const pointer=(e.clientX-box.left)/box.width*860;let best=chartPoints[0];for(const p of chartPoints)if(Math.abs(p.x-pointer)<Math.abs(best.x-pointer))best=p;const tip=$('tooltip');tip.style.display='block';tip.textContent=dateTime(best.raw.t)+' · '+fmt(best.raw[currentMetric])+' '+valueFields[currentMetric];const tipHalf=Math.min(box.width/2-10,Math.max(50,tip.getBoundingClientRect().width/2+10));tip.style.left=Math.max(tipHalf,Math.min(box.width-tipHalf,best.x/860*box.width))+'px';tip.style.top='12px';$('point').setAttribute('cx',best.x);$('point').setAttribute('cy',best.y);$('point').setAttribute('visibility','visible')});
-$('chart').addEventListener('pointerleave',()=>{$('tooltip').style.display='none';$('point').setAttribute('visibility','hidden')});
+// This is the single owner of chart pointer selection and crosshair position.
+// The chart refinement layer owns only the static crosshair/legend elements.
+let chartTouchTimer=null;
+function clearChartHover(){
+  if(chartTouchTimer){clearTimeout(chartTouchTimer);chartTouchTimer=null;}
+  $('tooltip').style.display='none';
+  $('point').setAttribute('visibility','hidden');
+  $('chart').closest('.chart-wrap')?.classList.remove('hovering');
+}
+function showChartHover(event){
+  if(chartPoints.length<2)return;
+  const chart=$('chart'),box=chart.getBoundingClientRect();
+  if(!box.width)return;
+  const pointer=(event.clientX-box.left)/box.width*860;
+  // A binary search avoids scanning thousands of D1 samples per pointer frame.
+  let left=0,right=chartPoints.length;
+  while(left<right){
+    const mid=(left+right)>>1;
+    if(chartPoints[mid].x<pointer)left=mid+1;else right=mid;
+  }
+  const first=chartPoints[Math.min(left,chartPoints.length-1)];
+  const second=chartPoints[Math.max(0,left-1)];
+  const best=Math.abs(first.x-pointer)<Math.abs(second.x-pointer)?first:second;
+  const tip=$('tooltip');
+  tip.textContent=dateTime(best.raw.t)+' · '+fmt(best.raw[currentMetric])+
+    ' '+valueFields[currentMetric];
+  tip.style.display='block';
+  const tipWidth=tip.getBoundingClientRect().width;
+  const half=Math.min(box.width/2-10,Math.max(50,tipWidth/2+10));
+  tip.style.left=Math.max(half,Math.min(box.width-half,best.x/860*box.width))+'px';
+  tip.style.top='12px';
+  $('point').setAttribute('cx',best.x);
+  $('point').setAttribute('cy',best.y);
+  $('point').setAttribute('visibility','visible');
+  const frame=chart.closest('.chart-wrap');
+  frame?.classList.add('hovering');
+  const cross=frame?.querySelector('.chart-crosshair');
+  if(cross)cross.style.transform='translateX('+(best.x/860*box.width).toFixed(2)+'px)';
+  if(event.pointerType==='touch'){
+    if(chartTouchTimer)clearTimeout(chartTouchTimer);
+    chartTouchTimer=setTimeout(clearChartHover,2200);
+  }
+}
+$('chart').addEventListener('pointermove',e=>{
+  if(e.pointerType==='touch'&&!e.buttons)return;
+  showChartHover(e);
+},{passive:true});
+$('chart').addEventListener('pointerdown',e=>{
+  if(e.pointerType==='touch')showChartHover(e);
+},{passive:true});
+$('chart').addEventListener('pointerleave',e=>{
+  if(e.pointerType!=='touch')clearChartHover();
+},{passive:true});
+$('chart').addEventListener('pointercancel',clearChartHover,{passive:true});
 for(const card of document.querySelectorAll('.card'))card.addEventListener('pointermove',e=>{const r=card.getBoundingClientRect();card.style.setProperty('--mouse-x',(e.clientX-r.left)+'px');card.style.setProperty('--mouse-y',(e.clientY-r.top)+'px')});
 const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('show');observer.unobserve(entry.target)}},{threshold:.07});document.querySelectorAll('.reveal').forEach(x=>observer.observe(x));
 $('footerTime').textContent='© '+new Date().getFullYear()+' KVN STUDIOS';

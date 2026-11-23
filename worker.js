@@ -23,6 +23,7 @@ let secondaryCache = null;
 let secondaryCacheUntil = 0;
 let secondaryCacheUniverse = null;
 let secondaryPending = null;
+let lastStatsPersistBucket = -1;
 const API_HEADERS = { 'Accept': 'application/json' };
 async function getJSON(url) {
   const ctrl = new AbortController();
@@ -33,7 +34,7 @@ async function getJSON(url) {
     return await r.json();
   } finally { clearTimeout(timer); }
 }
-async function fetchStats(env = {}) {
+async function fetchStats(env = {}, ctx = null) {
   // The Universe ID, not Place ID, is required for public game statistics.
   const override=typeof env.ROBLOX_UNIVERSE_ID==='string'?env.ROBLOX_UNIVERSE_ID.trim():'';
   if(/^[0-9]{4,20}$/.test(override))cachedUniverse=override;
@@ -77,16 +78,26 @@ async function fetchStats(env = {}) {
         secondaryCacheUntil=Date.now()+(anyNew?SUPPORT_CACHE_MS:45000);
         return values;
       }).finally(()=>{secondaryPending=null;});
+      // Cloudflare may stop unawaited work after the response. Keep optional
+      // artwork/vote enrichment alive without delaying live player counts.
+      if(ctx&&typeof ctx.waitUntil==='function')
+        ctx.waitUntil(secondaryPending.catch(()=>{}));
     }
-    support=await secondaryPending;
+    // Give fast optional metrics a brief chance, but do not make public
+    // player counts wait for thumbnails, votes, or their 9-second timeout.
+    support=await Promise.race([
+      secondaryPending,
+      new Promise(resolve=>setTimeout(()=>resolve(secondaryCacheUniverse===u?secondaryCache:null),400))
+    ]) || support;
   }
   // Retry a transient game-details error once; do not invent game stats.
   let gameData;
   const initial=await gamePending;
   if(initial.error){
-    const error=initial.error;
-    if(/Roblox API HTTP 4(?!29)\d\d/.test(String(error?.message||'')))throw error;
-    gameData=await getJSON(gameUrl);
+    // A 9-second upstream timeout followed by another 9-second retry exceeds
+    // the browser's 12-second fetch budget. Fail fast so the visitor gets
+    // an explicit cached/error state and the next poll can retry.
+    throw initial.error;
   }else gameData=initial.value;
   const g=gameData?.data?.[0];
   if(!g)throw new Error('Game details: Roblox returned no matching universe');
@@ -815,7 +826,7 @@ const THEMED_HTML = HTML
   .replace('</section></main><footer', () => '</section>' + publicAnalyticsMarkup + '</main><footer')
   .replace('</script></body></html>', () => '\n' + premiumJS + '\n' + publicAnalyticsClient + '\n' + refinementJS + '\n' + studioUpgradeJS + '\n' + cinematicJS + '\n' + liveIntelligenceJS + '\n</script></body></html>');
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     // Only safe, read-only methods are accepted, including on the HTML route.
     if(request.method!=='GET' && request.method!=='HEAD')
       return safeError(405,'method_not_allowed','Only GET and HEAD are supported.');
@@ -870,7 +881,7 @@ export default {
         const now=Date.now();
         if(!lastLiveStats || now>=liveCacheUntil){
           if(!pendingStats){
-            pendingStats=fetchStats(env).then(data=>{
+            pendingStats=fetchStats(env,ctx).then(data=>{
               lastLiveStats=data;
               liveCacheUntil=Date.now()+LIVE_CACHE_MS;
               return data;
@@ -879,7 +890,21 @@ export default {
           await pendingStats;
         }
         const stats=lastLiveStats;
-        try{await record(env.DB,stats);}catch{console.log('D1 sample write unavailable');}
+        // Persist at most once per five-minute bucket per isolate. This D1
+        // write must never hold up the browser response; Cron still collects
+        // samples independently even when nobody visits the dashboard.
+        if(env.DB){
+          const bucket=Math.floor(Date.now()/300000);
+          if(bucket!==lastStatsPersistBucket){
+            lastStatsPersistBucket=bucket;
+            const write=record(env.DB,stats).catch(()=>{
+              lastStatsPersistBucket=-1;
+              console.log('D1 sample write unavailable');
+            });
+            if(ctx&&typeof ctx.waitUntil==='function')ctx.waitUntil(write);
+            else void write;
+          }
+        }
         return protectResponse(Response.json(stats,{
           headers:{'Cache-Control':'public, max-age=12'}
         }));
@@ -917,6 +942,6 @@ export default {
     }),nonce);
   },
   async scheduled(event, env, ctx) {
-    if (env.DB) ctx.waitUntil(fetchStats(env).then(s=>record(env.DB,s)));
+    if (env.DB) ctx.waitUntil(fetchStats(env,ctx).then(s=>record(env.DB,s)));
   }
 };

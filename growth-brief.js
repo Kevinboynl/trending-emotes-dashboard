@@ -8,6 +8,9 @@ export const growthBriefMarkup = String.raw`
     </div>
     <span class="gb-status" id="gb-signal" role="status" aria-live="polite">CONNECTING TO ROBLOX</span>
   </div>
+  <div class="gb-mode-controls" role="group" aria-label="Dashboard layout">
+    <span>VIEW MODE</span><button type="button" data-gb-view="focus" aria-pressed="true">Growth focus</button><button type="button" data-gb-view="all" aria-pressed="false">All analytics</button>
+  </div>
   <div class="gb-command">
     <article class="gb-main" aria-labelledby="gb-main-title">
       <div class="gb-main-upper"><span class="gb-label" id="gb-main-title">CONCURRENT PLAYERS / VERIFIED</span><span class="gb-main-arrow" aria-hidden="true">↗</span></div>
@@ -118,11 +121,37 @@ export const growthBriefCSS = String.raw`
 @media(max-width:390px){.gb-live-row{gap:12px}.gb-live-side{font-size:9px}.gb-live-count{font-size:68px}.gb-chart-header{align-items:flex-start}.gb-jumps{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.gb-decision-link{transition:none}}
 
+
+/* Focus selected by the visitor. No analytics network requests are altered. */
+.gb-mode-controls{display:flex;align-items:center;justify-content:flex-end;gap:5px;margin:0 0 18px;flex-wrap:wrap}
+.gb-mode-controls>span{color:#90afcf;font:800 10px 'Outfit',sans-serif;letter-spacing:.12em;margin-right:8px}
+.gb-mode-controls button{border:1px solid rgba(106,174,242,.23);padding:10px 14px;border-radius:9px;background:rgba(17,40,76,.7);color:#abc8e5;font:800 11px 'Outfit',sans-serif;cursor:pointer}
+.gb-mode-controls button[aria-pressed="true"]{background:#72c6ff;color:#06192d;border-color:#72c6ff}
+.gb-mode-controls button:focus-visible{outline:2px solid #b2e8ff;outline-offset:3px}
+body[data-gb-view="focus"] #dashboard .kvn-signal,
+body[data-gb-view="focus"] #dashboard .kvn-activity-feed,
+body[data-gb-view="focus"] #dashboard .kvn-peak-hours,
+body[data-gb-view="focus"] #details,
+body[data-gb-view="focus"] #tabs,
+body[data-gb-view="focus"] #dashboard .tabbody,
+body[data-gb-view="focus"] #officialMetrics{display:none!important}
+@media(max-width:580px){.gb-mode-controls{justify-content:stretch}.gb-mode-controls>span{width:100%}.gb-mode-controls button{flex:1}}
 `;
 export const growthBriefJS = String.raw`
 (()=>{
 'use strict';
 const get=id=>document.getElementById(id);
+const viewButtons=[...document.querySelectorAll('[data-gb-view]')];
+(function initView(){
+ let first='focus';try{if(localStorage.getItem('kvn-growth-view-v1')==='all')first='all';}catch{}
+ function setView(view,save){const value=view==='all'?'all':'focus';document.body.dataset.gbView=value;viewButtons.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.gbView===value)));if(save){try{localStorage.setItem('kvn-growth-view-v1',value);}catch{}}}
+ viewButtons.forEach(button=>button.addEventListener('click',()=>setView(button.dataset.gbView,true)));
+ document.querySelectorAll('a[href="#details"],a[href="#officialMetrics"],a[href="#peak-hours"]').forEach(link=>link.addEventListener('click',()=>setView('all',true)));
+ if(['#details','#officialMetrics','#peak-hours'].includes(location.hash))first='all';
+ setView(first,false);
+ window.addEventListener('hashchange',()=>{if(['#details','#officialMetrics','#peak-hours'].includes(location.hash))setView('all',false);});
+})();
+
 const direction=get('gb-direction'),movement=get('gb-movement'),hour=get('gb-hour'),hourNote=get('gb-hour-note'),fresh=get('gb-freshness'),freshNote=get('gb-freshness-note'),fill=get('gb-track-fill');
 if(!direction||!hour||!fresh)return;
 const format=n=>Math.abs(n).toLocaleString('en-US');

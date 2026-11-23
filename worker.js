@@ -438,6 +438,16 @@ function animateNumber(id,num,extra,verifiedCcuChange=false){
 function state(msg,err){$('status').textContent=msg;$('pulse').style.background=err?'var(--danger)':'var(--green)';$('lastUpdate').textContent=err?msg:'Updated '+dateTime(Date.now())}
 function loadImage(url,target,parent){if(typeof url!=='string'||!url.startsWith('https://'))return;const box=$(target);if(!box)return;if(parent){const existing=box.querySelector('img');if(existing&&existing.src===url)return;const el=document.createElement('img');el.src=url;el.alt='TRENDING EMOTES! Roblox artwork';el.decoding='async';box.replaceChildren(el);}else{if(box.src!==url)box.src=url;box.alt='TRENDING EMOTES! Roblox artwork';box.style.visibility='visible'}}
 // Fast public polls; slower D1 history requests avoid needless database work.
+async function dashboardFetchJSON(path,timeoutMs=7500){
+  const ctrl=new AbortController();
+  const timer=setTimeout(()=>ctrl.abort(),timeoutMs);
+  try{
+    const response=await fetch(path,{cache:'no-store',signal:ctrl.signal});
+    if(!response.ok)throw new Error('Dashboard endpoint returned '+response.status);
+    return await response.json();
+  }finally{clearTimeout(timer);}
+}
+
 const LIVE_POLL_MS=20000;
 const HISTORY_POLL_MS=60000;
 let liveStatsInFlight=null;
@@ -590,9 +600,7 @@ async function loadHistory(){
   let unavailable=false;
   let comparison={state:'unavailable'};
   try{
-    const r=await fetch('/api/history?range='+requestedRange,{cache:'no-store'});
-    if(!r.ok)throw Error('history unavailable');
-    const data=await r.json();
+    const data=await dashboardFetchJSON('/api/history?range='+requestedRange,7500);
     // A slow 7D response must never replace a newer 24H selection.
     if(version!==historyRequestVersion||requestedRange!==currentRange)return;
     comparison=data.comparison&&typeof data.comparison==='object'
@@ -622,7 +630,9 @@ async function loadHistory(){
       if(strong)strong.textContent=unavailable?'Unable to refresh history':'Not enough verified history yet';
     }
   }
-  await acquisition();
+  // Chart/history status is ready already. Acquisition can update cards
+  // separately; a slow 7D API query must not freeze chart interactions.
+  void acquisition().catch(err=>console.warn('Acquisition refresh delayed',err));
   if(version===historyRequestVersion&&requestedRange===currentRange){
     window.dispatchEvent(new CustomEvent('kvn:history-loaded',{
       detail:{range:requestedRange,comparison,cloud:usingCloud,error:unavailable}
@@ -633,8 +643,7 @@ async function acquisition(){
   let source=browserHistory;
   if(usingCloud){
     try{
-      const r=await fetch('/api/history?range=7d',{cache:'no-store'});
-      const d=await r.json();
+      const d=await dashboardFetchJSON('/api/history?range=7d',6000);
       if(d.storage==='cloud'&&Array.isArray(d.points))source=d.points;
     }catch{}
   }

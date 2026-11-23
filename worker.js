@@ -1,6 +1,7 @@
 import { refinementCSS, refinementJS } from './refinements.js';
 import { publicAnalyticsResponse, publicAnalyticsStyles, publicAnalyticsMarkup, publicAnalyticsClient } from './public-analytics.js';
 import { premiumCSS } from './premium-theme.js';
+import { neonCSS } from './neon-theme.js';
 import { premiumJS } from './premium-interactions.js';
 import { studioUpgradeCSS, studioUpgradeJS } from './studio-upgrade.js';
 import { cinematicCSS, cinematicJS } from './cinematic-v2.js';
@@ -941,7 +942,7 @@ const THEMED_HTML = HTML
   .replaceAll('<b>STUDIOS</b>', '<b>CLOTHING</b>')
   .replaceAll('#b6ff69', '#5daeff')
   .replaceAll('#aaff62', '#5daeff')
-  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + pulseCSS + '\n' + peakHoursCSS + '\n' + growthBriefCSS + '\n' + playerGoalCSS + '\n' + signalCSS + '\n' + activityFeedCSS + '\n' + growthCommandCSS + '\n</style>')
+  .replace('</style>', () => '\n' + premiumCSS + '\n' + publicAnalyticsStyles + '\n' + refinementCSS + '\n' + studioUpgradeCSS + '\n' + cinematicCSS + '\n' + liveIntelligenceCSS + '\n' + pulseCSS + '\n' + peakHoursCSS + '\n' + growthBriefCSS + '\n' + playerGoalCSS + '\n' + signalCSS + '\n' + activityFeedCSS + '\n' + growthCommandCSS + '\n' + neonCSS + '\n</style>')
   .replace('<section class="wrap" id="dashboard">', () => growthCommandMarkup + '\n' + pulseMarkup + '\n' + growthBriefMarkup + '\n<section class="wrap" id="dashboard">')
   .replace('<div class="metrics reveal">', () => signalMarkup + '\n' + activityFeedMarkup + '\n' + peakHoursMarkup + '\n<div class="metrics reveal">')
   .replace('</section></main><footer', () => '</section>' + publicAnalyticsMarkup + '</main><footer')

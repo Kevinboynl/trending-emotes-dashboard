@@ -50,6 +50,17 @@ export const growthFocusCSS = String.raw`
 @media(max-width:470px){.kvn-growth-focus__surface{padding:18px;border-radius:19px}.kvn-growth-focus__grid,.kvn-growth-focus__side{gap:9px}.kvn-growth-focus__primary{padding:20px;min-height:185px}.kvn-growth-focus__tile{padding:16px}.kvn-growth-focus__tile-value{font-size:29px}.kvn-growth-focus__timeline{padding:17px}.kvn-growth-focus__timeline-head{align-items:flex-start;flex-direction:column}.kvn-growth-focus__signal{font-size:9px;padding:10px 12px}.kvn-growth-focus__value{font-size:clamp(63px,18vw,90px)}}
 @media(prefers-reduced-motion:reduce){.kvn-growth-focus__bar,.kvn-growth-focus__primary{transition:none!important}}
 
+
+/* When the existing Command Center is present, avoid duplicate headline metrics. */
+.kvn-growth-focus--history-only{margin-top:20px;margin-bottom:30px}
+.kvn-growth-focus--history-only .kvn-growth-focus__surface{padding:clamp(19px,2.4vw,30px)}
+.kvn-growth-focus--history-only .kvn-growth-focus__head{margin-bottom:17px}
+.kvn-growth-focus--history-only h2{font-size:clamp(25px,3vw,36px)}
+.kvn-growth-focus--history-only .kvn-growth-focus__primary,
+.kvn-growth-focus--history-only .kvn-growth-focus__side{display:none}
+.kvn-growth-focus--history-only .kvn-growth-focus__grid{display:block}
+.kvn-growth-focus--history-only .kvn-growth-focus__timeline{width:100%}
+.kvn-growth-focus--history-only .kvn-growth-focus__timeline .kvn-growth-focus__bars{height:95px}
 `;
 export const growthFocusJS = String.raw`
 
@@ -86,6 +97,13 @@ export const growthFocusJS = String.raw`
       '<div class="kvn-growth-focus__bottom"><p class="kvn-growth-focus__source" id="kvnPulseSource">Source: verified Roblox public API · missing data is never filled in</p><a href="#analytics" class="kvn-growth-focus__link">EXPLORE FULL ANALYTICS <span aria-hidden="true">↗</span></a></div>'+
     '</div>';
   ticker.insertAdjacentElement('afterend',node);
+  if(document.querySelector('.kvn-command')){
+    node.classList.add('kvn-growth-focus--history-only');
+    const title=node.querySelector('h2');
+    if(title)title.innerHTML='PLAYER <span>MOMENTUM.</span>';
+    const intro=node.querySelector('.kvn-growth-focus__intro');
+    if(intro)intro.textContent='A visual timeline of the most recent verified player measurements — no made-up points.';
+  }
   const byId=id=>document.getElementById(id);
   const count=byId('kvnPulseCount'),change=byId('kvnPulseChange');
   const changeTile=byId('kvnPulseChangeTile'),changeNote=byId('kvnPulseChangeNote');

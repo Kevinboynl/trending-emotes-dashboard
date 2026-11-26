@@ -363,6 +363,16 @@ export const publicAnalyticsStyles = String.raw`
 @media(max-width:950px){.kvn-insights{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:680px){.kvn-insights,.tabbody[data-page="acquisition"] .details{grid-template-columns:1fr}.kvn-insight-card{padding:20px}.kvn-insight-card .k-value{font-size:34px}}
 @media(prefers-reduced-motion:reduce){.kvn-insight-card{transition:none}.kvn-insight-card:hover{transform:none}}
+/* Consistent dashboard typography and blue surfaces. */
+#officialMetrics .official-card,.kvn-insight-card{background:linear-gradient(145deg,#10254a,#09172f);border-color:#294a75;border-radius:16px;box-shadow:inset 0 1px #9dcfff12}
+#officialMetrics .official-card strong,.kvn-insight-card .k-value{font-family:inherit;letter-spacing:-.035em;font-weight:750;line-height:1.2;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#officialMetrics .official-card small,.kvn-insight-card .k-label{color:#a3c9f5;letter-spacing:.055em}
+#officialMetrics .official-card p,.kvn-insight-card .k-status{color:#b0c6e2;line-height:1.65}
+#officialMetrics .official-grid,.kvn-insights{align-items:stretch}
+#officialMetrics .official-card,.kvn-insight-card{display:flex;flex-direction:column}
+#officialMetrics .official-card svg,.kvn-insight-card svg{margin-top:auto;padding-top:12px;flex-shrink:0}
+#officialMetrics .official-message{margin-bottom:16px}
+
 `;
 export const publicAnalyticsMarkup = String.raw`
 <section class="wrap" id="officialMetrics" aria-label="Selected official Roblox statistics">
@@ -549,6 +559,19 @@ export const publicAnalyticsClient = String.raw`
      try{r=await fetch('/api/public-analytics',{cache:'no-store',signal:controller.signal});}
      finally{clearTimeout(timeout);}
      const data=await r.json();
+     const authorized=r.ok && ['ready','partial'].includes(data?.state) && Array.isArray(data.metrics) && data.metrics.length;
+     if(!authorized && !['disabled','not_configured'].includes(data?.state) && window.__kvnPublishedAnalytics){
+       message('The latest request failed. Previously verified data is retained; it is not live.',true);
+       consecutiveFailures++;queueRecovery();return;
+     }
+     if(authorized && window.__kvnPublishedAnalytics){
+       const previous=new Map(window.__kvnPublishedAnalytics.metrics.map(m=>[m.id,m]));
+       data.metrics=data.metrics.map(m=>{
+         const p=previous.get(m.id);
+         return m.state!=='ready' && p?.state==='ready' && Number.isFinite(p.latest?.value)
+           ? {...p,previouslyVerified:true}:m;
+       });
+     }
      renderPanels(data);
      if(r.ok && ['ready','partial'].includes(data?.state)){
        consecutiveFailures=0;
